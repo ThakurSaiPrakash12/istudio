@@ -11,6 +11,7 @@ import 'app/theme/app_colors.dart';
 import 'app/theme/app_theme.dart';
 import 'app/widgets/studio_splash.dart';
 
+import 'app/providers/notifications_provider.dart';
 import 'app/providers/theme_provider.dart';
 
 void main() {
@@ -36,6 +37,14 @@ class LumenApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()..bootstrap()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..bootstrap()),
         ChangeNotifierProvider(create: (_) => EventsProvider()),
+        ChangeNotifierProxyProvider<EventsProvider, NotificationsProvider>(
+          create: (_) => NotificationsProvider(),
+          update: (_, events, previous) {
+            final notifs = previous ?? NotificationsProvider();
+            notifs.syncEvents(events);
+            return notifs;
+          },
+        ),
         ChangeNotifierProxyProvider<AuthProvider, InvoicesProvider>(
           create: (_) => InvoicesProvider(),
           update: (_, auth, previous) {
@@ -74,6 +83,15 @@ class _AuthGate extends StatelessWidget {
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 320),
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            ...previousChildren,
+            ?currentChild,
+          ],
+        );
+      },
       child: auth.isLoggedIn
           ? const AppShell(key: ValueKey('home'))
           : const AuthScreen(key: ValueKey('auth')),

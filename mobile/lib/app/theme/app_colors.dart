@@ -2,35 +2,90 @@ import 'package:flutter/material.dart';
 
 import '../models/studio_event.dart';
 
-/// Universal studio palette supporting Dark and Light themes
+/// Universal studio palette supporting Liquid Glass Dark & Light themes
 @immutable
 class AppColors {
   const AppColors._();
 
-  // Dark Theme Palette
-  static const Color ink = Color(0xFF0B1320);
-  static const Color navy = Color(0xFF1C2541);
-  static const Color slate = Color(0xFF3A506B);
-  static const Color aqua = Color(0xFF5BC0BE);
-  static const Color paper = Color(0xFFF4F7F5);
-  static const Color muted = Color(0xFF9BB0C4);
-  static const Color mist = Color(0x99F4F7F5);
+  // ================= LUMEN Liquid Glass Palette (Sky Blue) =================
+  // Radiant Sky Blue & Ice Cyan
+  static const Color sky = Color(0xFF38BDF8);       // Electric Sky 400
+  static const Color skyLight = Color(0xFFBAE6FD);  // Ice Sky 200
+  static const Color skyDeep = Color(0xFF0284C7);   // Vivid Ocean Sky 600
+  static const Color skyGlow = Color(0x5938BDF8);   // 35% Sky Ambient Halo
+  static const Color skyCyan = Color(0xFF06B6D4);   // Cyan 500
 
-  // Light Theme Palette
-  static const Color lightScaffold = Color(0xFFF6F8FB);
+  // Gold aliases redirected to Sky Blue for complete aesthetic overhaul
+  static const Color gold = sky;
+  static const Color goldLight = skyLight;
+  static const Color goldDeep = skyDeep;
+  static const Color goldGlow = skyGlow;
+
+  // Obsidian Cinema (Dark Mode Base)
+  static const Color ink = Color(0xFF060911);
+  static const Color navy = Color(0xFF0A101F);
+  static const Color slate = Color(0xFF131D31);
+  static const Color paper = Color(0xFFF8FAFC);
+  static const Color muted = Color(0xFF94A3B8);
+  static const Color mist = Color(0x99F8FAFC);
+
+  // Liquid Glass Translucencies (Dark Mode)
+  static const Color glassSurfaceDark = Color(0xB80B1326); // 72% opacity frosted
+  static const Color glassCardDark = Color(0xCC0D172E);    // 80% opacity frosted
+  static const Color glassBorderDark = Color(0x3838BDF8);  // Specular sky hairline rim
+  static const Color glassInnerDark = Color(0xA6060C1A);   // Inset container fill
+  static const Color glassSpecular = Color(0x5938BDF8);    // Top refraction highlight
+
+  // Editorial Silk (Light Mode Base)
+  static const Color lightScaffold = Color(0xFFF0F6FC);
   static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightTextMain = Color(0xFF0F172A);
+  static const Color lightTextMain = Color(0xFF0B132B);
   static const Color lightTextMuted = Color(0xFF64748B);
   static const Color lightBorder = Color(0xFFE2E8F0);
   static const Color lightInputFill = Color(0xFFF1F5F9);
-  static const Color lightPrimary = Color(0xFF0D9488);
+  static const Color lightPrimary = Color(0xFF0284C7); // Vivid Sky Blue 600
 
+  // Liquid Glass Translucencies (Light Mode)
+  static const Color glassSurfaceLight = Color(0xE6FFFFFF); // 90% opacity frosted
+  static const Color glassCardLight = Color(0xF2FFFFFF);
+  static const Color glassBorderLight = Color(0x4D38BDF8);
+  static const Color glassInnerLight = Color(0xB3F1F5F9);
+
+  // Aliases for backwards compatibility
+  static const Color aqua = sky;
   static const Color midnight = ink;
   static const Color plum = navy;
   static const Color merlot = slate;
-  static const Color blossom = aqua;
+  static const Color blossom = sky;
   static const Color ivory = paper;
   static const Color blush = muted;
+
+  // Linear Gradient Presets for Sky Blue Liquid Glass
+  static const LinearGradient skyGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+  );
+
+  static const LinearGradient goldGradient = skyGradient;
+
+  static const LinearGradient glassCardGradientDark = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xE60E1A33),
+      Color(0xD9081224),
+    ],
+  );
+
+  static const LinearGradient glassCardGradientLight = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFAFFFFFF),
+      Color(0xF2F0F7FF),
+    ],
+  );
 
   // Helper resolvers for dynamic theme styling
   static bool isDark(BuildContext context) =>
@@ -40,10 +95,10 @@ class AppColors {
       isDark(context) ? ink : lightScaffold;
 
   static Color cardBackground(BuildContext context) =>
-      isDark(context) ? navy.withValues(alpha: 0.78) : lightCard;
+      isDark(context) ? glassCardDark : glassCardLight;
 
   static Color cardBorder(BuildContext context) =>
-      isDark(context) ? slate.withValues(alpha: 0.45) : lightBorder;
+      isDark(context) ? glassBorderDark : glassBorderLight;
 
   static Color textMain(BuildContext context) =>
       isDark(context) ? paper : lightTextMain;
@@ -52,34 +107,52 @@ class AppColors {
       isDark(context) ? muted : lightTextMuted;
 
   static Color inputBackground(BuildContext context) =>
-      isDark(context) ? navy.withValues(alpha: 0.55) : lightInputFill;
+      isDark(context) ? glassInnerDark : lightInputFill;
 
   static Color innerContainerBackground(BuildContext context) =>
-      isDark(context) ? ink.withValues(alpha: 0.55) : const Color(0xFFF1F5F9);
+      isDark(context) ? glassInnerDark : glassInnerLight;
 
   static Color accent(BuildContext context) =>
-      isDark(context) ? aqua : lightPrimary;
+      isDark(context) ? sky : lightPrimary;
 
   static Color expense(BuildContext context) =>
-      isDark(context) ? const Color(0xFFFF7A8A) : const Color(0xFFE11D48);
+      isDark(context) ? const Color(0xFFF43F5E) : const Color(0xFFE11D48);
 
   static Color profit(BuildContext context) =>
-      isDark(context) ? aqua : lightPrimary;
+      isDark(context) ? const Color(0xFF10B981) : const Color(0xFF059669);
 
   static Color statusColor(BuildContext context, EventStatus status) {
     final dark = isDark(context);
     switch (status) {
       case EventStatus.completed:
-        return dark ? aqua : const Color(0xFF0D9488);
+        return dark ? const Color(0xFF10B981) : const Color(0xFF059669);
       case EventStatus.inProgress:
-        return dark ? const Color(0xFF64B5F6) : const Color(0xFF0284C7);
+        return dark ? sky : const Color(0xFF0284C7);
       case EventStatus.paymentDue:
-        return dark ? const Color(0xFFE8B86D) : const Color(0xFFD97706);
+        return dark ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
       case EventStatus.upcoming:
-        return dark ? const Color(0xFF81C784) : const Color(0xFF16A34A);
+        return dark ? sky : lightPrimary;
       case EventStatus.cancelled:
-        return dark ? const Color(0xFFFF7A8A) : const Color(0xFFDC2626);
+        return dark ? const Color(0xFFF43F5E) : const Color(0xFFDC2626);
     }
+  }
+
+  static Color urgencyCritical(BuildContext context) =>
+      isDark(context) ? const Color(0xFFF43F5E) : const Color(0xFFE11D48);
+
+  static Color urgencyWarning(BuildContext context) =>
+      isDark(context) ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
+
+  static Color urgencyNotice(BuildContext context) =>
+      isDark(context) ? sky : lightPrimary;
+
+  static Color urgencyColor(BuildContext context, int daysLeft, int hoursLeft) {
+    if (daysLeft == 0 && hoursLeft <= 24) {
+      return urgencyCritical(context);
+    } else if (daysLeft <= 3) {
+      return urgencyWarning(context);
+    }
+    return urgencyNotice(context);
   }
 }
 
@@ -114,18 +187,18 @@ class StudioColors extends ThemeExtension<StudioColors> {
   final Color innerContainerBg;
 
   static const StudioColors brand = StudioColors(
-    blossom: AppColors.aqua,
+    blossom: AppColors.gold,
     merlot: AppColors.slate,
     plum: AppColors.navy,
     midnight: AppColors.ink,
     ivory: AppColors.paper,
     blush: AppColors.muted,
     mist: AppColors.mist,
-    cardBg: Color(0xC71C2541),
-    cardBorder: Color(0x733A506B),
+    cardBg: AppColors.glassCardDark,
+    cardBorder: AppColors.glassBorderDark,
     textMain: AppColors.paper,
     textMuted: AppColors.muted,
-    innerContainerBg: Color(0x8C0B1320),
+    innerContainerBg: AppColors.glassInnerDark,
   );
 
   static const StudioColors lightBrand = StudioColors(
@@ -136,11 +209,11 @@ class StudioColors extends ThemeExtension<StudioColors> {
     ivory: AppColors.lightTextMain,
     blush: AppColors.lightTextMuted,
     mist: Color(0x6664748B),
-    cardBg: AppColors.lightCard,
-    cardBorder: AppColors.lightBorder,
+    cardBg: AppColors.glassCardLight,
+    cardBorder: AppColors.glassBorderLight,
     textMain: AppColors.lightTextMain,
     textMuted: AppColors.lightTextMuted,
-    innerContainerBg: Color(0xFFF1F5F9),
+    innerContainerBg: AppColors.glassInnerLight,
   );
 
   @override

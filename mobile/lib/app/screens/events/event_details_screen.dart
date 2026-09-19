@@ -86,6 +86,10 @@ class EventDetailsScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                 children: [
+                  // 7-Day Countdown Alert Hero (if within 7 days)
+                  if (event.isWithin7Days)
+                    _build7DayCountdownHero(context, event),
+
                   // A. Event Header
                   _buildEventHeader(context, event),
                   const SizedBox(height: 16),
@@ -114,6 +118,173 @@ class EventDetailsScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  // ================= 7-Day Countdown Hero =================
+  Widget _build7DayCountdownHero(BuildContext context, StudioEvent event) {
+    final days = event.daysUntilStart;
+    final hours = event.hoursUntilStart;
+    final mins = event.minutesUntilStart;
+    final urgencyColor = AppColors.urgencyColor(context, days, hours);
+    final isDark = context.isDark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: isDark
+              ? [
+                  urgencyColor.withValues(alpha: 0.22),
+                  context.cardBg,
+                ]
+              : [
+                  urgencyColor.withValues(alpha: 0.12),
+                  Colors.white,
+                ],
+        ),
+        border: Border.all(
+          color: urgencyColor.withValues(alpha: 0.5),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: urgencyColor.withValues(alpha: isDark ? 0.2 : 0.1),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: urgencyColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: urgencyColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      days == 0
+                          ? 'IMMINENT SHOOT'
+                          : 'UPCOMING SHOOT IN 7 DAYS',
+                      style: TextStyle(
+                        color: urgencyColor,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Text(
+                event.countdownFormatted,
+                style: TextStyle(
+                  color: urgencyColor,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Clock units
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: context.innerBg.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: context.cardBorder.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildClockUnit(
+                    context,
+                    days.clamp(0, 99).toString().padLeft(2, '0'),
+                    'DAYS',
+                    urgencyColor),
+                Text(':',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: urgencyColor)),
+                _buildClockUnit(
+                    context,
+                    hours.clamp(0, 23).toString().padLeft(2, '0'),
+                    'HOURS',
+                    urgencyColor),
+                Text(':',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: urgencyColor)),
+                _buildClockUnit(
+                    context,
+                    mins.clamp(0, 59).toString().padLeft(2, '0'),
+                    'MINS',
+                    urgencyColor),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Scheduled start: ${event.startTime} on ${DateFormat('EEEE, d MMMM yyyy').format(event.startsAt)} at ${event.location}.',
+            style: TextStyle(
+              color: context.textMuted,
+              fontSize: 11.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClockUnit(
+      BuildContext context, String val, String unit, Color accent) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          val,
+          style: GoogleFonts.dmSans(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: context.textMain,
+          ),
+        ),
+        Text(
+          unit,
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+            color: context.textMuted,
+            letterSpacing: 0.8,
+          ),
+        ),
+      ],
     );
   }
 

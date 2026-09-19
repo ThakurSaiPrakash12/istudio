@@ -26,7 +26,7 @@ class ApiConfig {
   static String get origin =>
       _strip(_override.isNotEmpty ? _override : backendUrl);
 
-  static String get baseUrl => '${origin}/api';
+  static String get baseUrl => '$origin/api';
 
   static String resolveMedia(String? path) {
     if (path == null || path.trim().isEmpty) return '';

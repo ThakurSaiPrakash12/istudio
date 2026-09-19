@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -18,54 +19,76 @@ class AuthModeToggle extends StatelessWidget {
 
     return Semantics(
       label: isLogin ? 'Sign in selected' : 'Sign up selected',
-      child: Container(
-        padding: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-          color: context.innerBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: context.cardBorder),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final tabWidth = (constraints.maxWidth - 4) / 2;
-            return Stack(
-              children: [
-                AnimatedAlign(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutCubic,
-                  alignment: isLogin
-                      ? Alignment.centerLeft
-                      : Alignment.centerRight,
-                  child: Container(
-                    width: tabWidth,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        colors: isDark
-                            ? const [AppColors.aqua, AppColors.slate]
-                            : const [AppColors.lightPrimary, Color(0xFF0F766E)],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.glassInnerDark : AppColors.glassInnerLight,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+                width: 1.2,
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final tabWidth = (constraints.maxWidth - 4) / 2;
+                return Stack(
+                  children: [
+                    AnimatedAlign(
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeOutBack,
+                      alignment: isLogin
+                          ? Alignment.centerLeft
+                          : Alignment.centerRight,
+                      child: Container(
+                        width: tabWidth,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          gradient: isDark
+                              ? AppColors.skyGradient
+                              : const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                                ),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.sky.withValues(alpha: isDark ? 0.35 : 0.22),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    _Tab(
-                      label: 'Sign in',
-                      selected: isLogin,
-                      onTap: () => onChanged(true),
-                    ),
-                    _Tab(
-                      label: 'Sign up',
-                      selected: !isLogin,
-                      onTap: () => onChanged(false),
+                    Row(
+                      children: [
+                        _Tab(
+                          label: 'Sign in',
+                          selected: isLogin,
+                          onTap: () => onChanged(true),
+                        ),
+                        _Tab(
+                          label: 'Sign up',
+                          selected: !isLogin,
+                          onTap: () => onChanged(false),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -87,18 +110,20 @@ class _Tab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: SizedBox(
           height: 44,
           child: Center(
             child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
-              style: Theme.of(context).textTheme.titleSmall!.copyWith(
+              style: TextStyle(
                 color: selected
-                    ? (context.isDark ? AppColors.paper : Colors.white)
+                    ? const Color(0xFF080C14) // Pure high contrast dark on gold thumb!
                     : context.textMuted,
-                fontWeight: FontWeight.w600,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 14,
+                letterSpacing: 0.3,
               ),
               child: Text(label),
             ),

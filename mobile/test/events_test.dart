@@ -5,9 +5,13 @@ import 'package:lumen_studio/app/models/client.dart';
 import 'package:lumen_studio/app/models/studio_event.dart';
 import 'package:lumen_studio/app/providers/auth_provider.dart';
 import 'package:lumen_studio/app/providers/events_provider.dart';
+import 'package:lumen_studio/app/providers/invoices_provider.dart';
+import 'package:lumen_studio/app/providers/notifications_provider.dart';
+import 'package:lumen_studio/app/providers/theme_provider.dart';
 import 'package:lumen_studio/app/screens/clients/client_details_screen.dart';
 import 'package:lumen_studio/app/screens/clients/clients_screen.dart';
 import 'package:lumen_studio/app/screens/home/home_screen.dart';
+import 'package:lumen_studio/app/screens/shell/app_shell.dart';
 import 'package:lumen_studio/app/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
@@ -243,6 +247,64 @@ void main() {
       expect(find.text('+ Add Event'), findsOneWidget);
       expect(find.text('Past Events'), findsOneWidget);
       expect(find.text('View all →'), findsNWidgets(2));
+    });
+
+    testWidgets('AppShell renders and navigates between tabs without exceptions',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final auth = AuthProvider();
+      final events = EventsProvider();
+      final notifs = NotificationsProvider();
+      notifs.syncEvents(events);
+      final invoices = InvoicesProvider();
+      invoices.syncAuth(auth);
+
+      tester.view.physicalSize = const Size(420, 850);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: auth),
+            ChangeNotifierProvider.value(value: events),
+            ChangeNotifierProvider.value(value: notifs),
+            ChangeNotifierProvider.value(value: invoices),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark,
+            home: const AppShell(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Calendar'), findsWidgets);
+
+      await tester.tap(find.text('Calendar').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Booked sessions & shoot schedule'), findsOneWidget);
+
+      // Tap Invoices
+      await tester.tap(find.text('Invoices').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Tap Clients
+      await tester.tap(find.text('Clients').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      notifs.dispose();
     });
   });
 }

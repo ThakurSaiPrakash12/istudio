@@ -18,37 +18,43 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        children: [
-          StudioAppBar(
-            title: 'Invoices',
-            subtitle: _isCreate
-                ? 'Create and send a bill'
-                : 'Payments, pending and overdue',
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-            child: _InvoiceModeToggle(
-              isCreate: _isCreate,
-              onChanged: (value) => setState(() => _isCreate = value),
-            ),
-          ),
-          Expanded(
-            child: IndexedStack(
-              index: _isCreate ? 0 : 1,
-              children: [
-                CreateInvoiceForm(
-                  onSaved: (_) => setState(() => _isCreate = false),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: Column(
+            children: [
+              StudioAppBar(
+                title: 'Invoices',
+                subtitle: _isCreate
+                    ? 'Create and send a bill'
+                    : 'Payments, pending and overdue',
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                child: _InvoiceModeToggle(
+                  isCreate: _isCreate,
+                  onChanged: (value) => setState(() => _isCreate = value),
                 ),
-                const InvoiceHistoryTab(),
-              ],
-            ),
+              ),
+              Expanded(
+                child: IndexedStack(
+                  index: _isCreate ? 0 : 1,
+                  children: [
+                    CreateInvoiceForm(
+                      onSaved: (_) => setState(() => _isCreate = false),
+                    ),
+                    const InvoiceHistoryTab(),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
+
 
 class _InvoiceModeToggle extends StatelessWidget {
   const _InvoiceModeToggle({
@@ -68,9 +74,12 @@ class _InvoiceModeToggle extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: context.innerBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: context.cardBorder),
+          color: isDark ? AppColors.glassInnerDark : AppColors.glassInnerLight,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+            width: 1.2,
+          ),
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -79,7 +88,7 @@ class _InvoiceModeToggle extends StatelessWidget {
               children: [
                 AnimatedAlign(
                   duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutCubic,
+                  curve: Curves.easeOutBack,
                   alignment: isCreate
                       ? Alignment.centerLeft
                       : Alignment.centerRight,
@@ -87,12 +96,25 @@ class _InvoiceModeToggle extends StatelessWidget {
                     width: tabWidth,
                     height: 44,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        colors: isDark
-                            ? const [AppColors.aqua, AppColors.slate]
-                            : const [AppColors.lightPrimary, Color(0xFF0F766E)],
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: isDark
+                          ? AppColors.skyGradient
+                          : const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                            ),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        width: 1,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.sky.withValues(alpha: isDark ? 0.35 : 0.22),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -134,18 +156,20 @@ class _Tab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: SizedBox(
           height: 44,
           child: Center(
             child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
-              style: Theme.of(context).textTheme.titleSmall!.copyWith(
+              style: TextStyle(
                 color: selected
-                    ? (context.isDark ? AppColors.paper : Colors.white)
+                    ? const Color(0xFF080C14)
                     : context.textMuted,
-                fontWeight: FontWeight.w600,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 14,
+                letterSpacing: 0.3,
               ),
               child: Text(label),
             ),
@@ -155,3 +179,4 @@ class _Tab extends StatelessWidget {
     );
   }
 }
+

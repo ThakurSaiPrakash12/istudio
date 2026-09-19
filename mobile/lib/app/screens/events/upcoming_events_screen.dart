@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../models/studio_event.dart';
 import '../../providers/events_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/countdown_chip.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import 'create_event_sheet.dart';
@@ -27,6 +28,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
 
   final List<String> _categories = [
     'All',
+    'Within 7 Days',
     'Wedding',
     'Maternity',
     'Commercial',
@@ -51,7 +53,9 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
     final query = _searchController.text.trim().toLowerCase();
     final filtered = allUpcoming.where((event) {
       final matchesCategory = _selectedCategory == 'All' ||
-          event.eventType.toLowerCase() == _selectedCategory.toLowerCase();
+          (_selectedCategory == 'Within 7 Days'
+              ? event.isWithin7Days
+              : event.eventType.toLowerCase() == _selectedCategory.toLowerCase());
       final matchesSearch = query.isEmpty ||
           event.title.toLowerCase().contains(query) ||
           event.clientName.toLowerCase().contains(query) ||
@@ -61,132 +65,137 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            StudioAppBar(
-              title: 'Upcoming Events',
-              subtitle: 'Scheduled shoots & bookings',
-              leading: IconButton(
-                tooltip: 'Back',
-                icon: Icon(Icons.arrow_back_ios_new_rounded,
-                    color: textMain, size: 20),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              actions: [
-                IconButton(
-                  tooltip: 'Add Event',
-                  icon: Icon(Icons.add_circle_outline_rounded,
-                      color: accent, size: 24),
-                  onPressed: () => CreateEventSheet.show(context),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Column(
+              children: [
+                StudioAppBar(
+                  title: 'Upcoming Events',
+                  subtitle: 'Scheduled shoots & bookings',
+                  leading: IconButton(
+                    tooltip: 'Back',
+                    icon: Icon(Icons.arrow_back_ios_new_rounded,
+                        color: textMain, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  actions: [
+                    IconButton(
+                      tooltip: 'Add Event',
+                      icon: Icon(Icons.add_circle_outline_rounded,
+                          color: accent, size: 24),
+                      onPressed: () => CreateEventSheet.show(context),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        style: TextStyle(color: textMain, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Search upcoming shoots, clients, venues...',
+                          prefixIcon: Icon(Icons.search, color: textMuted, size: 20),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, color: textMuted, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: context.cardBg,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 36,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categories.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, idx) {
+                            final cat = _categories[idx];
+                            final isSelected = _selectedCategory == cat;
+                            return ChoiceChip(
+                              label: Text(cat),
+                              selected: isSelected,
+                              onSelected: (val) {
+                                if (val) setState(() => _selectedCategory = cat);
+                              },
+                              selectedColor: accent.withValues(alpha: 0.25),
+                              backgroundColor: context.cardBg,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? accent
+                                    : context.cardBorder,
+                              ),
+                              labelStyle: TextStyle(
+                                color: isSelected ? accent : textMain,
+                                fontSize: 12,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.calendar_today_rounded,
+                                  size: 48,
+                                  color: textMuted.withValues(alpha: 0.5)),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No upcoming events found',
+                                style: TextStyle(
+                                  color: textMain,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: accent,
+                                  foregroundColor: context.isDark ? AppColors.ink : Colors.white,
+                                ),
+                                onPressed: () => CreateEventSheet.show(context),
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text('+ Add Event'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final event = filtered[index];
+                            return _buildUpcomingEventCard(context, event);
+                          },
+                        ),
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    onChanged: (_) => setState(() {}),
-                    style: TextStyle(color: textMain, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Search upcoming shoots, clients, venues...',
-                      prefixIcon: Icon(Icons.search, color: textMuted, size: 20),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear, color: textMuted, size: 18),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: context.cardBg,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _categories.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (context, idx) {
-                        final cat = _categories[idx];
-                        final isSelected = _selectedCategory == cat;
-                        return ChoiceChip(
-                          label: Text(cat),
-                          selected: isSelected,
-                          onSelected: (val) {
-                            if (val) setState(() => _selectedCategory = cat);
-                          },
-                          selectedColor: accent.withValues(alpha: 0.25),
-                          backgroundColor: context.cardBg,
-                          side: BorderSide(
-                            color: isSelected
-                                ? accent
-                                : context.cardBorder,
-                          ),
-                          labelStyle: TextStyle(
-                            color: isSelected ? accent : textMain,
-                            fontSize: 12,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.normal,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.calendar_today_rounded,
-                              size: 48,
-                              color: textMuted.withValues(alpha: 0.5)),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No upcoming events found',
-                            style: TextStyle(
-                              color: textMain,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accent,
-                              foregroundColor: context.isDark ? AppColors.ink : Colors.white,
-                            ),
-                            onPressed: () => CreateEventSheet.show(context),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('+ Add Event'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final event = filtered[index];
-                        return _buildUpcomingEventCard(context, event);
-                      },
-                    ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -224,7 +233,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                 height: 44,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Icon(
                   Icons.camera_alt_outlined,
@@ -261,15 +270,21 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                 ),
               ),
               const SizedBox(width: 6),
-              Flexible(child: _buildStatusBadge(context, event.status)),
+              if (event.isWithin7Days)
+                CountdownChip(
+                  daysLeft: event.daysUntilStart,
+                  hoursLeft: event.hoursUntilStart,
+                )
+              else
+                Flexible(child: _buildStatusBadge(context, event.status)),
             ],
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: context.innerBg,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
               children: [
@@ -351,10 +366,10 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
     final color = AppColors.statusColor(context, status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Text(

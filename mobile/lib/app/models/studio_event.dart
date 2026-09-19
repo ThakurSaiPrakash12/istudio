@@ -274,6 +274,80 @@ class StudioEvent {
   double get progressRatio =>
       totalTasksCount == 0 ? 0.0 : (completedTasksCount / totalTasksCount);
 
+  /// Calculates exact target start DateTime by parsing startTime (e.g. 10:00 AM or 02:30 PM)
+  DateTime get fullStartDateTime {
+    int hour = 10;
+    int minute = 0;
+    try {
+      final clean = startTime.trim().toUpperCase();
+      final isPm = clean.contains('PM');
+      final isAm = clean.contains('AM');
+      final parts = clean.replaceAll(RegExp(r'[^\d:]'), '').split(':');
+      if (parts.isNotEmpty) {
+        hour = int.tryParse(parts[0]) ?? 10;
+        if (parts.length > 1) {
+          minute = int.tryParse(parts[1]) ?? 0;
+        }
+        if (isPm && hour < 12) hour += 12;
+        if (isAm && hour == 12) hour = 0;
+      }
+    } catch (_) {}
+    return DateTime(startsAt.year, startsAt.month, startsAt.day, hour, minute);
+  }
+
+  /// Live duration until event begins
+  Duration get timeUntilStart => fullStartDateTime.difference(DateTime.now());
+
+  /// True if scheduled to start in <= 7 days and has not completed/ended
+  bool get isWithin7Days {
+    if (status == EventStatus.completed || status == EventStatus.cancelled) {
+      return false;
+    }
+    final remaining = timeUntilStart;
+    return remaining.inSeconds > -86400 && remaining <= const Duration(days: 7);
+  }
+
+  bool get isImminent => isWithin7Days && timeUntilStart.inHours <= 24;
+
+  int get daysUntilStart => timeUntilStart.inDays;
+  int get hoursUntilStart => timeUntilStart.inHours % 24;
+  int get minutesUntilStart => timeUntilStart.inMinutes % 60;
+
+  /// Formatted notification copy: "2 days and 14 hours left" or "18 hours left"
+  String get countdownFormatted {
+    final remaining = timeUntilStart;
+    if (remaining.inSeconds <= 0) {
+      return 'Today / Ongoing';
+    }
+    final days = daysUntilStart;
+    final hours = hoursUntilStart;
+    if (days >= 1) {
+      final dayStr = days == 1 ? 'day' : 'days';
+      final hourStr = hours == 1 ? 'hour' : 'hours';
+      return '$days $dayStr, $hours $hourStr left';
+    } else if (hours >= 1) {
+      final hourStr = hours == 1 ? 'hour' : 'hours';
+      return '$hours $hourStr left';
+    } else {
+      return '$minutesUntilStart mins left';
+    }
+  }
+
+  /// Compact chip copy: "⏳ 2d 14h left"
+  String get countdownChip {
+    final remaining = timeUntilStart;
+    if (remaining.inSeconds <= 0) return '🔥 Today';
+    final days = daysUntilStart;
+    final hours = hoursUntilStart;
+    if (days >= 1) {
+      return '⏳ ${days}d ${hours}h left';
+    } else if (hours >= 1) {
+      return '🚨 ${hours}h left';
+    } else {
+      return '🚨 ${minutesUntilStart}m left';
+    }
+  }
+
   bool get isPast =>
       status == EventStatus.completed ||
       startsAt.isBefore(DateTime.now().subtract(const Duration(days: 1)));

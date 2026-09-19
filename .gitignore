@@ -50,3 +50,6 @@ Thumbs.db
 # Agent & Local tooling workspace metadata
 .agents/
 .gemini/
+
+# Flutter SDK local install
+flutter/

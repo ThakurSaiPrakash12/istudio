@@ -306,92 +306,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-          children: [
-            Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  ProfileAvatar(logoUrl: user?.logoUrl, size: 112),
-                  if (_isUploadingImage)
-                    Container(
-                      width: 112,
-                      height: 112,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.ink.withValues(alpha: 0.7),
-                      ),
-                      alignment: Alignment.center,
-                      child: const SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.aqua),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              children: [
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      ProfileAvatar(logoUrl: user?.logoUrl, size: 112),
+                      if (_isUploadingImage)
+                        Container(
+                          width: 112,
+                          height: 112,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.ink.withValues(alpha: 0.7),
+                          ),
+                          alignment: Alignment.center,
+                          child: const SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.aqua),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Semantics(
-                      button: true,
-                      label: 'Upload studio profile image',
-                      child: Material(
-                        color: AppColors.aqua,
-                        shape: const CircleBorder(),
-                        elevation: 4,
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: isBusy ? null : _showImageSourcePicker,
-                          child: const Padding(
-                            padding: EdgeInsets.all(9),
-                            child: Icon(
-                              Icons.camera_alt_rounded,
-                              size: 18,
-                              color: AppColors.ink,
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Semantics(
+                          button: true,
+                          label: 'Upload studio profile image',
+                          child: Material(
+                            color: AppColors.aqua,
+                            shape: const CircleBorder(),
+                            elevation: 4,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: isBusy ? null : _showImageSourcePicker,
+                              child: const Padding(
+                                padding: EdgeInsets.all(9),
+                                child: Icon(
+                                  Icons.camera_alt_rounded,
+                                  size: 18,
+                                  color: AppColors.ink,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  user?.displayStudioName ?? 'Your studio',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: context.textMain,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user?.displayOwner ?? '',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.muted,
+                      ),
+                ),
+                const SizedBox(height: 22),
+                if (_editing) _buildForm(isBusy) else _buildDetails(user),
+                const SizedBox(height: 20),
+                _buildThemeSelector(context),
+                const SizedBox(height: 24),
+                StudioButton(
+                  label: 'Sign out',
+                  isSecondary: true,
+                  icon: Icons.logout_rounded,
+                  onPressed: isBusy
+                      ? null
+                      : () {
+                          Navigator.of(context).pop();
+                          context.read<AuthProvider>().logout();
+                        },
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              user?.displayStudioName ?? 'Your studio',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: context.textMain,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              user?.displayOwner ?? '',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.muted,
-                  ),
-            ),
-            const SizedBox(height: 22),
-            if (_editing) _buildForm(isBusy) else _buildDetails(user),
-            const SizedBox(height: 20),
-            _buildThemeSelector(context),
-            const SizedBox(height: 24),
-            StudioButton(
-              label: 'Sign out',
-              onPressed: isBusy
-                  ? null
-                  : () {
-                      Navigator.of(context).pop();
-                      context.read<AuthProvider>().logout();
-                    },
-            ),
-          ],
+          ),
         ),
       ),
     );

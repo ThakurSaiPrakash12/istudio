@@ -4,7 +4,7 @@
 # This file should be version controlled and should not be manually edited.
 
 version:
-  revision: "ee80f08bbf97172ec030b8751ceab557177a34a6"
+  revision: "9584c6713b324636289d067944a46fd6b49df14b"
   channel: "stable"
 
 project_type: app
@@ -13,17 +13,14 @@ project_type: app
 migration:
   platforms:
     - platform: root
-      create_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
-      base_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
-    - platform: android
-      create_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
-      base_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
-    - platform: ios
-      create_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
-      base_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
+      create_revision: 9584c6713b324636289d067944a46fd6b49df14b
+      base_revision: 9584c6713b324636289d067944a46fd6b49df14b
     - platform: web
-      create_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
-      base_revision: ee80f08bbf97172ec030b8751ceab557177a34a6
+      create_revision: 9584c6713b324636289d067944a46fd6b49df14b
+      base_revision: 9584c6713b324636289d067944a46fd6b49df14b
+    - platform: windows
+      create_revision: 9584c6713b324636289d067944a46fd6b49df14b
+      base_revision: 9584c6713b324636289d067944a46fd6b49df14b
 
   # User provided section
 

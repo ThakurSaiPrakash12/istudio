@@ -43,18 +43,36 @@ class ClientsScreen extends StatefulWidget {
   State<ClientsScreen> createState() => _ClientsScreenState();
 }
 
-class _ClientsScreenState extends State<ClientsScreen> {
+class _ClientsScreenState extends State<ClientsScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   ClientFilter _activeFilter = ClientFilter.all;
+  late AnimationController _enterController;
 
   static final _currency =
       NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
   @override
+  void initState() {
+    super.initState();
+    _enterController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _enterController.dispose();
     super.dispose();
   }
+
+  Animation<double> _staggered(double begin, double end) =>
+      CurvedAnimation(
+        parent: _enterController,
+        curve: Interval(begin, end, curve: Curves.easeOutCubic),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +89,6 @@ class _ClientsScreenState extends State<ClientsScreen> {
       final clientEvents =
           provider.getEventsForClient(client.id, clientName: client.name);
 
-      // Search matching: name, phone, email, and event names
       final matchesSearch = query.isEmpty ||
           client.name.toLowerCase().contains(query) ||
           client.phone.toLowerCase().contains(query) ||
@@ -82,21 +99,22 @@ class _ClientsScreenState extends State<ClientsScreen> {
 
       if (!matchesSearch) return false;
 
-      // Filter chip matching
       switch (_activeFilter) {
         case ClientFilter.all:
           return true;
         case ClientFilter.upcoming:
           return clientEvents.any((e) =>
               e.status == EventStatus.upcoming &&
-              !e.startsAt.isBefore(DateTime.now().subtract(const Duration(days: 1))));
+              !e.startsAt
+                  .isBefore(DateTime.now().subtract(const Duration(days: 1))));
         case ClientFilter.active:
           return clientEvents.any((e) => e.status == EventStatus.inProgress);
         case ClientFilter.past:
           return clientEvents.isNotEmpty &&
               clientEvents.every((e) =>
                   e.status == EventStatus.completed ||
-                  e.startsAt.isBefore(DateTime.now().subtract(const Duration(days: 1))));
+                  e.startsAt.isBefore(
+                      DateTime.now().subtract(const Duration(days: 1))));
         case ClientFilter.paymentDue:
           return clientEvents.any((e) =>
               e.remainingAmount > 0 || e.status == EventStatus.paymentDue);
@@ -104,157 +122,182 @@ class _ClientsScreenState extends State<ClientsScreen> {
     }).toList();
 
     return SafeArea(
-      child: Column(
-        children: [
-          StudioAppBar(
-            title: 'Clients',
-            subtitle: '${allClients.length} registered profiles',
-            actions: [
-              IconButton(
-                tooltip: 'Add Client',
-                icon: Icon(Icons.person_add_alt_1_rounded,
-                    color: accent, size: 22),
-                onPressed: () => _showAddClientSheet(context),
-              ),
-            ],
-          ),
-
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color: context.cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: context.cardBorder.withValues(alpha: 0.35),
-                ),
-              ),
-              child: TextField(
-                controller: _searchController,
-                style: TextStyle(color: textMain, fontSize: 14),
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Search by client, phone, email, or event...',
-                  hintStyle: TextStyle(
-                    color: textMuted.withValues(alpha: 0.7),
-                    fontSize: 13,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: Column(
+            children: [
+              StudioAppBar(
+                title: 'Clients',
+                subtitle: '${allClients.length} registered profiles',
+                actions: [
+                  IconButton(
+                    tooltip: 'Add Client',
+                    icon: Icon(Icons.person_add_alt_1_rounded,
+                        color: accent, size: 22),
+                    onPressed: () => _showAddClientSheet(context),
                   ),
-                  prefixIcon: Icon(Icons.search_rounded,
-                      color: accent, size: 20),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear,
-                              color: textMuted, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+                ],
               ),
-            ),
-          ),
 
-          // Filter Chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: ClientFilter.values.map((filter) {
-                final isSelected = _activeFilter == filter;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8, bottom: 8),
-                  child: FilterChip(
-                    label: Text(filter.label),
-                    selected: isSelected,
-                    selectedColor: accent,
-                    backgroundColor: context.cardBg,
-                    showCheckmark: false,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? (context.isDark ? AppColors.ink : Colors.white)
-                          : textMain,
-                      fontSize: 12,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                    side: BorderSide(
-                      color: isSelected
-                          ? accent
-                          : context.cardBorder.withValues(alpha: 0.3),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _activeFilter = filter);
-                      }
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Client List
-          Expanded(
-            child: filteredClients.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.person_search_rounded,
-                              size: 48,
-                              color: textMuted.withValues(alpha: 0.5)),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No clients found',
-                            style: GoogleFonts.playfairDisplay(
-                              color: textMain,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Try modifying your search or filters.',
-                            style: TextStyle(
-                                color: textMuted, fontSize: 13),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+              // Search Bar
+              FadeTransition(
+                opacity: _staggered(0.0, 0.30),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: context.cardBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: context.cardBorder.withValues(alpha: 0.30),
                       ),
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: filteredClients.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final client = filteredClients[index];
-                      final events = provider.getEventsForClient(client.id,
-                          clientName: client.name);
-                      final totalValue = provider.getClientTotalValue(client.id,
-                          clientName: client.name);
-                      final totalRemaining = provider.getClientTotalRemaining(
-                          client.id,
-                          clientName: client.name);
-                      final hasRemaining = totalRemaining > 0;
+                    child: TextField(
+                      controller: _searchController,
+                      style: TextStyle(color: textMain, fontSize: 14),
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Search by client, phone, email, or event...',
+                        hintStyle: TextStyle(
+                          color: textMuted.withValues(alpha: 0.7),
+                          fontSize: 13,
+                        ),
+                        prefixIcon: Icon(Icons.search_rounded,
+                            color: accent, size: 20),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear,
+                                    color: textMuted, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
-                      return StudioCard(
-                        padding: const EdgeInsets.all(16),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
+              // Filter Chips
+              FadeTransition(
+                opacity: _staggered(0.10, 0.40),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: ClientFilter.values.map((filter) {
+                      final isSelected = _activeFilter == filter;
+                      return Padding(
+                        padding:
+                            const EdgeInsets.only(right: 8, bottom: 8),
+                        child: FilterChip(
+                          label: Text(filter.label),
+                          selected: isSelected,
+                          selectedColor: accent,
+                          backgroundColor: context.cardBg,
+                          showCheckmark: false,
+                          shape: const StadiumBorder(),
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? (context.isDark
+                                    ? AppColors.ink
+                                    : Colors.white)
+                                : textMain,
+                            fontSize: 12,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                          side: BorderSide(
+                            color: isSelected
+                                ? accent
+                                : context.cardBorder
+                                    .withValues(alpha: 0.4),
+                          ),
+                          onSelected: (_) {
+                            setState(() => _activeFilter = filter);
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+
+              // Client List
+              Expanded(
+                child: filteredClients.isEmpty
+                    ? FadeTransition(
+                        opacity: _staggered(0.20, 0.55),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(18),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        accent.withValues(alpha: 0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                      Icons.person_search_rounded,
+                                      size: 40,
+                                      color: textMuted.withValues(
+                                          alpha: 0.6)),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  'No clients found',
+                                  style: GoogleFonts.playfairDisplay(
+                                    color: textMain,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Try modifying your search or filters.',
+                                  style: TextStyle(
+                                      color: textMuted, fontSize: 13),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding:
+                            const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                        itemCount: filteredClients.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final client = filteredClients[index];
+                          final events = provider.getEventsForClient(
+                              client.id,
+                              clientName: client.name);
+                          final totalValue =
+                              provider.getClientTotalValue(client.id,
+                                  clientName: client.name);
+                          final totalRemaining =
+                              provider.getClientTotalRemaining(
+                                  client.id,
+                                  clientName: client.name);
+                          final hasRemaining = totalRemaining > 0;
+
+                          return StudioCard(
+                            borderRadius: 28,
+                            padding: const EdgeInsets.all(16),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -264,23 +307,42 @@ class _ClientsScreenState extends State<ClientsScreen> {
                               );
                             },
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    CircleAvatar(
-                                      radius: 22,
-                                      backgroundColor: accent
-                                          .withValues(alpha: 0.16),
-                                      child: Text(
-                                        client.name.isNotEmpty
-                                            ? client.name.characters.first
-                                                .toUpperCase()
-                                            : 'C',
-                                        style: TextStyle(
-                                          color: accent,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 16,
+                                    // Circular avatar
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            accent.withValues(
+                                                alpha: 0.22),
+                                            accent.withValues(
+                                                alpha: 0.06),
+                                          ],
+                                        ),
+                                        border: Border.all(
+                                          color: accent.withValues(
+                                              alpha: 0.28),
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          client.name.isNotEmpty
+                                              ? client
+                                                  .name.characters.first
+                                                  .toUpperCase()
+                                              : 'C',
+                                          style: TextStyle(
+                                            color: accent,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -302,7 +364,8 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                           Text(
                                             client.phone.isNotEmpty
                                                 ? client.phone
-                                                : (client.email.isNotEmpty
+                                                : (client
+                                                        .email.isNotEmpty
                                                     ? client.email
                                                     : 'No contact details'),
                                             style: TextStyle(
@@ -320,97 +383,122 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                Divider(
-                                    color: context.cardBorder.withValues(alpha: 0.3),
-                                    height: 1),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.event_note_outlined,
-                                              size: 13,
-                                              color: accent
-                                                  .withValues(alpha: 0.8)),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              '${events.length} ${events.length == 1 ? 'Event' : 'Events'}'
-                                              '${events.isNotEmpty ? ' · ${_currency.format(totalValue)}' : ''}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: textMain,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
+                                // Pill-shaped stats row
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: context.innerBg,
+                                    borderRadius:
+                                        BorderRadius.circular(999),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                                Icons
+                                                    .event_note_outlined,
+                                                size: 13,
+                                                color: accent.withValues(
+                                                    alpha: 0.8)),
+                                            const SizedBox(width: 5),
+                                            Flexible(
+                                              child: Text(
+                                                '${events.length} ${events.length == 1 ? 'Event' : 'Events'}'
+                                                '${events.isNotEmpty ? ' · ${_currency.format(totalValue)}' : ''}',
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow
+                                                        .ellipsis,
+                                                style: TextStyle(
+                                                  color: textMain,
+                                                  fontSize: 12,
+                                                  fontWeight:
+                                                      FontWeight.w600,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    if (hasRemaining)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 7, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: (context.isDark
-                                                  ? const Color(0xFFE8B86D)
-                                                  : const Color(0xFFD97706))
-                                              .withValues(alpha: 0.16),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border: Border.all(
-                                            color: (context.isDark
-                                                    ? const Color(0xFFE8B86D)
-                                                    : const Color(0xFFD97706))
-                                                .withValues(alpha: 0.4),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '${_currency.format(totalRemaining)} Due',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: context.isDark
-                                                ? const Color(0xFFE8B86D)
-                                                : const Color(0xFFD97706),
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 7, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: accent.withValues(alpha: 0.14),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          'All Paid',
-                                          style: TextStyle(
-                                            color: accent,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                          ],
                                         ),
                                       ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      if (hasRemaining)
+                                        Container(
+                                          padding:
+                                              const EdgeInsets
+                                                  .symmetric(
+                                                  horizontal: 9,
+                                                  vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors
+                                                    .urgencyWarning(
+                                                        context)
+                                                .withValues(
+                                                    alpha: 0.14),
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                                    999),
+                                            border: Border.all(
+                                              color: AppColors
+                                                      .urgencyWarning(
+                                                          context)
+                                                  .withValues(
+                                                      alpha: 0.35),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${_currency.format(totalRemaining)} Due',
+                                            maxLines: 1,
+                                            overflow:
+                                                TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors
+                                                  .urgencyWarning(
+                                                      context),
+                                              fontSize: 11,
+                                              fontWeight:
+                                                  FontWeight.w700,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        Container(
+                                          padding:
+                                              const EdgeInsets
+                                                  .symmetric(
+                                                  horizontal: 9,
+                                                  vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: accent.withValues(
+                                                alpha: 0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                                    999),
+                                          ),
+                                          child: Text(
+                                            'All Paid',
+                                            style: TextStyle(
+                                              color: accent,
+                                              fontSize: 11,
+                                              fontWeight:
+                                                  FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -426,7 +514,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (sheetContext) {
         return Padding(
@@ -441,6 +529,18 @@ class _ClientsScreenState extends State<ClientsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: sheetContext.textMuted.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -453,8 +553,10 @@ class _ClientsScreenState extends State<ClientsScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: sheetContext.textMuted),
-                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon:
+                          Icon(Icons.close, color: sheetContext.textMuted),
+                      onPressed: () =>
+                          Navigator.of(sheetContext).pop(),
                     ),
                   ],
                 ),
@@ -487,7 +589,8 @@ class _ClientsScreenState extends State<ClientsScreen> {
                 const SizedBox(height: 14),
                 StudioTextField(
                   label: 'Notes & Preferences',
-                  hint: 'Special lighting, themes, delivery requests...',
+                  hint:
+                      'Special lighting, themes, delivery requests...',
                   controller: notesController,
                   maxLines: 3,
                 ),
@@ -497,12 +600,14 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   onPressed: () {
                     final name = nameController.text.trim();
                     final phone = phoneController.text.trim();
-                    final digitsOnly = phone.replaceAll(RegExp(r'\D'), '');
+                    final digitsOnly =
+                        phone.replaceAll(RegExp(r'\D'), '');
 
                     if (name.isEmpty) {
                       ScaffoldMessenger.of(sheetContext).showSnackBar(
                         const SnackBar(
-                          content: Text('Please enter client full name'),
+                          content:
+                              Text('Please enter client full name'),
                         ),
                       );
                       return;
@@ -520,7 +625,8 @@ class _ClientsScreenState extends State<ClientsScreen> {
                     if (digitsOnly.length < 10) {
                       ScaffoldMessenger.of(sheetContext).showSnackBar(
                         const SnackBar(
-                          content: Text('Phone number must be at least 10 digits'),
+                          content: Text(
+                              'Phone number must be at least 10 digits'),
                         ),
                       );
                       return;
@@ -541,7 +647,8 @@ class _ClientsScreenState extends State<ClientsScreen> {
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Client "${newClient.name}" created.'),
+                        content: Text(
+                            'Client "${newClient.name}" created.'),
                       ),
                     );
                   },

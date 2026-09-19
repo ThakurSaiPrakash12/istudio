@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/studio_event.dart';
 import '../../providers/events_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/countdown_chip.dart';
 import '../../widgets/month_calendar.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
@@ -18,7 +20,8 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen>
+    with SingleTickerProviderStateMixin {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selected = DateTime(
     DateTime.now().year,
@@ -26,11 +29,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
     DateTime.now().day,
   );
 
+  late AnimationController _enterController;
+
   static final _currency =
       NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
   static DateTime _dateOnly(DateTime value) =>
       DateTime(value.year, value.month, value.day);
+
+  @override
+  void initState() {
+    super.initState();
+    _enterController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _enterController.dispose();
+    super.dispose();
+  }
+
+  Animation<double> _staggered(double begin, double end) =>
+      CurvedAnimation(
+        parent: _enterController,
+        curve: Interval(begin, end, curve: Curves.easeOutCubic),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -77,64 +103,148 @@ class _CalendarScreenState extends State<CalendarScreen> {
         : _dateOnly(upcomingEvents.first.startsAt);
 
     return SafeArea(
-      child: Column(
-        children: [
-          StudioAppBar(
-            title: 'Calendar',
-            subtitle: 'Booked sessions',
-            actions: [
-              IconButton(
-                tooltip: 'Add Shoot',
-                icon: Icon(Icons.add_circle_outline_rounded,
-                    color: accent, size: 22),
-                onPressed: () => CreateEventSheet.show(context),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: Column(
+            children: [
+              StudioAppBar(
+                title: 'Calendar',
+                subtitle: 'Booked sessions & shoot schedule',
+                actions: [
+                  IconButton(
+                    tooltip: 'Book Shoot',
+                    icon: Icon(Icons.add_circle_outline_rounded,
+                        color: accent, size: 22),
+                    onPressed: () => CreateEventSheet.show(context),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                  children: [
+                    // Calendar Card
+                    FadeTransition(
+                      opacity: _staggered(0.0, 0.35),
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.04),
+                          end: Offset.zero,
+                        ).animate(_staggered(0.0, 0.35)),
+                        child: StudioCard(
+                          borderRadius: 28,
+                          padding: const EdgeInsets.all(16),
+                          child: MonthCalendar(
+                            visibleMonth: _month,
+                            selectedDay: _selected,
+                            markedDays: marked,
+                            upcomingDays: upcomingDays,
+                            nearestUpcomingDay: nearestUpcomingDay,
+                            onMonthChanged: (value) =>
+                                setState(() => _month = value),
+                            onDaySelected: (value) =>
+                                setState(() => _selected = value),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+
+                    // Selected Day Header
+                    FadeTransition(
+                      opacity: _staggered(0.15, 0.50),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              DateFormat('EEEE, d MMMM').format(_selected),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.playfairDisplay(
+                                color: textMain,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                  color: accent.withValues(alpha: 0.28)),
+                            ),
+                            child: Text(
+                              '${dayEvents.length} ${dayEvents.length == 1 ? 'Shoot' : 'Shoots'}',
+                              style: TextStyle(
+                                color: accent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Day Events
+                    FadeTransition(
+                      opacity: _staggered(0.30, 0.70),
+                      child: dayEvents.isEmpty
+                          ? StudioCard(
+                              borderRadius: 28,
+                              padding: const EdgeInsets.all(24),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: accent.withValues(alpha: 0.08),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.event_available_outlined,
+                                        color: textMuted.withValues(alpha: 0.6),
+                                        size: 32,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'No shoots booked for this date.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(color: textMuted),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : Column(
+                              children: dayEvents
+                                  .map(
+                                    (event) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: _buildEventCard(context, event),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              children: [
-                StudioCard(
-                  child: MonthCalendar(
-                    visibleMonth: _month,
-                    selectedDay: _selected,
-                    markedDays: marked,
-                    upcomingDays: upcomingDays,
-                    nearestUpcomingDay: nearestUpcomingDay,
-                    onMonthChanged: (value) => setState(() => _month = value),
-                    onDaySelected: (value) => setState(() => _selected = value),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  DateFormat('EEEE, d MMMM').format(_selected),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: textMain,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (dayEvents.isEmpty)
-                  StudioCard(
-                    child: Text(
-                      'No shoots booked for this day.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: textMuted,
-                      ),
-                    ),
-                  )
-                else
-                  ...dayEvents.map(
-                    (event) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _buildEventCard(context, event),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -153,12 +263,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildEventCard(BuildContext context, StudioEvent event) {
     final amountDue = event.remainingAmount;
-    final amountText = amountDue > 0 ? _currency.format(amountDue) : 'None';
+    final amountText =
+        amountDue > 0 ? _currency.format(amountDue) : 'Paid in Full';
     final accent = context.accentColor;
     final textMain = context.textMain;
     final textMuted = context.textMuted;
 
     return StudioCard(
+      borderRadius: 28,
       onTap: () => _openEventDetails(context, event),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,6 +278,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Circular monogram
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.25),
+                      accent.withValues(alpha: 0.08),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  border:
+                      Border.all(color: accent.withValues(alpha: 0.30)),
+                ),
+                child: Center(
+                  child: Text(
+                    event.clientName.isNotEmpty
+                        ? event.clientName.characters.first.toUpperCase()
+                        : 'S',
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,30 +318,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       style: TextStyle(
                         color: textMain,
                         fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
-                      event.clientName,
+                      '${event.clientName} · ${event.eventType}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: textMuted,
-                          ),
+                      style: TextStyle(
+                        color: textMuted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 118),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              if (event.isWithin7Days)
+                CountdownChip(
+                  daysLeft: event.daysUntilStart,
+                  hoursLeft: event.hoursUntilStart,
+                  compact: true,
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     event.eventType,
@@ -209,105 +356,81 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     style: TextStyle(
                       color: accent,
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _EventInfoRow(
-            icon: Icons.schedule_rounded,
-            text: '${event.startTime} – ${event.endTime}',
-          ),
-          const SizedBox(height: 8),
-          _EventInfoRow(
-            icon: Icons.account_balance_wallet_outlined,
-            text: 'Amount due: $amountText',
-            color: amountDue > 0
-                ? (context.isDark
-                    ? const Color(0xFFE8B86D)
-                    : const Color(0xFFD97706))
-                : accent,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_outlined,
-                color: accent,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  event.location,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: textMuted,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => _openEventDetails(context, event),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                  child: Text(
-                    'Details →',
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Time & Location pill
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: context.innerBg,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.schedule_rounded, size: 14, color: accent),
+                const SizedBox(width: 6),
+                Text(
+                  '${event.startTime} – ${event.endTime}',
+                  style: TextStyle(
+                      color: textMain,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.location_on_outlined,
+                    size: 14, color: textMuted),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    event.location,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: textMuted, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Balance: $amountText',
+                style: TextStyle(
+                  color: amountDue > 0
+                      ? AppColors.urgencyWarning(context)
+                      : const Color(0xFF10B981),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Details',
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Icon(Icons.arrow_forward_ios_rounded,
+                      color: accent, size: 10),
+                ],
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _EventInfoRow extends StatelessWidget {
-  const _EventInfoRow({
-    required this.icon,
-    required this.text,
-    this.color,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final defaultMuted = context.textMuted;
-    final rowColor = color ?? defaultMuted;
-
-    return Row(
-      children: [
-        Icon(icon, color: context.accentColor, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: rowColor,
-              fontSize: 13,
-              fontWeight: color == null ? FontWeight.w500 : FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

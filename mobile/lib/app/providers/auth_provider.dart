@@ -58,6 +58,25 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  void loginDemo() {
+    _token = 'lumen-studio-demo-token';
+    _user = const User(
+      id: 'usr-demo-01',
+      username: 'alex',
+      phone: '+91 98765 43210',
+      ownerName: 'Alex Mercer',
+      studioName: 'Lumen Art Studio',
+      email: 'alex@lumenstudio.art',
+      city: 'Indiranagar, Bengaluru',
+      address: 'Studio Loft 4B, 100ft Road',
+      about: 'Editorial, Fashion & Fine Art Wedding Photography.',
+      specialties: 'Weddings · Maternity · Commercial',
+      instagram: '@lumenstudio.art',
+      website: 'lumenstudio.art',
+    );
+    notifyListeners();
+  }
+
   Future<bool> signup({
     required String username,
     required String phone,

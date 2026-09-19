@@ -67,135 +67,135 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            StudioAppBar(
-              title: 'Past Events',
-              subtitle: 'Completed shoots & business history',
-              leading: IconButton(
-                tooltip: 'Back',
-                icon: Icon(Icons.arrow_back_ios_new_rounded,
-                    color: textMain, size: 20),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              actions: [
-                IconButton(
-                  tooltip: _newestFirst ? 'Sort: Newest' : 'Sort: Oldest',
-                  icon: Icon(
-                    _newestFirst
-                        ? Icons.arrow_downward_rounded
-                        : Icons.arrow_upward_rounded,
-                    color: accent,
-                    size: 20,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Column(
+              children: [
+                StudioAppBar(
+                  title: 'Past Events',
+                  subtitle: 'Completed shoots & business history',
+                  leading: IconButton(
+                    tooltip: 'Back',
+                    icon: Icon(Icons.arrow_back_ios_new_rounded,
+                        color: textMain, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-                  onPressed: () {
-                    setState(() => _newestFirst = !_newestFirst);
-                  },
+                  actions: [
+                    IconButton(
+                      tooltip: _newestFirst ? 'Sort: Newest' : 'Sort: Oldest',
+                      icon: Icon(
+                        _newestFirst
+                            ? Icons.arrow_downward_rounded
+                            : Icons.arrow_upward_rounded,
+                        color: accent,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        setState(() => _newestFirst = !_newestFirst);
+                      },
+                    ),
+                  ],
+                ),
+                // Search Bar & Filter chips
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        style: TextStyle(color: textMain, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Search past shoots, clients, locations...',
+                          prefixIcon: Icon(Icons.search, color: textMuted, size: 20),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, color: textMuted, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: context.cardBg,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 36,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categories.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, idx) {
+                            final cat = _categories[idx];
+                            final isSelected = _selectedCategory == cat;
+                            return ChoiceChip(
+                              label: Text(cat),
+                              selected: isSelected,
+                              onSelected: (val) {
+                                if (val) setState(() => _selectedCategory = cat);
+                              },
+                              selectedColor: accent.withValues(alpha: 0.25),
+                              backgroundColor: context.cardBg,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? accent
+                                    : context.cardBorder,
+                              ),
+                              labelStyle: TextStyle(
+                                color: isSelected ? accent : textMain,
+                                fontSize: 12,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.history_toggle_off_rounded,
+                                  size: 48,
+                                  color: textMuted.withValues(alpha: 0.5)),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No completed shoots match your filter',
+                                style: TextStyle(
+                                  color: textMain,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final event = filtered[index];
+                            return _buildPastEventCard(context, event);
+                          },
+                        ),
                 ),
               ],
             ),
-            // Search Bar & Filter chips
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    onChanged: (_) => setState(() {}),
-                    style: TextStyle(color: textMain, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Search past shoots, clients, locations...',
-                      prefixIcon: Icon(Icons.search, color: textMuted, size: 20),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear, color: textMuted, size: 18),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: context.cardBg,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _categories.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (context, idx) {
-                        final cat = _categories[idx];
-                        final isSelected = _selectedCategory == cat;
-                        return ChoiceChip(
-                          label: Text(cat),
-                          selected: isSelected,
-                          onSelected: (val) {
-                            if (val) setState(() => _selectedCategory = cat);
-                          },
-                          selectedColor: accent.withValues(alpha: 0.25),
-                          backgroundColor: context.cardBg,
-                          side: BorderSide(
-                            color: isSelected
-                                ? accent
-                                : context.cardBorder,
-                          ),
-                          labelStyle: TextStyle(
-                            color: isSelected ? accent : textMain,
-                            fontSize: 12,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.normal,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.history_rounded,
-                              size: 48,
-                              color: textMuted.withValues(alpha: 0.5)),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No completed events match your search',
-                            style: TextStyle(
-                              color: textMain,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Try adjusting your search query or category filters',
-                            style: TextStyle(color: textMuted, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final event = filtered[index];
-                        return _buildPastEventCard(context, event);
-                      },
-                    ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -231,7 +231,7 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
                 height: 42,
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Icon(
                   Icons.photo_camera_rounded,
@@ -270,10 +270,10 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
               const SizedBox(width: 6),
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: statusColor.withValues(alpha: 0.3),
                     ),
@@ -305,10 +305,10 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
           const SizedBox(height: 14),
           // Financial snapshot row
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: context.innerBg,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: context.cardBorder.withValues(alpha: 0.3),
               ),

@@ -129,11 +129,54 @@ class _AuthScreenState extends State<AuthScreen>
                         SizedBox(height: compact ? 14 : 22),
                         FadeSlideIn(
                           animation: _card,
-                          child: _AuthCard(
-                            isLogin: _isLogin,
-                            isLoading: isLoading,
-                            onLogin: _handleLogin,
-                            onSignup: _handleSignup,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _AuthCard(
+                                isLogin: _isLogin,
+                                isLoading: isLoading,
+                                onLogin: _handleLogin,
+                                onSignup: _handleSignup,
+                              ),
+                              const SizedBox(height: 18),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () =>
+                                    context.read<AuthProvider>().loginDemo(),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: context.innerBg
+                                        .withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: context.accentColor
+                                          .withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.auto_awesome_rounded,
+                                            color: context.accentColor, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Explore Studio in Demo Mode →',
+                                          style: TextStyle(
+                                            color: context.accentColor,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -177,7 +220,7 @@ class _AuthCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
       decoration: BoxDecoration(
         color: context.cardBg,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         border: Border.all(color: context.cardBorder),
         boxShadow: [
           BoxShadow(
