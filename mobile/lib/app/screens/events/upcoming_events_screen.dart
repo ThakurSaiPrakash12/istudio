@@ -34,6 +34,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
     'Commercial',
     'Newborn',
     'Portrait',
+    'Others',
   ];
 
   @override
@@ -55,7 +56,20 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
       final matchesCategory = _selectedCategory == 'All' ||
           (_selectedCategory == 'Within 7 Days'
               ? event.isWithin7Days
-              : event.eventType.toLowerCase() == _selectedCategory.toLowerCase());
+              : _selectedCategory == 'Others'
+                  ? !const [
+                      'wedding',
+                      'maternity',
+                      'commercial',
+                      'newborn',
+                      'portrait',
+                      'pre-wedding',
+                      'fashion',
+                      'event'
+                    ].contains(event.eventType.toLowerCase()) ||
+                    event.eventType.toLowerCase() == 'others'
+                  : event.eventType.toLowerCase() ==
+                      _selectedCategory.toLowerCase());
       final matchesSearch = query.isEmpty ||
           event.title.toLowerCase().contains(query) ||
           event.clientName.toLowerCase().contains(query) ||
@@ -250,7 +264,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                       event.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: textMain,
                         fontSize: 17,
                         fontWeight: FontWeight.w700,

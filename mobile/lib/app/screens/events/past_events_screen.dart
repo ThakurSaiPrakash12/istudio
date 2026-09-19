@@ -32,6 +32,7 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
     'Commercial',
     'Newborn',
     'Portrait',
+    'Others',
   ];
 
   @override
@@ -51,7 +52,20 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
     final query = _searchController.text.trim().toLowerCase();
     final filtered = allPast.where((event) {
       final matchesCategory = _selectedCategory == 'All' ||
-          event.eventType.toLowerCase() == _selectedCategory.toLowerCase();
+          (_selectedCategory == 'Others'
+              ? !const [
+                  'wedding',
+                  'maternity',
+                  'commercial',
+                  'newborn',
+                  'portrait',
+                  'pre-wedding',
+                  'fashion',
+                  'event'
+                ].contains(event.eventType.toLowerCase()) ||
+                event.eventType.toLowerCase() == 'others'
+              : event.eventType.toLowerCase() ==
+                  _selectedCategory.toLowerCase());
       final matchesSearch = query.isEmpty ||
           event.title.toLowerCase().contains(query) ||
           event.clientName.toLowerCase().contains(query) ||
@@ -248,7 +262,7 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
                       event.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: textMain,
                         fontSize: 17,
                         fontWeight: FontWeight.w700,

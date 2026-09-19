@@ -162,10 +162,10 @@ class _CalendarScreenState extends State<CalendarScreen>
                               DateFormat('EEEE, d MMMM').format(_selected),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.playfairDisplay(
+                              style: GoogleFonts.plusJakartaSans(
                                 color: textMain,
                                 fontWeight: FontWeight.w700,
-                                fontSize: 18,
+                                fontSize: 17,
                               ),
                             ),
                           ),

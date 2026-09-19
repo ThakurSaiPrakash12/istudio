@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -125,67 +124,31 @@ class _LiquidGlassDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(999);
+    final radius = BorderRadius.circular(24);
 
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-        child: Container(
-          height: 68,
-          decoration: BoxDecoration(
-            borderRadius: radius,
+    return Container(
+      height: 64,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
+        border: Border.all(
+          color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
+          width: 0.8,
+        ),
+        boxShadow: [
+          BoxShadow(
             color: isDark
-                ? AppColors.glassCardDark.withValues(alpha: 0.85)
-                : AppColors.glassCardLight.withValues(alpha: 0.92),
-            border: Border.all(
-              color: isDark
-                  ? AppColors.glassBorderDark
-                  : AppColors.glassBorderLight,
-              width: 1.3,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.55)
-                    : const Color(0x180F172A),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-              if (isDark)
-                BoxShadow(
-                  color: AppColors.sky.withValues(alpha: 0.06),
-                  blurRadius: 40,
-                  offset: const Offset(0, 4),
-                ),
-            ],
+                ? Colors.black.withValues(alpha: 0.4)
+                : const Color(0x120F172A),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-          child: Stack(
-            children: [
-              // Specular top refraction rim
-              Positioned(
-                top: 0,
-                left: 32,
-                right: 32,
-                height: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0.0),
-                        Colors.white.withValues(alpha: isDark ? 0.35 : 0.7),
-                        Colors.white.withValues(alpha: 0.0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Row(
-                    children: [
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          children: [
                       _DockItem(
                         icon: Icons.space_dashboard_outlined,
                         activeIcon: Icons.space_dashboard_rounded,
@@ -224,14 +187,9 @@ class _LiquidGlassDock extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+              );
+            }
+          }
 
 class _DockItem extends StatefulWidget {
   const _DockItem({

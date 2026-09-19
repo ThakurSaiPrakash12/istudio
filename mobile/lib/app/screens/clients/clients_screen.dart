@@ -257,7 +257,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                                 const SizedBox(height: 14),
                                 Text(
                                   'No clients found',
-                                  style: GoogleFonts.playfairDisplay(
+                                  style: GoogleFonts.plusJakartaSans(
                                     color: textMain,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
@@ -546,7 +546,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                   children: [
                     Text(
                       'New Client Profile',
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: sheetContext.textMain,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,

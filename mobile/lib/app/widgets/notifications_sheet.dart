@@ -101,10 +101,11 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                       children: [
                         Text(
                           'Notifications',
-                          style: GoogleFonts.playfairDisplay(
-                            fontSize: 22,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 20,
                             fontWeight: FontWeight.w700,
                             color: textMain,
+                            letterSpacing: -0.3,
                           ),
                         ),
                         if (notifsProvider.unreadCount > 0) ...[

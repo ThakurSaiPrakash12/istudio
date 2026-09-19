@@ -31,23 +31,13 @@ class AppTheme {
       inversePrimary: AppColors.goldDeep,
     );
 
-    final display = GoogleFonts.playfairDisplayTextTheme();
-    final body = GoogleFonts.dmSansTextTheme();
-
-    final textTheme = body
-        .copyWith(
-          displayLarge: display.displayLarge,
-          displayMedium: display.displayMedium,
-          displaySmall: display.displaySmall,
-          headlineLarge: display.headlineLarge,
-          headlineMedium: display.headlineMedium,
-          headlineSmall: display.headlineSmall,
-          titleLarge: display.titleLarge,
-        )
-        .apply(
-          bodyColor: AppColors.paper,
-          displayColor: AppColors.paper,
-        );
+    final font = GoogleFonts.plusJakartaSansTextTheme();
+    final body = font;
+    final display = font;
+    final textTheme = font.apply(
+      bodyColor: AppColors.paper,
+      displayColor: AppColors.paper,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -62,10 +52,10 @@ class AppTheme {
         color: AppColors.glassCardDark,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(18),
           side: const BorderSide(
             color: AppColors.glassBorderDark,
-            width: 1.2,
+            width: 0.8,
           ),
         ),
       ),
@@ -73,21 +63,21 @@ class AppTheme {
         backgroundColor: AppColors.navy,
         elevation: 8,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-          side: const BorderSide(color: AppColors.glassBorderDark),
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.glassBorderDark, width: 0.8),
         ),
-        titleTextStyle: display.titleMedium?.copyWith(
+        titleTextStyle: textTheme.titleMedium?.copyWith(
           color: AppColors.paper,
           fontWeight: FontWeight.w700,
         ),
-        contentTextStyle: body.bodyMedium?.copyWith(color: AppColors.muted),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(color: AppColors.muted),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.navy,
         modalBackgroundColor: AppColors.navy,
         elevation: 16,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       chipTheme: ChipThemeData(
@@ -236,23 +226,13 @@ class AppTheme {
       inversePrimary: AppColors.lightPrimary,
     );
 
-    final display = GoogleFonts.playfairDisplayTextTheme();
-    final body = GoogleFonts.dmSansTextTheme();
-
-    final textTheme = body
-        .copyWith(
-          displayLarge: display.displayLarge,
-          displayMedium: display.displayMedium,
-          displaySmall: display.displaySmall,
-          headlineLarge: display.headlineLarge,
-          headlineMedium: display.headlineMedium,
-          headlineSmall: display.headlineSmall,
-          titleLarge: display.titleLarge,
-        )
-        .apply(
-          bodyColor: AppColors.lightTextMain,
-          displayColor: AppColors.lightTextMain,
-        );
+    final font = GoogleFonts.plusJakartaSansTextTheme();
+    final body = font;
+    final display = font;
+    final textTheme = font.apply(
+      bodyColor: AppColors.lightTextMain,
+      displayColor: AppColors.lightTextMain,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -267,26 +247,26 @@ class AppTheme {
         color: AppColors.lightCard,
         elevation: 0.5,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-          side: const BorderSide(color: AppColors.lightBorder),
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.lightBorder, width: 0.8),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.lightCard,
         elevation: 8,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-        titleTextStyle: display.titleMedium?.copyWith(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: textTheme.titleMedium?.copyWith(
           color: AppColors.lightTextMain,
           fontWeight: FontWeight.w700,
         ),
-        contentTextStyle: body.bodyMedium?.copyWith(color: AppColors.lightTextMuted),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(color: AppColors.lightTextMuted),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.lightCard,
         modalBackgroundColor: AppColors.lightCard,
         elevation: 16,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       chipTheme: ChipThemeData(

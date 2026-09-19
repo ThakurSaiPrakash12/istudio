@@ -102,7 +102,7 @@ class _AddDeliverableSheetState extends State<AddDeliverableSheet> {
               ),
               Text(
                 isEdit ? 'Edit deliverable' : 'Add deliverable',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -207,7 +207,7 @@ class InvoiceActionsSheet extends StatelessWidget {
                 children: [
                   Text(
                     invoice.number,
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.plusJakartaSans(
                       color: textMain,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -330,7 +330,7 @@ class _PartialPaymentSheetState extends State<PartialPaymentSheet> {
               ),
               Text(
                 'Partial payment',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,

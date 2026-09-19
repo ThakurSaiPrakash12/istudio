@@ -490,9 +490,9 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
       children: [
         Text(
           title,
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.plusJakartaSans(
             color: context.textMain,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),

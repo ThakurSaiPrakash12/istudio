@@ -276,10 +276,10 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                         const SizedBox(height: 12),
                         Text(
                           'No invoices here',
-                          style: GoogleFonts.playfairDisplay(
+                          style: GoogleFonts.plusJakartaSans(
                             color: textMain,
                             fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 6),

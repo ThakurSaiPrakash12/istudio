@@ -3,18 +3,18 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Premium Liquid Glass Card with frosted blur, specular highlights, and ambient glow
+/// Modern tactile card following Swiggy/Blinkit design language
 class StudioCard extends StatefulWidget {
   const StudioCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(18),
+    this.padding = const EdgeInsets.all(16),
     this.onTap,
-    this.borderRadius = 32.0,
+    this.borderRadius = 18.0,
     this.customBorder,
     this.gradient,
-    this.blurSigma = 18.0,
-    this.enableSpecularRim = true,
+    this.blurSigma = 0.0,
+    this.enableSpecularRim = false,
     this.animateOnAppear = false,
     this.appearDelay = Duration.zero,
   });
@@ -36,41 +36,24 @@ class StudioCard extends StatefulWidget {
 
 class _StudioCardState extends State<StudioCard>
     with SingleTickerProviderStateMixin {
-  late AnimationController _appearController;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
+  late AnimationController _pressController;
+  late Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
-    _appearController = AnimationController(
+    _pressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 90),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _appearController,
-      curve: Curves.easeOutCubic,
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.985).animate(
+      CurvedAnimation(parent: _pressController, curve: Curves.easeInOut),
     );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _appearController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    if (widget.animateOnAppear) {
-      Future.delayed(widget.appearDelay, () {
-        if (mounted) _appearController.forward();
-      });
-    } else {
-      _appearController.value = 1.0;
-    }
   }
 
   @override
   void dispose() {
-    _appearController.dispose();
+    _pressController.dispose();
     super.dispose();
   }
 
@@ -80,97 +63,57 @@ class _StudioCardState extends State<StudioCard>
     final radius = BorderRadius.circular(widget.borderRadius);
 
     final cardDecoration = BoxDecoration(
+      color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
       borderRadius: radius,
-      gradient: widget.gradient ??
-          (isDark
-              ? AppColors.glassCardGradientDark
-              : AppColors.glassCardGradientLight),
+      gradient: widget.gradient,
       border: widget.customBorder ??
           Border.all(
-            color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
-            width: 1.2,
+            color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
+            width: 0.8,
           ),
       boxShadow: [
         BoxShadow(
           color: isDark
-              ? Colors.black.withValues(alpha: 0.35)
+              ? Colors.black.withValues(alpha: 0.25)
               : const Color(0x0A0F172A),
-          blurRadius: 24,
-          offset: const Offset(0, 8),
+          blurRadius: 12,
+          offset: const Offset(0, 3),
           spreadRadius: 0,
         ),
-        if (isDark)
-          BoxShadow(
-            color: AppColors.sky.withValues(alpha: 0.04),
-            blurRadius: 40,
-            offset: const Offset(0, 2),
-          ),
       ],
     );
 
-    Widget innerContent = Container(
+    Widget cardWidget = Container(
       width: double.infinity,
       padding: widget.padding,
       decoration: cardDecoration,
-      child: Stack(
-        children: [
-          // Specular top refraction highlight
-          if (widget.enableSpecularRim)
-            Positioned(
-              top: 0,
-              left: 20,
-              right: 20,
-              height: 1,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withValues(alpha: 0.0),
-                      Colors.white.withValues(alpha: isDark ? 0.2 : 0.5),
-                      Colors.white.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          widget.child,
-        ],
-      ),
+      child: widget.child,
     );
 
-    Widget glassContent = ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-            sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
-        child: innerContent,
-      ),
-    );
-
-    // Wrap with appear animation
-    glassContent = FadeTransition(
-      opacity: _fadeAnim,
-      child: SlideTransition(
-        position: _slideAnim,
-        child: glassContent,
-      ),
-    );
-
-    if (widget.onTap == null) return glassContent;
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: radius,
-      child: InkWell(
+    if (widget.blurSigma > 0) {
+      cardWidget = ClipRRect(
         borderRadius: radius,
-        splashColor: isDark
-            ? AppColors.sky.withValues(alpha: 0.12)
-            : AppColors.lightPrimary.withValues(alpha: 0.08),
-        highlightColor: isDark
-            ? AppColors.sky.withValues(alpha: 0.06)
-            : AppColors.lightPrimary.withValues(alpha: 0.04),
-        onTap: widget.onTap,
-        child: glassContent,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: widget.blurSigma,
+            sigmaY: widget.blurSigma,
+          ),
+          child: cardWidget,
+        ),
+      );
+    }
+
+    if (widget.onTap == null) return cardWidget;
+
+    return GestureDetector(
+      onTapDown: (_) => _pressController.forward(),
+      onTapUp: (_) => _pressController.reverse(),
+      onTapCancel: () => _pressController.reverse(),
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: cardWidget,
       ),
     );
   }

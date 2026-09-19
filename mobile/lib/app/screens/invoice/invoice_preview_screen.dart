@@ -131,9 +131,9 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       appBar: AppBar(
         title: Text(
           widget.isDraft ? 'Preview invoice' : _invoice.number,
-          style: GoogleFonts.playfairDisplay(
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 19,
             color: textMain,
           ),
         ),

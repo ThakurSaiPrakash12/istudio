@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,8 @@ class AuthProvider extends ChangeNotifier {
     : _authService = authService ?? AuthService();
 
   static const _tokenKey = 'lumen_auth_token';
+  static const _userKey = 'lumen_cached_user';
+  static const _logoKey = 'lumen_cached_studio_logo';
 
   final AuthService _authService;
 
@@ -31,15 +34,50 @@ class AuthProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final storedToken = prefs.getString(_tokenKey);
-      if (storedToken == null || storedToken.isEmpty) {
-        return;
+      final storedUserJson = prefs.getString(_userKey);
+      final storedLogo = prefs.getString(_logoKey);
+
+      // 1. Immediately restore cached session and logo so UI doesn't flicker or wait for cold start
+      if (storedToken != null && storedToken.isNotEmpty) {
+        _token = storedToken;
+        if (storedUserJson != null && storedUserJson.isNotEmpty) {
+          try {
+            _user = User.fromJson(jsonDecode(storedUserJson) as Map<String, dynamic>);
+          } catch (_) {}
+        }
+        if (_user != null && _user!.logoUrl.isEmpty && storedLogo != null && storedLogo.isNotEmpty) {
+          _user = _user!.copyWith(logoUrl: storedLogo);
+        }
       }
-      final user = await _authService.me(storedToken);
-      _token = storedToken;
-      _user = user;
+
+      _isBootstrapping = false;
+      notifyListeners();
+
+      // 2. Fetch fresh profile in background without logging user out if server is sleeping
+      if (storedToken != null && storedToken.isNotEmpty) {
+        try {
+          var user = await _authService.me(storedToken);
+          // If server woke up with empty logo but device has cached logo, preserve cached logo
+          if (user.logoUrl.isEmpty && storedLogo != null && storedLogo.isNotEmpty) {
+            user = user.copyWith(logoUrl: storedLogo);
+          } else if (user.logoUrl.isNotEmpty) {
+            await prefs.setString(_logoKey, user.logoUrl);
+          }
+          _user = user;
+          await prefs.setString(_userKey, jsonEncode(user.toJson()));
+          notifyListeners();
+        } on ApiException catch (error) {
+          if (error.statusCode == 401) {
+            await _clearSession();
+            notifyListeners();
+          }
+          // If server is sleeping or network error, retain cached user session!
+        } catch (_) {
+          // Server sleeping / cold start - retain cached user session
+        }
+      }
     } catch (_) {
-      await _clearSession();
-    } finally {
+      // SharedPreferences error fallback
       _isBootstrapping = false;
       notifyListeners();
     }
@@ -99,6 +137,18 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _user = await _authService.updateProfile(token: _token!, fields: fields);
+      final prefs = await SharedPreferences.getInstance();
+      if (_user != null) {
+        await prefs.setString(_userKey, jsonEncode(_user!.toJson()));
+        if (fields.containsKey('logoUrl')) {
+          final newLogo = fields['logoUrl'] as String? ?? '';
+          if (newLogo.isEmpty) {
+            await prefs.remove(_logoKey);
+          } else {
+            await prefs.setString(_logoKey, newLogo);
+          }
+        }
+      }
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -116,6 +166,10 @@ class AuthProvider extends ChangeNotifier {
     if (_user != null) {
       _user = _user!.copyWith(logoUrl: logoUrl);
       notifyListeners();
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString(_logoKey, logoUrl);
+        prefs.setString(_userKey, jsonEncode(_user!.toJson()));
+      });
     }
   }
 
@@ -128,11 +182,17 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      _user = await _authService.uploadLogo(
+      final updatedUser = await _authService.uploadLogo(
         token: _token!,
         bytes: bytes,
         filename: filename,
       );
+      _user = updatedUser;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userKey, jsonEncode(updatedUser.toJson()));
+      if (updatedUser.logoUrl.isNotEmpty) {
+        await prefs.setString(_logoKey, updatedUser.logoUrl);
+      }
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -180,6 +240,10 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _persistSession(AuthResult result) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, result.token);
+    await prefs.setString(_userKey, jsonEncode(result.user.toJson()));
+    if (result.user.logoUrl.isNotEmpty) {
+      await prefs.setString(_logoKey, result.user.logoUrl);
+    }
     _token = result.token;
     _user = result.user;
   }
@@ -187,6 +251,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    await prefs.remove(_userKey);
+    await prefs.remove(_logoKey);
     _token = null;
     _user = null;
   }

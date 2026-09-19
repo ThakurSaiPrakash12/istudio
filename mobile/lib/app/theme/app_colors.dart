@@ -7,49 +7,49 @@ import '../models/studio_event.dart';
 class AppColors {
   const AppColors._();
 
-  // ================= LUMEN Liquid Glass Palette (Sky Blue) =================
-  // Radiant Sky Blue & Ice Cyan
-  static const Color sky = Color(0xFF38BDF8);       // Electric Sky 400
-  static const Color skyLight = Color(0xFFBAE6FD);  // Ice Sky 200
-  static const Color skyDeep = Color(0xFF0284C7);   // Vivid Ocean Sky 600
-  static const Color skyGlow = Color(0x5938BDF8);   // 35% Sky Ambient Halo
+  // ================= LUMEN Studio Palette (Electric Sky & Tactile Slate) =================
+  // Radiant Sky Blue & Modern Tech Accents (Swiggy / Blinkit precision)
+  static const Color sky = Color(0xFF0EA5E9);       // Sky Blue 500 (Primary Brand)
+  static const Color skyLight = Color(0xFFE0F2FE);  // Sky 100 (Tint surfaces)
+  static const Color skyDeep = Color(0xFF0284C7);   // Sky 600 (High contrast interactive)
+  static const Color skyGlow = Color(0x260EA5E9);   // 15% Subtle Focus Ring
   static const Color skyCyan = Color(0xFF06B6D4);   // Cyan 500
 
-  // Gold aliases redirected to Sky Blue for complete aesthetic overhaul
+  // Legacy aliases redirected to Sky Blue
   static const Color gold = sky;
   static const Color goldLight = skyLight;
   static const Color goldDeep = skyDeep;
   static const Color goldGlow = skyGlow;
 
-  // Obsidian Cinema (Dark Mode Base)
-  static const Color ink = Color(0xFF060911);
-  static const Color navy = Color(0xFF0A101F);
-  static const Color slate = Color(0xFF131D31);
-  static const Color paper = Color(0xFFF8FAFC);
-  static const Color muted = Color(0xFF94A3B8);
-  static const Color mist = Color(0x99F8FAFC);
+  // Dark Mode Surfaces (Deep Obsidian Slate)
+  static const Color ink = Color(0xFF0B0F19);        // Deep Slate Canvas
+  static const Color navy = Color(0xFF131A2A);       // Dark Elevated Surface
+  static const Color slate = Color(0xFF1E293B);      // Dark Card Surface
+  static const Color paper = Color(0xFFF8FAFC);      // High Contrast Text
+  static const Color muted = Color(0xFF94A3B8);      // Secondary Text
+  static const Color mist = Color(0x6694A3B8);
 
-  // Liquid Glass Translucencies (Dark Mode)
-  static const Color glassSurfaceDark = Color(0xB80B1326); // 72% opacity frosted
-  static const Color glassCardDark = Color(0xCC0D172E);    // 80% opacity frosted
-  static const Color glassBorderDark = Color(0x3838BDF8);  // Specular sky hairline rim
-  static const Color glassInnerDark = Color(0xA6060C1A);   // Inset container fill
-  static const Color glassSpecular = Color(0x5938BDF8);    // Top refraction highlight
+  // Modern Tactile Surfaces (Dark Mode)
+  static const Color glassSurfaceDark = Color(0xF2131A2A); 
+  static const Color glassCardDark = Color(0xFF162032);    
+  static const Color glassBorderDark = Color(0xFF24324D);  // Clean hairline border
+  static const Color glassInnerDark = Color(0xFF0F1523);   // Inset container fill
+  static const Color glassSpecular = Color(0x1F38BDF8);
 
-  // Editorial Silk (Light Mode Base)
-  static const Color lightScaffold = Color(0xFFF0F6FC);
-  static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightTextMain = Color(0xFF0B132B);
-  static const Color lightTextMuted = Color(0xFF64748B);
-  static const Color lightBorder = Color(0xFFE2E8F0);
-  static const Color lightInputFill = Color(0xFFF1F5F9);
-  static const Color lightPrimary = Color(0xFF0284C7); // Vivid Sky Blue 600
+  // Light Mode Surfaces (Clean, crisp Swiggy/Blinkit standard)
+  static const Color lightScaffold = Color(0xFFF8FAFC);    // Ultra clean slate canvas
+  static const Color lightCard = Color(0xFFFFFFFF);        // Pure white card
+  static const Color lightTextMain = Color(0xFF0F172A);    // Crisp dark slate text
+  static const Color lightTextMuted = Color(0xFF64748B);   // Balanced secondary text
+  static const Color lightBorder = Color(0xFFE2E8F0);      // Hairline 0.8px border
+  static const Color lightInputFill = Color(0xFFF1F5F9);   // Soft input container
+  static const Color lightPrimary = Color(0xFF0284C7);     // Rich Sky Blue 600
 
-  // Liquid Glass Translucencies (Light Mode)
-  static const Color glassSurfaceLight = Color(0xE6FFFFFF); // 90% opacity frosted
-  static const Color glassCardLight = Color(0xF2FFFFFF);
-  static const Color glassBorderLight = Color(0x4D38BDF8);
-  static const Color glassInnerLight = Color(0xB3F1F5F9);
+  // Modern Tactile Surfaces (Light Mode)
+  static const Color glassSurfaceLight = Color(0xF7FFFFFF);
+  static const Color glassCardLight = Color(0xFFFFFFFF);
+  static const Color glassBorderLight = Color(0xFFE2E8F0);
+  static const Color glassInnerLight = Color(0xFFF1F5F9);
 
   // Aliases for backwards compatibility
   static const Color aqua = sky;
@@ -60,11 +60,11 @@ class AppColors {
   static const Color ivory = paper;
   static const Color blush = muted;
 
-  // Linear Gradient Presets for Sky Blue Liquid Glass
+  // Gradients
   static const LinearGradient skyGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+    colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
   );
 
   static const LinearGradient goldGradient = skyGradient;
@@ -73,8 +73,8 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xE60E1A33),
-      Color(0xD9081224),
+      Color(0xFF182236),
+      Color(0xFF131A2A),
     ],
   );
 
@@ -82,8 +82,8 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFAFFFFFF),
-      Color(0xF2F0F7FF),
+      Color(0xFFFFFFFF),
+      Color(0xFFFBFDFF),
     ],
   );
 

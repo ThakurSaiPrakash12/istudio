@@ -150,7 +150,7 @@ class ClientDetailsScreen extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   client.name.isNotEmpty ? client.name.characters.first.toUpperCase() : 'C',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: textMain,
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -164,7 +164,7 @@ class ClientDetailsScreen extends StatelessWidget {
                   children: [
                     Text(
                       client.name,
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: textMain,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -347,7 +347,7 @@ class ClientDetailsScreen extends StatelessWidget {
                   'Financial Summary',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: textMain,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -525,7 +525,7 @@ class ClientDetailsScreen extends StatelessWidget {
                   'Client Events',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: textMain,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -612,7 +612,7 @@ class ClientDetailsScreen extends StatelessWidget {
                             event.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.playfairDisplay(
+                            style: GoogleFonts.plusJakartaSans(
                               color: textMain,
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -678,7 +678,7 @@ class ClientDetailsScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Payment History',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: textMain,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -826,7 +826,7 @@ class ClientDetailsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Edit Client Profile',
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: sheetContext.textMain,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,

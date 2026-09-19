@@ -195,11 +195,11 @@ class EventCountdownBanner extends StatelessWidget {
                         // 2. Event Title & Client Subtitle
                         Text(
                           event.title,
-                          style: GoogleFonts.playfairDisplay(
+                          style: GoogleFonts.plusJakartaSans(
                             color: textMain,
-                            fontSize: 21,
+                            fontSize: 19,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
+                            letterSpacing: -0.3,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

@@ -51,10 +51,11 @@ class StudioAppBar extends StatelessWidget implements PreferredSizeWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.plusJakartaSans(
                       color: AppColors.textMain(context),
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   if (subtitle != null)

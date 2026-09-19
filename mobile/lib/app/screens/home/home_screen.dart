@@ -338,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen>
         const SizedBox(height: 12),
         Text(
           '$greeting, $ownerName',
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.plusJakartaSans(
             color: textMain,
             fontSize: 28,
             fontWeight: FontWeight.w700,
@@ -627,7 +627,7 @@ class _HomeScreenState extends State<HomeScreen>
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: context.textMain,
                     fontWeight: FontWeight.w700,
                     fontSize: 19,
@@ -784,7 +784,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ? event.clientName.characters.first
                             .toUpperCase()
                         : 'S',
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.plusJakartaSans(
                       color: accent,
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
@@ -799,7 +799,7 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     Text(
                       event.title,
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: textMain,
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
@@ -942,7 +942,7 @@ class _HomeScreenState extends State<HomeScreen>
           const SizedBox(height: 14),
           Text(
             'No upcoming shoots scheduled',
-            style: GoogleFonts.playfairDisplay(
+            style: GoogleFonts.plusJakartaSans(
               color: context.textMain,
               fontSize: 17,
               fontWeight: FontWeight.w700,
@@ -1002,7 +1002,7 @@ class _HomeScreenState extends State<HomeScreen>
                       event.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: textMain,
                         fontSize: 16.5,
                         fontWeight: FontWeight.w700,

@@ -309,7 +309,7 @@ class EventDetailsScreen extends StatelessWidget {
                       event.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: context.textMain,
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -462,7 +462,7 @@ class EventDetailsScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Event Financials',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: context.textMain,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -593,7 +593,7 @@ class EventDetailsScreen extends StatelessWidget {
                         alignment: Alignment.centerRight,
                         child: Text(
                           _currency.format(event.netProfit),
-                          style: GoogleFonts.playfairDisplay(
+                          style: GoogleFonts.plusJakartaSans(
                             color: event.netProfit >= 0
                                 ? AppColors.profit(context)
                                 : AppColors.expense(context),
@@ -678,7 +678,7 @@ class EventDetailsScreen extends StatelessWidget {
             children: [
               Text(
                 'Payments',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -913,7 +913,7 @@ class EventDetailsScreen extends StatelessWidget {
             children: [
               Text(
                 'Event Expenses',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -1076,7 +1076,7 @@ class EventDetailsScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Work Progress',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: context.textMain,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -1091,7 +1091,7 @@ class EventDetailsScreen extends StatelessWidget {
                 child: Text(
                   '$completed / $total',
                   key: ValueKey('progress-count-$completed-$total'),
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.plusJakartaSans(
                     color: context.accentColor,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -1562,7 +1562,7 @@ class EventDetailsScreen extends StatelessWidget {
         children: [
           Text(
             'Notes',
-            style: GoogleFonts.playfairDisplay(
+            style: GoogleFonts.plusJakartaSans(
               color: context.textMain,
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -1621,7 +1621,7 @@ class EventDetailsScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Record Payment',
-                          style: GoogleFonts.playfairDisplay(
+                          style: GoogleFonts.plusJakartaSans(
                             color: context.textMain,
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -1793,7 +1793,7 @@ class EventDetailsScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Payment Proof & Receipt',
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.plusJakartaSans(
                       color: context.textMain,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -1834,7 +1834,7 @@ class EventDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       _currency.format(payment.amount),
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.plusJakartaSans(
                         color: context.textMain,
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
@@ -1935,7 +1935,7 @@ class EventDetailsScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Add Event Expense',
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.plusJakartaSans(
                       color: context.textMain,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -2027,7 +2027,7 @@ class EventDetailsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20)),
               title: Text(
                 'Update Event Status',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontWeight: FontWeight.w700,
                 ),

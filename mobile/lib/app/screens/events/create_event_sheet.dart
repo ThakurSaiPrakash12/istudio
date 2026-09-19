@@ -38,6 +38,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
   final _notesController = TextEditingController();
   final _totalAmountController = TextEditingController();
   final _advanceController = TextEditingController();
+  final _customEventTypeController = TextEditingController();
 
   String _eventType = 'Wedding';
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 3));
@@ -59,6 +60,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
     'Portrait',
     'Fashion',
     'Event',
+    'Others',
   ];
 
   @override
@@ -81,6 +83,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
     _notesController.dispose();
     _totalAmountController.dispose();
     _advanceController.dispose();
+    _customEventTypeController.dispose();
     super.dispose();
   }
 
@@ -227,10 +230,15 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
       matchedClientId = newClient.id;
     }
 
+    final effectiveEventType = (_eventType == 'Others' &&
+            _customEventTypeController.text.trim().isNotEmpty)
+        ? _customEventTypeController.text.trim()
+        : _eventType;
+
     final newEvent = StudioEvent(
       id: 'evt-${DateTime.now().millisecondsSinceEpoch}',
       title: _nameController.text.trim(),
-      eventType: _eventType,
+      eventType: effectiveEventType,
       clientId: matchedClientId,
       clientName: clientName,
       status: EventStatus.upcoming,
@@ -300,10 +308,11 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                         'Create New Event',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.playfairDisplay(
+                        style: GoogleFonts.plusJakartaSans(
                           color: textMain,
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -380,6 +389,21 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                       );
                     }).toList(),
                   ),
+                  if (_eventType == 'Others') ...[
+                    const SizedBox(height: 10),
+                    StudioTextField(
+                      label: 'Specify Event Type *',
+                      hint: 'e.g. Housewarming, Anniversary, Corporate Gala',
+                      controller: _customEventTypeController,
+                      validator: (val) {
+                        if (_eventType == 'Others' &&
+                            (val == null || val.trim().isEmpty)) {
+                          return 'Please specify the event type';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   StudioTextField(
                     label: 'Client Name *',
@@ -578,9 +602,9 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
       children: [
         Text(
           title,
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.plusJakartaSans(
             color: context.textMain,
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),

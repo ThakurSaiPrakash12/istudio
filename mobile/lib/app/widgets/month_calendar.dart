@@ -67,10 +67,11 @@ class MonthCalendar extends StatelessWidget {
               child: Text(
                 DateFormat('MMMM yyyy').format(visibleMonth),
                 textAlign: TextAlign.center,
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.plusJakartaSans(
                   color: textMain,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
             ),

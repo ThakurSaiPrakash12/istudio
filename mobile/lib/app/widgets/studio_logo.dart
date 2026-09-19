@@ -71,42 +71,38 @@ class StudioLogo extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: compact ? 12 : 18),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'LUMEN',
-                style: GoogleFonts.playfairDisplay(
-                  color: textMain,
-                  fontSize: compact ? 26 : 36,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 6,
-                ),
-              ),
-            ],
+          SizedBox(height: compact ? 10 : 16),
+          Text(
+            'LUMEN',
+            style: GoogleFonts.plusJakartaSans(
+              color: textMain,
+              fontSize: compact ? 22 : 30,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 4,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
               color: isDark
-                  ? AppColors.sky.withValues(alpha: 0.14)
-                  : AppColors.lightPrimary.withValues(alpha: 0.1),
+                  ? AppColors.sky.withValues(alpha: 0.12)
+                  : AppColors.lightPrimary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
                 color: isDark
-                    ? AppColors.sky.withValues(alpha: 0.35)
-                    : AppColors.lightPrimary.withValues(alpha: 0.25),
+                    ? AppColors.sky.withValues(alpha: 0.3)
+                    : AppColors.lightPrimary.withValues(alpha: 0.2),
+                width: 0.8,
               ),
             ),
             child: Text(
-              'PHOTOGRAPHY ATELIER',
-              style: GoogleFonts.dmSans(
-                color: isDark ? AppColors.gold : AppColors.lightPrimary,
+              'STUDIO OS',
+              style: GoogleFonts.plusJakartaSans(
+                color: isDark ? AppColors.sky : AppColors.lightPrimary,
                 fontSize: compact ? 9.5 : 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2.2,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.8,
               ),
             ),
           ),

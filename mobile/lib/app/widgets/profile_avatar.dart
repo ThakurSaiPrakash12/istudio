@@ -86,15 +86,16 @@ class ProfileAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: isDark
-              ? const [AppColors.aqua, AppColors.slate]
-              : const [AppColors.lightPrimary, Color(0xFF0F766E)],
+        color: isDark ? AppColors.glassCardDark : AppColors.lightInputFill,
+        border: Border.all(
+          color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
+          width: 0.8,
         ),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.28),
-            blurRadius: 12,
+            color: isDark ? Colors.black.withValues(alpha: 0.25) : const Color(0x0A0F172A),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
