@@ -42,6 +42,14 @@ class NotificationsProvider extends ChangeNotifier {
       (n.urgency == NotificationUrgency.critical ||
           n.urgency == NotificationUrgency.warning));
 
+  bool _notificationsAllowed = false;
+  bool get notificationsAllowed => _notificationsAllowed;
+
+  void enableNotifications() {
+    _notificationsAllowed = true;
+    notifyListeners();
+  }
+
   /// Regenerates notifications based on current events
   void syncEvents(EventsProvider eventsProvider) {
     final now = DateTime.now();
@@ -62,33 +70,46 @@ class NotificationsProvider extends ChangeNotifier {
         if (_dismissedIds.contains(notifId)) continue;
 
         NotificationUrgency urgency;
+        String notifTitle = event.title;
         String message;
 
-        if (diff.inHours <= 24 && diff.inSeconds > 0) {
+        final days = event.daysUntilStart;
+        final hours = event.hoursUntilStart;
+        final mins = event.minutesUntilStart;
+
+        if (diff.inSeconds <= 0) {
           urgency = NotificationUrgency.critical;
-          final hours = event.hoursUntilStart;
-          final mins = event.minutesUntilStart;
+          notifTitle = '🔥 TODAY: ${event.title}';
+          message =
+              '${event.title} with ${event.clientName} is happening TODAY at ${event.startTime} (${event.location}).';
+        } else if (days == 0 || diff.inHours <= 24) {
+          urgency = NotificationUrgency.critical;
+          notifTitle = '🚨 1-DAY ALERT (Tomorrow): ${event.title}';
           final timeStr = hours > 0 ? '$hours hours and $mins mins' : '$mins minutes';
           message =
-              '${event.title} with ${event.clientName} starts in $timeStr at ${event.location}. Verify gear & battery charges.';
-        } else if (diff.inDays <= 3 && diff.inSeconds > 0) {
+              '${event.title} with ${event.clientName} starts in $timeStr at ${event.location}. Verify gear, lenses & battery charges.';
+        } else if (days == 2) {
           urgency = NotificationUrgency.warning;
+          notifTitle = '⚡ 2-DAY ALERT: ${event.title}';
           message =
-              '${event.title} starts in ${event.daysUntilStart} days and ${event.hoursUntilStart} hours. Confirm venue timing and crew availability.';
-        } else if (diff.inSeconds <= 0) {
-          urgency = NotificationUrgency.critical;
-          message = '${event.title} is scheduled for today at ${event.startTime}.';
+              '${event.title} starts in 2 days at ${event.location}. Finalize timeline, shot list & crew availability with ${event.clientName}.';
+        } else if (days == 3) {
+          urgency = NotificationUrgency.warning;
+          notifTitle = '⚡ 3-DAY ALERT: ${event.title}';
+          message =
+              '${event.title} starts in 3 days. Confirm venue access, equipment rental, and schedule details with ${event.clientName}.';
         } else {
           urgency = NotificationUrgency.notice;
+          notifTitle = '📅 $days-DAY REMINDER: ${event.title}';
           message =
-              'Upcoming session in ${event.daysUntilStart} days and ${event.hoursUntilStart} hours (${event.eventType} shoot for ${event.clientName}).';
+              'Upcoming ${event.eventType} shoot in $days days and $hours hours for ${event.clientName} at ${event.location}.';
         }
 
         generated.add(
           StudioNotification(
             id: notifId,
             eventId: event.id,
-            title: event.title,
+            title: notifTitle,
             message: message,
             startsAt: event.fullStartDateTime,
             createdAt: now,
@@ -109,7 +130,7 @@ class NotificationsProvider extends ChangeNotifier {
             StudioNotification(
               id: payNotifId,
               eventId: event.id,
-              title: 'Payment Due: ${event.title}',
+              title: '💰 Payment Due: ${event.title}',
               message:
                   '${event.clientName} has a balance of ₹${event.remainingAmount.toStringAsFixed(0)} pending.',
               startsAt: event.fullStartDateTime,
@@ -125,7 +146,7 @@ class NotificationsProvider extends ChangeNotifier {
       }
     }
 
-    // Sort by startsAt ascending (most imminent shoots first)
+    // Sort by urgency and startsAt ascending (most imminent shoots first)
     generated.sort((a, b) {
       if (a.urgency == NotificationUrgency.critical &&
           b.urgency != NotificationUrgency.critical) {

@@ -13,6 +13,7 @@ import 'package:lumen_studio/app/screens/clients/clients_screen.dart';
 import 'package:lumen_studio/app/screens/home/home_screen.dart';
 import 'package:lumen_studio/app/screens/shell/app_shell.dart';
 import 'package:lumen_studio/app/theme/app_theme.dart';
+import 'package:lumen_studio/app/widgets/monthly_financial_summary_sheet.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -244,7 +245,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Upcoming Events'), findsOneWidget);
-      expect(find.text('+ Add Event'), findsOneWidget);
+      expect(find.textContaining('Add Event'), findsOneWidget);
       expect(find.text('Past Events'), findsOneWidget);
       expect(find.text('View all →'), findsNWidgets(2));
     });
@@ -303,6 +304,47 @@ void main() {
       await tester.tap(find.text('Clients').last);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+
+      notifs.dispose();
+    });
+
+    testWidgets('MonthlyFinancialSummarySheet renders monthly stats and event breakdown',
+        (WidgetTester tester) async {
+      final notifs = NotificationsProvider();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => EventsProvider()),
+            ChangeNotifierProvider(create: (_) => notifs),
+            ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => MonthlyFinancialSummarySheet.show(
+                    context,
+                    initialMonth: DateTime(2026, 8),
+                  ),
+                  child: const Text('Open Summary'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Summary'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Monthly Financial Summary'), findsOneWidget);
+      expect(find.text('August 2026'), findsOneWidget);
+      expect(find.text('Total Event Value'), findsOneWidget);
+      expect(find.text('Amount Received'), findsOneWidget);
+      expect(find.text('Total Expenditure'), findsOneWidget);
+      expect(find.text('Net Amount Left'), findsOneWidget);
 
       notifs.dispose();
     });

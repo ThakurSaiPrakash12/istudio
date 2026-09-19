@@ -10,7 +10,6 @@ import '../../providers/notifications_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/countdown_chip.dart';
 import '../../widgets/event_countdown_banner.dart';
-import '../../widgets/notifications_sheet.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
@@ -80,8 +79,7 @@ class _HomeScreenState extends State<HomeScreen>
     final nearestHeroEvent =
         shootsWithin7Days.isNotEmpty ? shootsWithin7Days.first : null;
 
-    final totalBalanceDue =
-        upcoming.fold(0.0, (acc, e) => acc + e.remainingAmount);
+
 
     return SafeArea(
       child: Center(
@@ -136,17 +134,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(height: 18),
 
-                    // 2. KPI Summary Ribbon
-                    _AnimatedSection(
-                      animation: _staggered(0.08, 0.35),
-                      child: _buildKpiRibbon(
-                        context,
-                        upcomingCount: upcoming.length,
-                        within7DaysCount: shootsWithin7Days.length,
-                        balanceDue: totalBalanceDue,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+
 
                     // 3. 7-Day Countdown Alert Hero Banner
                     if (nearestHeroEvent != null &&
@@ -358,252 +346,58 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ================= 2. KPI Ribbon =================
-  Widget _buildKpiRibbon(
-    BuildContext context, {
-    required int upcomingCount,
-    required int within7DaysCount,
-    required double balanceDue,
-  }) {
-    final accent = context.accentColor;
-    return Row(
-      children: [
-        Expanded(
-          child: _buildKpiTile(
-            context,
-            title: 'Upcoming',
-            value: '$upcomingCount',
-            subtitle: 'Booked shoots',
-            icon: Icons.calendar_month_rounded,
-            accentColor: accent,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildKpiTile(
-            context,
-            title: 'In 7 Days',
-            value: '$within7DaysCount',
-            subtitle:
-                within7DaysCount > 0 ? 'Urgent attention' : 'On schedule',
-            icon: Icons.timer_outlined,
-            accentColor: within7DaysCount > 0
-                ? AppColors.urgencyWarning(context)
-                : accent,
-            highlight: within7DaysCount > 0,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildKpiTile(
-            context,
-            title: 'Balance',
-            value: _currency.format(balanceDue),
-            subtitle: balanceDue > 0 ? 'Pending' : 'All clear',
-            icon: Icons.account_balance_wallet_outlined,
-            accentColor: balanceDue > 0
-                ? AppColors.urgencyWarning(context)
-                : const Color(0xFF10B981),
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildKpiTile(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color accentColor,
-    bool highlight = false,
-  }) {
-    final textMain = context.textMain;
-    final textMuted = context.textMuted;
-
-    return StudioCard(
-      borderRadius: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      customBorder: highlight
-          ? Border.all(
-              color: accentColor.withValues(alpha: 0.50), width: 1.3)
-          : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: textMuted,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(icon, size: 13, color: accentColor),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: GoogleFonts.dmSans(
-                color: textMain,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: highlight
-                  ? accentColor
-                  : textMuted.withValues(alpha: 0.8),
-              fontSize: 10.5,
-              fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ================= 3. Quick Action Bar =================
   Widget _buildQuickActionBar(
       BuildContext context, NotificationsProvider? notifs) {
-    final unread = notifs?.unreadCount ?? 0;
     final isDark = context.isDark;
 
-    return Row(
-      children: [
-        // "+ Add Event" primary pill button
-        Expanded(
-          flex: 5,
-          child: _PressableButton(
-            onTap: () => CreateEventSheet.show(context),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  vertical: 14, horizontal: 16),
-              decoration: BoxDecoration(
-                gradient: isDark
-                    ? AppColors.skyGradient
-                    : const LinearGradient(
-                        colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
-                      ),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.45),
-                  width: 1.2,
+    return _PressableButton(
+      onTap: () => CreateEventSheet.show(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? AppColors.skyGradient
+              : const LinearGradient(
+                  colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.sky
-                        .withValues(alpha: isDark ? 0.35 : 0.22),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(
-                      Icons.add_rounded,
-                      color: Color(0xFF040C1A),
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      '+ Add Event',
-                      style: TextStyle(
-                        color: Color(0xFF040C1A),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
-                ),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.45),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.sky.withValues(alpha: isDark ? 0.35 : 0.22),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(
+              Icons.add_rounded,
+              color: Color(0xFF040C1A),
+              size: 22,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'Add Event',
+              style: TextStyle(
+                color: Color(0xFF040C1A),
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.3,
               ),
             ),
-          ),
+          ],
         ),
-        const SizedBox(width: 10),
-
-        // Alerts Button
-        Expanded(
-          flex: 4,
-          child: _PressableButton(
-            onTap: () => NotificationsSheet.show(context),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  vertical: 14, horizontal: 12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.glassCardDark : Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: unread > 0
-                      ? AppColors.urgencyCritical(context)
-                          .withValues(alpha: 0.6)
-                      : (isDark
-                          ? AppColors.glassBorderDark
-                          : AppColors.lightBorder),
-                  width: 1.2,
-                ),
-              ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.notifications_active_outlined,
-                      color: unread > 0
-                          ? AppColors.urgencyCritical(context)
-                          : context.textMain,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      unread > 0 ? 'Alerts ($unread)' : 'Alerts',
-                      style: TextStyle(
-                        color: unread > 0
-                            ? AppColors.urgencyCritical(context)
-                            : context.textMain,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 

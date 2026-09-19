@@ -53,34 +53,83 @@ class MonthCalendar extends StatelessWidget {
 
     return Column(
       children: [
-        // Month nav
+        // Month & Year nav
         Row(
           children: [
             IconButton(
-              tooltip: 'Previous month',
+              tooltip: 'Previous Year',
+              onPressed: () => onMonthChanged(
+                DateTime(visibleMonth.year - 1, visibleMonth.month),
+              ),
+              icon: Icon(Icons.first_page_rounded, color: textMuted, size: 20),
+            ),
+            IconButton(
+              tooltip: 'Previous Month',
               onPressed: () => onMonthChanged(
                 DateTime(visibleMonth.year, visibleMonth.month - 1),
               ),
               icon: Icon(Icons.chevron_left_rounded, color: textMain),
             ),
             Expanded(
-              child: Text(
-                DateFormat('MMMM yyyy').format(visibleMonth),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  color: textMain,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDay,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    initialDatePickerMode: DatePickerMode.year,
+                    helpText: 'JUMP TO ANY YEAR, MONTH & DAY',
+                  );
+                  if (picked != null) {
+                    onMonthChanged(DateTime(picked.year, picked.month));
+                    onDaySelected(picked);
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          DateFormat('MMMM yyyy').format(visibleMonth),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: textMain,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_drop_down_circle_outlined,
+                          color: accent,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
             IconButton(
-              tooltip: 'Next month',
+              tooltip: 'Next Month',
               onPressed: () => onMonthChanged(
                 DateTime(visibleMonth.year, visibleMonth.month + 1),
               ),
               icon: Icon(Icons.chevron_right_rounded, color: textMain),
+            ),
+            IconButton(
+              tooltip: 'Next Year',
+              onPressed: () => onMonthChanged(
+                DateTime(visibleMonth.year + 1, visibleMonth.month),
+              ),
+              icon: Icon(Icons.last_page_rounded, color: textMuted, size: 20),
             ),
           ],
         ),

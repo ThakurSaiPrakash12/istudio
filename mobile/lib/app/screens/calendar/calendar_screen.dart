@@ -8,6 +8,7 @@ import '../../providers/events_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/countdown_chip.dart';
 import '../../widgets/month_calendar.dart';
+import '../../widgets/monthly_financial_summary_sheet.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import '../events/create_event_sheet.dart';
@@ -113,6 +114,35 @@ class _CalendarScreenState extends State<CalendarScreen>
                 subtitle: 'Booked sessions & shoot schedule',
                 actions: [
                   IconButton(
+                    tooltip: 'Monthly Financial Summary',
+                    icon: Icon(Icons.analytics_outlined,
+                        color: accent, size: 22),
+                    onPressed: () => MonthlyFinancialSummarySheet.show(
+                      context,
+                      initialMonth: _month,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Jump to Date',
+                    icon: Icon(Icons.calendar_month_outlined,
+                        color: accent, size: 22),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selected,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                        helpText: 'JUMP TO ANY DATE',
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _month = DateTime(picked.year, picked.month);
+                          _selected = picked;
+                        });
+                      }
+                    },
+                  ),
+                  IconButton(
                     tooltip: 'Book Shoot',
                     icon: Icon(Icons.add_circle_outline_rounded,
                         color: accent, size: 22),
@@ -149,7 +179,62 @@ class _CalendarScreenState extends State<CalendarScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 12),
+
+                    // Quick Financial Summary Banner
+                    FadeTransition(
+                      opacity: _staggered(0.10, 0.40),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => MonthlyFinancialSummarySheet.show(
+                          context,
+                          initialMonth: _month,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                                color: accent.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.insights_rounded,
+                                  color: accent, size: 22),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Monthly Financial Summary',
+                                      style: TextStyle(
+                                        color: textMain,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'View income, expenses & net left for ${DateFormat('MMMM yyyy').format(_month)}',
+                                      style: TextStyle(
+                                        color: textMuted,
+                                        fontSize: 11.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios_rounded,
+                                  color: accent, size: 14),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
 
                     // Selected Day Header
                     FadeTransition(

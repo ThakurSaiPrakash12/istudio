@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/studio_event.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
@@ -162,40 +165,46 @@ class EventDetailsScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: urgencyColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: urgencyColor,
-                        shape: BoxShape.circle,
+              Expanded(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: urgencyColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: urgencyColor,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      days == 0
-                          ? 'IMMINENT SHOOT'
-                          : 'UPCOMING SHOOT IN 7 DAYS',
-                      style: TextStyle(
-                        color: urgencyColor,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          days == 0
+                              ? 'IMMINENT SHOOT'
+                              : 'UPCOMING SHOOT IN 7 DAYS',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: urgencyColor,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 event.countdownFormatted,
                 style: TextStyle(
@@ -1590,9 +1599,11 @@ class EventDetailsScreen extends StatelessWidget {
     final amountController = TextEditingController();
     final refController = TextEditingController();
     final proofController = TextEditingController();
+    final event = context.read<EventsProvider>().findById(eventId);
 
     PaymentMethod selectedMethod = PaymentMethod.upi;
     bool attachProof = false;
+    bool isUploadingProof = false;
 
     showModalBottomSheet(
       context: context,
@@ -1726,11 +1737,156 @@ class EventDetailsScreen extends StatelessWidget {
                       ],
                     ),
                     if (attachProof) ...[
-                      const SizedBox(height: 6),
-                      StudioTextField(
-                        label: 'Proof Document / Image File',
-                        hint: 'e.g. payment_receipt.jpg',
-                        controller: proofController,
+                      const SizedBox(height: 10),
+                      if (proofController.text.trim().isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Payment Proof Image Attached',
+                                  style: TextStyle(
+                                    color: context.textMain,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(Icons.close_rounded, size: 18, color: Colors.redAccent),
+                                onPressed: () {
+                                  setModalState(() {
+                                    proofController.clear();
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: isUploadingProof
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.cloud_upload_outlined, size: 18),
+                          label: Text(
+                            isUploadingProof
+                                ? 'Uploading Image to Cloud...'
+                                : (proofController.text.trim().isNotEmpty
+                                    ? 'Change Proof Image'
+                                    : 'Upload Image (Cloudinary)'),
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.accentColor,
+                            side: BorderSide(
+                                color: context.accentColor.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: isUploadingProof
+                              ? null
+                              : () async {
+                                  final token = context.read<AuthProvider>().token;
+                                  setModalState(() => isUploadingProof = true);
+                                  try {
+                                    final picked = await ImagePicker().pickImage(
+                                      source: ImageSource.gallery,
+                                      imageQuality: 85,
+                                    );
+                                    if (picked != null) {
+                                      final bytes = await picked.readAsBytes();
+                                      final api = ApiService();
+                                      final res = await api.postMultipart(
+                                        '/auth/logo',
+                                        fieldName: 'logo',
+                                        bytes: bytes,
+                                        filename: picked.name,
+                                        token: token,
+                                      );
+                                      final imageUrl = res['imageUrl'] as String?;
+                                      if (imageUrl != null && imageUrl.isNotEmpty) {
+                                        final extracted = res['extractedTxn'] as Map<String, dynamic>?;
+                                        final fname = picked.name.toLowerCase();
+
+                                        setModalState(() {
+                                          proofController.text = imageUrl;
+
+                                          if (extracted != null && extracted['method'] != null) {
+                                            final m = extracted['method'].toString();
+                                            if (m == 'card') {
+                                              selectedMethod = PaymentMethod.card;
+                                            } else if (m == 'bankTransfer') {
+                                              selectedMethod = PaymentMethod.bankTransfer;
+                                            } else {
+                                              selectedMethod = PaymentMethod.upi;
+                                            }
+                                          } else if (fname.contains('card') || fname.contains('pos')) {
+                                            selectedMethod = PaymentMethod.card;
+                                          } else if (fname.contains('bank') || fname.contains('utr') || fname.contains('transfer')) {
+                                            selectedMethod = PaymentMethod.bankTransfer;
+                                          } else {
+                                            selectedMethod = PaymentMethod.upi;
+                                          }
+
+                                          if (refController.text.trim().isEmpty) {
+                                            if (extracted != null && extracted['reference'] != null && extracted['reference'].toString().isNotEmpty) {
+                                              refController.text = extracted['reference'].toString();
+                                            } else {
+                                              final now = DateTime.now();
+                                              final randDigits = (now.microsecondsSinceEpoch % 1000000000).toString();
+                                              if (selectedMethod == PaymentMethod.card) {
+                                                refController.text = 'POS/$randDigits';
+                                              } else if (selectedMethod == PaymentMethod.bankTransfer) {
+                                                refController.text = 'UTR/$randDigits';
+                                              } else {
+                                                refController.text = 'UPI/${now.year}/$randDigits';
+                                              }
+                                            }
+                                          }
+
+                                          if (titleController.text.trim().isEmpty || titleController.text.trim() == 'Payment') {
+                                            if (selectedMethod == PaymentMethod.card) {
+                                              titleController.text = 'Credit/Debit Card Payment';
+                                            } else if (selectedMethod == PaymentMethod.bankTransfer) {
+                                              titleController.text = 'Bank Transfer Payment';
+                                            } else {
+                                              titleController.text = 'UPI Payment';
+                                            }
+                                          }
+
+                                          final rem = event?.remainingAmount ?? 0;
+                                           if (amountController.text.trim().isEmpty && rem > 0) {
+                                             amountController.text = rem.toInt().toString();
+                                           }
+                                        });
+                                      }
+                                    }
+                                  } catch (e) {
+                                    debugPrint('Upload proof error: $e');
+                                  } finally {
+                                    setModalState(() => isUploadingProof = false);
+                                  }
+                                },
+                        ),
                       ),
                     ],
 
@@ -1774,102 +1930,138 @@ class EventDetailsScreen extends StatelessWidget {
 
   void _showProofDialog(BuildContext context, PaymentRecord payment) {
     final dateStr = DateFormat('d MMMM yyyy, h:mm a').format(payment.paidAt);
+    final hasImageProof = payment.proof != null &&
+        payment.proof!.trim().isNotEmpty &&
+        (payment.proof!.startsWith('http') ||
+            payment.proof!.startsWith('data:image'));
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Theme.of(context).bottomSheetTheme.backgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              24,
+              20,
+              MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Payment Proof & Receipt',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: context.textMain,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Payment Proof & Receipt',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: context.textMain,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close, color: context.textMuted),
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: context.innerBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: context.accentColor.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: context.accentColor.withValues(alpha: 0.16),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.verified_outlined,
+                            color: context.accentColor,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _currency.format(payment.amount),
+                          style: GoogleFonts.plusJakartaSans(
+                            color: context.textMain,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Payment Verified · ${payment.method.label}',
+                          style: TextStyle(
+                            color: context.accentColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (hasImageProof) ...[
+                          const SizedBox(height: 14),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              payment.proof!,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (ctx, err, stack) => Container(
+                                height: 80,
+                                color: context.cardBg,
+                                child: Center(
+                                  child: Text('Image Proof: ${payment.proof}',
+                                      style: TextStyle(
+                                          color: context.textMuted,
+                                          fontSize: 11)),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        Divider(color: context.cardBorder, height: 1),
+                        const SizedBox(height: 14),
+                        _buildProofDetailRow(context, 'Description', payment.title),
+                        const SizedBox(height: 8),
+                        _buildProofDetailRow(context, 'Date & Time', dateStr),
+                        const SizedBox(height: 8),
+                        _buildProofDetailRow(context, 'Transaction Ref',
+                            payment.reference ?? 'REF-AUTO-9281'),
+                        const SizedBox(height: 8),
+                        _buildProofDetailRow(context, 'Attachment File',
+                            payment.proof ?? 'receipt_doc.pdf'),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: context.textMuted),
+                  const SizedBox(height: 20),
+                  StudioButton(
+                    label: 'Done',
                     onPressed: () => Navigator.of(sheetContext).pop(),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: context.innerBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: context.accentColor.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: context.accentColor.withValues(alpha: 0.16),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.verified_outlined,
-                        color: context.accentColor,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _currency.format(payment.amount),
-                      style: GoogleFonts.plusJakartaSans(
-                        color: context.textMain,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Payment Verified · ${payment.method.label}',
-                      style: TextStyle(
-                        color: context.accentColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Divider(color: context.cardBorder, height: 1),
-                    const SizedBox(height: 14),
-                    _buildProofDetailRow(context, 'Description', payment.title),
-                    const SizedBox(height: 8),
-                    _buildProofDetailRow(context, 'Date & Time', dateStr),
-                    const SizedBox(height: 8),
-                    _buildProofDetailRow(context, 
-                        'Transaction Ref', payment.reference ?? 'REF-AUTO-9281'),
-                    const SizedBox(height: 8),
-                    _buildProofDetailRow(context, 
-                        'Attachment File', payment.proof ?? 'receipt_doc.pdf'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              StudioButton(
-                label: 'Done',
-                onPressed: () => Navigator.of(sheetContext).pop(),
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -1910,6 +2102,7 @@ class EventDetailsScreen extends StatelessWidget {
   void _showAddExpenseSheet(BuildContext context, String eventId) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
+    final customCategoryController = TextEditingController();
     String category = 'Crew';
 
     showModalBottomSheet(
@@ -1929,82 +2122,98 @@ class EventDetailsScreen extends StatelessWidget {
                 top: 24,
                 bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add Event Expense',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: context.textMain,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add Event Expense',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: context.textMain,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  StudioTextField(
-                    label: 'Expense Description',
-                    hint: 'e.g. Freelancer Photographer, Travel, Printing',
-                    controller: titleController,
-                  ),
-                  const SizedBox(height: 14),
-                  StudioTextField(
-                    label: 'Amount (₹)',
-                    hint: 'e.g. 15000',
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'Category',
-                    style: TextStyle(color: context.textMain, fontSize: 13),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: ['Crew', 'Travel', 'Equipment', 'Printing', 'Studio']
-                        .map((cat) {
-                      final selected = category == cat;
-                      return ChoiceChip(
-                        label: Text(cat),
-                        selected: selected,
-                        onSelected: (val) {
-                          if (val) setModalState(() => category = cat);
-                        },
-                        selectedColor: context.accentColor.withValues(alpha: 0.25),
-                        backgroundColor: context.innerBg,
-                        labelStyle: TextStyle(
-                          color: selected ? context.accentColor : context.textMain,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.normal,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  StudioButton(
-                    label: 'Save Expense',
-                    onPressed: () {
-                      final amount =
-                          double.tryParse(amountController.text.trim());
-                      if (amount != null &&
-                          amount > 0 &&
-                          titleController.text.trim().isNotEmpty) {
-                        final expense = ExpenseRecord(
-                          id: 'exp-${DateTime.now().millisecondsSinceEpoch}',
-                          title: titleController.text.trim(),
-                          amount: amount,
-                          category: category,
-                          incurredAt: DateTime.now(),
+                    const SizedBox(height: 16),
+                    StudioTextField(
+                      label: 'Expense Description',
+                      hint: 'e.g. Freelancer Photographer, Travel, Printing',
+                      controller: titleController,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Amount (₹)',
+                      hint: 'e.g. 15000',
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Category',
+                      style: TextStyle(color: context.textMain, fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ['Crew', 'Travel', 'Equipment', 'Printing', 'Studio', 'Others']
+                          .map((cat) {
+                        final selected = category == cat;
+                        return ChoiceChip(
+                          label: Text(cat),
+                          selected: selected,
+                          onSelected: (val) {
+                            if (val) setModalState(() => category = cat);
+                          },
+                          selectedColor: context.accentColor.withValues(alpha: 0.25),
+                          backgroundColor: context.innerBg,
+                          labelStyle: TextStyle(
+                            color: selected ? context.accentColor : context.textMain,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.normal,
+                          ),
                         );
-                        context
-                            .read<EventsProvider>()
-                            .addExpense(eventId, expense);
-                        Navigator.of(sheetContext).pop();
-                      }
-                    },
-                  ),
-                ],
+                      }).toList(),
+                    ),
+                    if (category == 'Others') ...[
+                      const SizedBox(height: 12),
+                      StudioTextField(
+                        label: 'Custom Category Name',
+                        hint: 'e.g. Catering, Venue, Maintenance',
+                        controller: customCategoryController,
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    StudioButton(
+                      label: 'Save Expense',
+                      onPressed: () {
+                        final amount =
+                            double.tryParse(amountController.text.trim());
+                        if (amount != null &&
+                            amount > 0 &&
+                            titleController.text.trim().isNotEmpty) {
+                          final finalCategory = category == 'Others' &&
+                                  customCategoryController.text.trim().isNotEmpty
+                              ? customCategoryController.text.trim()
+                              : (category == 'Others' ? 'Other' : category);
+
+                          final expense = ExpenseRecord(
+                            id: 'exp-${DateTime.now().millisecondsSinceEpoch}',
+                            title: titleController.text.trim(),
+                            amount: amount,
+                            category: finalCategory,
+                            incurredAt: DateTime.now(),
+                          );
+                          context
+                              .read<EventsProvider>()
+                              .addExpense(eventId, expense);
+                          Navigator.of(sheetContext).pop();
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -2015,6 +2224,7 @@ class EventDetailsScreen extends StatelessWidget {
 
   void _showEditEventDialog(BuildContext context, StudioEvent event) {
     EventStatus selectedStatus = event.status;
+    final notesController = TextEditingController(text: event.notes);
 
     showDialog(
       context: context,
@@ -2026,62 +2236,83 @@ class EventDetailsScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20)),
               title: Text(
-                'Update Event Status',
+                'Edit Event Details',
                 style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: EventStatus.values.map((status) {
-                  final isSelected = selectedStatus == status;
-                  return InkWell(
-                    onTap: () {
-                      setDialogState(() => selectedStatus = status);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? context.accentColor.withValues(alpha: 0.15)
-                            : context.innerBg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? context.accentColor
-                              : context.cardBorder,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_off,
-                            color: isSelected
-                                ? context.accentColor
-                                : context.textMuted,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            status.label,
-                            style: TextStyle(
-                              color: context.textMain,
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Status',
+                      style: TextStyle(
+                        color: context.textMain,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  );
-                }).toList(),
+                    const SizedBox(height: 6),
+                    ...EventStatus.values.map((status) {
+                      final isSelected = selectedStatus == status;
+                      return InkWell(
+                        onTap: () {
+                          setDialogState(() => selectedStatus = status);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? context.accentColor.withValues(alpha: 0.15)
+                                : context.innerBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? context.accentColor
+                                  : context.cardBorder,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_off,
+                                color: isSelected
+                                    ? context.accentColor
+                                    : context.textMuted,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                status.label,
+                                style: TextStyle(
+                                  color: context.textMain,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                    StudioTextField(
+                      label: 'Notes & Instructions',
+                      hint: 'Edit shoot notes, client requirements or special instructions...',
+                      controller: notesController,
+                      maxLines: 4,
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -2096,7 +2327,10 @@ class EventDetailsScreen extends StatelessWidget {
                   ),
                   onPressed: () {
                     context.read<EventsProvider>().updateEvent(
-                          event.copyWith(status: selectedStatus),
+                          event.copyWith(
+                            status: selectedStatus,
+                            notes: notesController.text.trim(),
+                          ),
                         );
                     Navigator.of(dialogContext).pop();
                   },

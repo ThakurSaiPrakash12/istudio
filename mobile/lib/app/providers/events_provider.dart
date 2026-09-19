@@ -37,7 +37,17 @@ class EventsProvider extends ChangeNotifier {
       ..sort((a, b) => b.startsAt.compareTo(a.startsAt));
   }
 
-  // ================= Client Methods =================
+  // ================= Event & Client Methods =================
+
+  StudioEvent? findById(String id) {
+    try {
+      return _events.firstWhere((e) => e.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  StudioEvent? getEventById(String id) => findById(id);
 
   Client? getClientById(String id) {
     try {

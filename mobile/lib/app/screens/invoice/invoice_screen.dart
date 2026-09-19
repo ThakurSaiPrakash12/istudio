@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/monthly_financial_summary_sheet.dart';
 import '../../widgets/studio_app_bar.dart';
 import 'create_invoice_form.dart';
 import 'invoice_history_tab.dart';
@@ -28,6 +29,17 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 subtitle: _isCreate
                     ? 'Create and send a bill'
                     : 'Payments, pending and overdue',
+                actions: [
+                  IconButton(
+                    tooltip: 'Monthly Financial Summary',
+                    icon: Icon(
+                      Icons.insights_rounded,
+                      color: context.accentColor,
+                      size: 22,
+                    ),
+                    onPressed: () => MonthlyFinancialSummarySheet.show(context),
+                  ),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),

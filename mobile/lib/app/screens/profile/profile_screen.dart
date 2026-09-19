@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/auth_background.dart';
 import '../../utils/validators.dart';
@@ -34,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController _address;
   late final TextEditingController _about;
   late final TextEditingController _instagram;
+  late final TextEditingController _youtube;
   late final TextEditingController _website;
   late final TextEditingController _specialties;
 
@@ -49,6 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _address = TextEditingController(text: user?.address ?? '');
     _about = TextEditingController(text: user?.about ?? '');
     _instagram = TextEditingController(text: user?.instagram ?? '');
+    _youtube = TextEditingController(text: user?.youtube ?? '');
     _website = TextEditingController(text: user?.website ?? '');
     _specialties = TextEditingController(text: user?.specialties ?? '');
   }
@@ -63,6 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _address.dispose();
     _about.dispose();
     _instagram.dispose();
+    _youtube.dispose();
     _website.dispose();
     _specialties.dispose();
     super.dispose();
@@ -78,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _address.text = user.address;
     _about.text = user.about;
     _instagram.text = user.instagram;
+    _youtube.text = user.youtube;
     _website.text = user.website;
     _specialties.text = user.specialties;
   }
@@ -257,6 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'address': _address.text.trim(),
       'about': _about.text.trim(),
       'instagram': _instagram.text.trim(),
+      'youtube': _youtube.text.trim(),
       'website': _website.text.trim(),
       'specialties': _specialties.text.trim(),
     });
@@ -382,8 +386,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 22),
                 if (_editing) _buildForm(isBusy) else _buildDetails(user),
-                const SizedBox(height: 20),
-                _buildThemeSelector(context),
                 const SizedBox(height: 24),
                 StudioButton(
                   label: 'Sign out',
@@ -416,6 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _DetailRow(label: 'Address', value: _orDash(user?.address)),
           _DetailRow(label: 'Specialties', value: _orDash(user?.specialties)),
           _DetailRow(label: 'Instagram', value: _orDash(user?.instagram)),
+          _DetailRow(label: 'YouTube', value: _orDash(user?.youtube)),
           _DetailRow(label: 'Website', value: _orDash(user?.website)),
           _DetailRow(label: 'About', value: _orDash(user?.about), last: true),
         ],
@@ -500,6 +503,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 14),
           StudioTextField(
+            label: 'YouTube Channel / Link',
+            hint: 'https://youtube.com/@yourstudio',
+            controller: _youtube,
+            prefixIcon: Icons.ondemand_video_rounded,
+          ),
+          const SizedBox(height: 14),
+          StudioTextField(
             label: 'Website',
             hint: 'https://yourstudio.com',
             controller: _website,
@@ -526,61 +536,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _orDash(String? value) {
     if (value == null || value.trim().isEmpty) return '—';
     return value.trim();
-  }
-
-  Widget _buildThemeSelector(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final currentMode = themeProvider.themeMode;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'App Appearance',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.textMuted(context),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-          ),
-        ),
-        StudioCard(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: _ThemeOptionButton(
-                  icon: Icons.dark_mode_rounded,
-                  label: 'Dark',
-                  isSelected: currentMode == ThemeMode.dark,
-                  onTap: () => themeProvider.setThemeMode(ThemeMode.dark),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ThemeOptionButton(
-                  icon: Icons.light_mode_rounded,
-                  label: 'Light',
-                  isSelected: currentMode == ThemeMode.light,
-                  onTap: () => themeProvider.setThemeMode(ThemeMode.light),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ThemeOptionButton(
-                  icon: Icons.hdr_auto_rounded,
-                  label: 'System',
-                  isSelected: currentMode == ThemeMode.system,
-                  onTap: () => themeProvider.setThemeMode(ThemeMode.system),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -621,69 +576,6 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ThemeOptionButton extends StatelessWidget {
-  const _ThemeOptionButton({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = AppColors.isDark(context);
-    final activeBg = isDark
-        ? AppColors.aqua.withValues(alpha: 0.22)
-        : AppColors.lightPrimary.withValues(alpha: 0.15);
-    final activeBorder = isDark ? AppColors.aqua : AppColors.lightPrimary;
-    final activeText = isDark ? AppColors.aqua : AppColors.lightPrimary;
-
-    return Material(
-      color: isSelected ? activeBg : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? activeBorder : AppColors.cardBorder(context),
-              width: isSelected ? 1.5 : 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isSelected ? activeText : AppColors.textMuted(context),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? activeText : AppColors.textMain(context),
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

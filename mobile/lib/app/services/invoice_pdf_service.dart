@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../models/invoice.dart';
 import '../models/user.dart';
+import 'api_config.dart';
 import 'file_store.dart';
 
 class InvoicePdfService {
@@ -43,10 +46,37 @@ class InvoicePdfService {
     final owner = studio?.displayOwner ?? '';
     final studioPhone = studio?.phone ?? '';
     final studioEmail = studio?.email ?? '';
+    final instagram = studio?.instagram ?? '';
+    final youtube = studio?.youtube ?? '';
+    final website = studio?.website ?? '';
     final studioAddress = [
       studio?.address,
       studio?.city,
     ].where((part) => part != null && part.trim().isNotEmpty).join(', ');
+
+    pw.ImageProvider? logoProvider;
+    if (studio != null && studio.logoUrl.trim().isNotEmpty) {
+      final resolvedLogo = ApiConfig.resolveMedia(studio.logoUrl.trim());
+      try {
+        if (resolvedLogo.startsWith('data:image/')) {
+          final base64Str = resolvedLogo.split(',').last;
+          final bytes = base64Decode(base64Str);
+          logoProvider = pw.MemoryImage(bytes);
+        } else if (resolvedLogo.startsWith('http://') ||
+            resolvedLogo.startsWith('https://')) {
+          try {
+            logoProvider = await networkImage(resolvedLogo);
+          } catch (_) {
+            final res = await http.get(Uri.parse(resolvedLogo));
+            if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+              logoProvider = pw.MemoryImage(res.bodyBytes);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error loading logo in PDF: $e');
+      }
+    }
 
     doc.addPage(
       pw.MultiPage(
@@ -104,6 +134,10 @@ class InvoicePdfService {
             phone: studioPhone,
             email: studioEmail,
             address: studioAddress,
+            instagram: instagram,
+            youtube: youtube,
+            website: website,
+            logoProvider: logoProvider,
             invoice: invoice,
           ),
           pw.SizedBox(height: 22),
@@ -129,99 +163,210 @@ class InvoicePdfService {
     required String phone,
     required String email,
     required String address,
+    required String instagram,
+    required String youtube,
+    required String website,
+    required pw.ImageProvider? logoProvider,
     required Invoice invoice,
   }) {
+    // Format social links cleanly
+    final socialParts = <String>[];
+    if (instagram.trim().isNotEmpty) {
+      socialParts.add('Instagram: ${instagram.trim()}');
+    } else {
+      socialParts.add('Instagram: @${studioName.replaceAll(' ', '').toLowerCase()}');
+    }
+    if (youtube.trim().isNotEmpty) {
+      socialParts.add('YouTube: ${youtube.trim()}');
+    } else {
+      socialParts.add('YouTube: @${studioName.replaceAll(' ', '').toLowerCase()}');
+    }
+    if (website.trim().isNotEmpty) {
+      socialParts.add('Web: ${website.trim()}');
+    }
+
+    final initial = studioName.trim().isNotEmpty
+        ? studioName.trim()[0].toUpperCase()
+        : 'S';
+
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.fromLTRB(22, 20, 22, 20),
+      padding: const pw.EdgeInsets.fromLTRB(20, 18, 20, 18),
       decoration: pw.BoxDecoration(
         color: _navy,
         borderRadius: pw.BorderRadius.circular(10),
       ),
-      child: pw.Row(
+      child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Expanded(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  studioName.toUpperCase(),
-                  style: pw.TextStyle(
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              // Logo image or Monogram Logo Badge
+              if (logoProvider != null) ...[
+                pw.Container(
+                  width: 52,
+                  height: 52,
+                  margin: const pw.EdgeInsets.only(right: 14),
+                  decoration: pw.BoxDecoration(
+                    borderRadius: pw.BorderRadius.circular(10),
                     color: PdfColors.white,
-                    fontSize: 20,
-                    fontWeight: pw.FontWeight.bold,
-                    letterSpacing: 1.1,
+                  ),
+                  child: pw.ClipRRect(
+                    horizontalRadius: 10,
+                    verticalRadius: 10,
+                    child: pw.Image(logoProvider, fit: pw.BoxFit.cover),
                   ),
                 ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  'Photography Studio',
-                  style: const pw.TextStyle(color: _aqua, fontSize: 10),
+              ] else ...[
+                // Default Studio Monogram Logo Badge
+                pw.Container(
+                  width: 52,
+                  height: 52,
+                  margin: const pw.EdgeInsets.only(right: 14),
+                  decoration: pw.BoxDecoration(
+                    borderRadius: pw.BorderRadius.circular(10),
+                    color: _aqua,
+                  ),
+                  child: pw.Center(
+                    child: pw.Text(
+                      initial,
+                      style: pw.TextStyle(
+                        color: _navy,
+                        fontSize: 26,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-                if (owner.isNotEmpty) ...[
-                  pw.SizedBox(height: 8),
+              ],
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      studioName.toUpperCase(),
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'PHOTOGRAPHY & CINEMATOGRAPHY ATELIER',
+                      style: const pw.TextStyle(
+                        color: _aqua,
+                        fontSize: 8.5,
+                        fontWeight: pw.FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    if (owner.isNotEmpty || phone.isNotEmpty || email.isNotEmpty) ...[
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        [owner, phone, email].where((v) => v.isNotEmpty).join('  ·  '),
+                        style: const pw.TextStyle(color: _paper, fontSize: 9),
+                      ),
+                    ],
+                    if (address.isNotEmpty)
+                      pw.Text(
+                        address,
+                        style: const pw.TextStyle(color: _paper, fontSize: 8.5),
+                      ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(width: 12),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
                   pw.Text(
-                    owner,
-                    style: const pw.TextStyle(color: _paper, fontSize: 10),
+                    'ESTIMATED COST',
+                    style: pw.TextStyle(
+                      color: _aqua,
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                      letterSpacing: 1.6,
+                    ),
+                  ),
+                  pw.Text(
+                    '& INVOICE STATEMENT',
+                    style: pw.TextStyle(
+                      color: PdfColors.white,
+                      fontSize: 8.5,
+                      fontWeight: pw.FontWeight.bold,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  pw.Text(
+                    invoice.number,
+                    style: pw.TextStyle(
+                      color: PdfColors.white,
+                      fontSize: 12,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3.5,
+                    ),
+                    decoration: pw.BoxDecoration(
+                      color: _statusColor(invoice.status),
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
+                    child: pw.Text(
+                      invoice.statusLabel.toUpperCase(),
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
                   ),
                 ],
-                if (address.isNotEmpty)
-                  pw.Text(
-                    address,
-                    style: const pw.TextStyle(color: _paper, fontSize: 9),
-                  ),
-                if (phone.isNotEmpty || email.isNotEmpty)
-                  pw.Text(
-                    [phone, email].where((v) => v.isNotEmpty).join('  ·  '),
-                    style: const pw.TextStyle(color: _paper, fontSize: 9),
-                  ),
-              ],
-            ),
-          ),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-              pw.Text(
-                'INVOICE',
-                style: pw.TextStyle(
-                  color: _aqua,
-                  fontSize: 22,
-                  fontWeight: pw.FontWeight.bold,
-                  letterSpacing: 2.4,
-                ),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Text(
-                invoice.number,
-                style: pw.TextStyle(
-                  color: PdfColors.white,
-                  fontSize: 13,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: pw.BoxDecoration(
-                  color: _statusColor(invoice.status),
-                  borderRadius: pw.BorderRadius.circular(10),
-                ),
-                child: pw.Text(
-                  invoice.statusLabel.toUpperCase(),
-                  style: pw.TextStyle(
-                    color: PdfColors.white,
-                    fontSize: 8,
-                    fontWeight: pw.FontWeight.bold,
-                    letterSpacing: 0.8,
-                  ),
-                ),
               ),
             ],
           ),
+          if (socialParts.isNotEmpty) ...[
+            pw.SizedBox(height: 12),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromInt(0x225BC0BE),
+                borderRadius: pw.BorderRadius.circular(6),
+                border: pw.Border.all(color: PdfColor.fromInt(0x445BC0BE), width: 0.6),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'PORTFOLIO LINKS:',
+                    style: pw.TextStyle(
+                      color: _aqua,
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  pw.Text(
+                    socialParts.join('   |   '),
+                    style: pw.TextStyle(
+                      color: PdfColors.white,
+                      fontSize: 8.5,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

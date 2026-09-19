@@ -94,64 +94,75 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Notifications',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: textMain,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        if (notifsProvider.unreadCount > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.urgencyCritical(context),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
                             child: Text(
-                              '${notifsProvider.unreadCount} new',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
+                              'Notifications',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
                                 fontWeight: FontWeight.w700,
+                                color: textMain,
+                                letterSpacing: -0.3,
                               ),
                             ),
                           ),
+                          if (notifsProvider.unreadCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.urgencyCritical(context),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '${notifsProvider.unreadCount} new',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Live 7-day countdowns & booking alerts',
-                      style: TextStyle(
-                        color: textMuted,
-                        fontSize: 12,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Live 7-day countdowns & booking alerts',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 6),
                 if (all.isNotEmpty)
                   TextButton(
                     onPressed: () => notifsProvider.markAllAsRead(),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                          horizontal: 6, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
                       'Mark all read',
                       style: TextStyle(
                         color: accent,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -165,6 +176,73 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
             ),
           ),
           const SizedBox(height: 10),
+
+          // Permission Banner if notifications are disabled
+          if (!notifsProvider.notificationsAllowed) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: accent.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.notifications_active_outlined, color: accent, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Enable Shoot Reminders',
+                          style: TextStyle(
+                            color: textMain,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Get alerts 3 days, 2 days, 1 day & on shoot day.',
+                          style: TextStyle(
+                            color: textMuted,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      notifsProvider.enableNotifications();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Enable',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
 
           // Filter tabs
           SingleChildScrollView(

@@ -10,6 +10,7 @@ class User {
     this.address = '',
     this.about = '',
     this.instagram = '',
+    this.youtube = '',
     this.website = '',
     this.specialties = '',
     this.logoUrl = '',
@@ -25,6 +26,7 @@ class User {
   final String address;
   final String about;
   final String instagram;
+  final String youtube;
   final String website;
   final String specialties;
   final String logoUrl;
@@ -46,6 +48,7 @@ class User {
       address: json['address'] as String? ?? '',
       about: json['about'] as String? ?? '',
       instagram: json['instagram'] as String? ?? '',
+      youtube: json['youtube'] as String? ?? '',
       website: json['website'] as String? ?? '',
       specialties: json['specialties'] as String? ?? '',
       logoUrl: json['logoUrl'] as String? ?? '',
@@ -64,6 +67,7 @@ class User {
       'address': address,
       'about': about,
       'instagram': instagram,
+      'youtube': youtube,
       'website': website,
       'specialties': specialties,
       'logoUrl': logoUrl,
@@ -79,6 +83,7 @@ class User {
     String? address,
     String? about,
     String? instagram,
+    String? youtube,
     String? website,
     String? specialties,
     String? logoUrl,
@@ -94,6 +99,7 @@ class User {
       address: address ?? this.address,
       about: about ?? this.about,
       instagram: instagram ?? this.instagram,
+      youtube: youtube ?? this.youtube,
       website: website ?? this.website,
       specialties: specialties ?? this.specialties,
       logoUrl: logoUrl ?? this.logoUrl,
