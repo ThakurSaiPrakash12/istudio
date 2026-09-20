@@ -117,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: sheetContext.accentColor.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(Icons.photo_library_outlined,
                         color: sheetContext.accentColor),
@@ -134,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: sheetContext.accentColor.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(Icons.camera_alt_outlined,
                         color: sheetContext.accentColor),
@@ -153,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFF7A8A).withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(Icons.delete_outline_rounded,
                           color: Color(0xFFFF7A8A)),

@@ -120,34 +120,41 @@ class _StudioButtonState extends State<StudioButton> {
                       ),
                     ),
                   Center(
-                    child: widget.isLoading
-                        ? SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (widget.icon != null) ...[
-                                Icon(widget.icon, color: textColor, size: 18),
-                                const SizedBox(width: 8),
-                              ],
-                              Text(
-                                widget.label,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 15,
-                                  letterSpacing: 0.5,
-                                ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: widget.isLoading
+                          ? SizedBox(
+                              key: const ValueKey('btn_loading'),
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                valueColor: AlwaysStoppedAnimation<Color>(textColor),
                               ),
-                            ],
-                          ),
+                            )
+                          : Row(
+                              key: const ValueKey('btn_content'),
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (widget.icon != null) ...[
+                                  Icon(widget.icon, color: textColor, size: 18),
+                                  const SizedBox(width: 8),
+                                ],
+                                Text(
+                                  widget.label,
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
                 ],
               ),

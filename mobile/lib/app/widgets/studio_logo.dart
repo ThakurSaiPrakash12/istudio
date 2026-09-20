@@ -19,22 +19,22 @@ class StudioLogo extends StatelessWidget {
 
     return Semantics(
       header: true,
-      label: 'Lumen Haute Studio',
+      label: 'iStudio',
       child: Column(
         children: [
           Hero(
-            tag: 'lumen-mark',
+            tag: 'studio-mark',
             child: Container(
               width: size,
               height: size,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: isDark
-                    ? AppColors.goldGradient
+                    ? AppColors.skyGradient
                     : const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFFE5C07B), Color(0xFFB8860B)],
+                        colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
                       ),
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.5),
@@ -42,7 +42,7 @@ class StudioLogo extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isDark ? AppColors.gold : AppColors.lightPrimary)
+                    color: (isDark ? AppColors.sky : AppColors.lightPrimary)
                         .withValues(alpha: 0.4),
                     blurRadius: 28,
                     spreadRadius: 2,
@@ -58,13 +58,13 @@ class StudioLogo extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: isDark ? const Color(0xFF080C14) : Colors.white,
                     border: Border.all(
-                      color: isDark ? AppColors.gold.withValues(alpha: 0.5) : AppColors.lightBorder,
+                      color: isDark ? AppColors.sky.withValues(alpha: 0.5) : AppColors.lightBorder,
                       width: 1,
                     ),
                   ),
                   child: Icon(
                     Icons.camera_rounded,
-                    color: isDark ? AppColors.gold : AppColors.lightPrimary,
+                    color: isDark ? AppColors.sky : AppColors.lightPrimary,
                     size: compact ? 22 : 32,
                   ),
                 ),
@@ -73,7 +73,7 @@ class StudioLogo extends StatelessWidget {
           ),
           SizedBox(height: compact ? 10 : 16),
           Text(
-            'LUMEN',
+            'iSTUDIO',
             style: GoogleFonts.plusJakartaSans(
               color: textMain,
               fontSize: compact ? 22 : 30,

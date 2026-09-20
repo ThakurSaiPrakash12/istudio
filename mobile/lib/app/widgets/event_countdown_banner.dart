@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/studio_event.dart';
 import '../models/studio_notification.dart';
 import '../screens/events/event_details_screen.dart';
+import '../routes/smooth_page_route.dart';
 import '../theme/app_colors.dart';
 
 /// Liquid Glass styled Hero 7-Day Countdown Alert Banner
@@ -90,13 +91,8 @@ class EventCountdownBanner extends StatelessWidget {
               borderRadius: radius,
               onTap: () {
                 Navigator.of(context).push(
-                  PageRouteBuilder<void>(
-                    transitionDuration: const Duration(milliseconds: 280),
-                    pageBuilder: (_, _, _) =>
-                        EventDetailsScreen(eventId: event.id),
-                    transitionsBuilder: (_, animation, _, child) {
-                      return FadeTransition(opacity: animation, child: child);
-                    },
+                  SmoothPageRoute(
+                    builder: (_) => EventDetailsScreen(eventId: event.id),
                   ),
                 );
               },

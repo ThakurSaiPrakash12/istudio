@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import 'event_details_screen.dart';
+import '../../routes/smooth_page_route.dart';
 
 class PastEventsScreen extends StatefulWidget {
   const PastEventsScreen({super.key});
@@ -225,12 +226,8 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
       padding: const EdgeInsets.all(16),
       onTap: () {
         Navigator.of(context).push(
-          PageRouteBuilder<void>(
-            transitionDuration: const Duration(milliseconds: 280),
-            pageBuilder: (_, _, _) => EventDetailsScreen(eventId: event.id),
-            transitionsBuilder: (_, animation, _, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+          SmoothPageRoute(
+            builder: (_) => EventDetailsScreen(eventId: event.id),
           ),
         );
       },

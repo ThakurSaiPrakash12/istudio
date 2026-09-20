@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/studio_notification.dart';
 import '../providers/notifications_provider.dart';
 import '../screens/events/event_details_screen.dart';
+import '../routes/smooth_page_route.dart';
 import '../theme/app_colors.dart';
 
 enum NotificationFilter {
@@ -350,13 +351,9 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
         if (notif.eventId != null) {
           Navigator.of(context).pop();
           Navigator.of(context).push(
-            PageRouteBuilder<void>(
-              transitionDuration: const Duration(milliseconds: 280),
-              pageBuilder: (_, _, _) =>
+            SmoothPageRoute(
+              builder: (_) =>
                   EventDetailsScreen(eventId: notif.eventId!),
-              transitionsBuilder: (_, animation, _, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
             ),
           );
         }

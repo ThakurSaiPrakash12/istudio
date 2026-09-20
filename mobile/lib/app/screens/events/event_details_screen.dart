@@ -52,7 +52,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: const StudioAppBar(
           title: 'Event Not Found',
-          subtitle: 'Lumen studio',
+          subtitle: 'Event not found',
         ),
         body: Center(
           child: Column(
@@ -153,7 +153,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: isDark
               ? [
@@ -446,7 +446,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: context.isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
@@ -504,7 +504,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: dueColor.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(999),
                       border: Border.all(
                         color: dueColor.withValues(alpha: 0.5),
                       ),
@@ -526,7 +526,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
                     color: context.accentColor.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     'Fully Paid',
@@ -545,7 +545,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: context.innerBg,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: context.cardBorder,
               ),
@@ -733,10 +733,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: context.innerBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                'No payments logged yet.',
+                'No payments recorded',
                 style: TextStyle(color: context.textMuted, fontSize: 13),
               ),
             )
@@ -748,7 +748,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: context.innerBg,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: context.cardBorder,
                   ),

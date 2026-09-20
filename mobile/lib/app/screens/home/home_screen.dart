@@ -18,6 +18,7 @@ import '../events/event_details_screen.dart';
 import '../events/past_events_screen.dart';
 import '../events/upcoming_events_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../routes/smooth_page_route.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen>
     _pageController = PageController(viewportFraction: 0.88);
     _staggerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 500),
     )..forward();
   }
 
@@ -88,8 +89,8 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             children: [
               StudioAppBar(
-                title: user?.displayStudioName ?? 'LUMEN',
-                subtitle: 'Photography Atelier',
+                title: user?.displayStudioName ?? 'Studio',
+                subtitle: 'Your studio dashboard',
                 showNotificationBell: true,
                 actions: [
                   Semantics(
@@ -99,17 +100,8 @@ class _HomeScreenState extends State<HomeScreen>
                       tooltip: 'Profile',
                       onPressed: () {
                         Navigator.of(context).push(
-                          PageRouteBuilder<void>(
-                            transitionDuration:
-                                const Duration(milliseconds: 280),
-                            pageBuilder: (_, _, _) =>
-                                const ProfileScreen(),
-                            transitionsBuilder: (_, animation, _, child) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: child,
-                              );
-                            },
+                          SmoothPageRoute(
+                            builder: (_) => const ProfileScreen(),
                           ),
                         );
                       },
@@ -167,18 +159,8 @@ class _HomeScreenState extends State<HomeScreen>
                         actionLabel: 'View all →',
                         onAction: () {
                           Navigator.of(context).push(
-                            PageRouteBuilder<void>(
-                              transitionDuration:
-                                  const Duration(milliseconds: 280),
-                              pageBuilder: (_, _, _) =>
-                                  const UpcomingEventsScreen(),
-                              transitionsBuilder:
-                                  (_, animation, _, child) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                );
-                              },
+                            SmoothPageRoute(
+                              builder: (_) => const UpcomingEventsScreen(),
                             ),
                           );
                         },
@@ -206,18 +188,8 @@ class _HomeScreenState extends State<HomeScreen>
                         actionLabel: 'View all →',
                         onAction: () {
                           Navigator.of(context).push(
-                            PageRouteBuilder<void>(
-                              transitionDuration:
-                                  const Duration(milliseconds: 280),
-                              pageBuilder: (_, _, _) =>
-                                  const PastEventsScreen(),
-                              transitionsBuilder:
-                                  (_, animation, _, child) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                );
-                              },
+                            SmoothPageRoute(
+                              builder: (_) => const PastEventsScreen(),
                             ),
                           );
                         },
@@ -234,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen>
                               padding: const EdgeInsets.all(22),
                               child: Center(
                                 child: Text(
-                                  'No completed shoots recorded yet.',
+                                  'Completed shoots will appear here.',
                                   style: TextStyle(
                                     color: context.textMuted
                                         .withValues(alpha: 0.8),
@@ -335,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         const SizedBox(height: 5),
         Text(
-          'Live studio schedule, bookings & 7-day countdown alerts',
+          'Here\'s what\'s happening today',
           style: TextStyle(
             color: textMuted,
             fontSize: 13,
@@ -486,6 +458,7 @@ class _HomeScreenState extends State<HomeScreen>
           height: 230,
           child: PageView.builder(
             controller: _pageController,
+            physics: const BouncingScrollPhysics(),
             itemCount: events.length,
             onPageChanged: (index) {
               setState(() => _currentCarouselIndex = index);
@@ -539,14 +512,8 @@ class _HomeScreenState extends State<HomeScreen>
       padding: const EdgeInsets.all(18),
       onTap: () {
         Navigator.of(context).push(
-          PageRouteBuilder<void>(
-            transitionDuration: const Duration(milliseconds: 280),
-            pageBuilder: (_, _, _) =>
-                EventDetailsScreen(eventId: event.id),
-            transitionsBuilder: (_, animation, _, child) {
-              return FadeTransition(
-                  opacity: animation, child: child);
-            },
+          SmoothPageRoute(
+            builder: (_) => EventDetailsScreen(eventId: event.id),
           ),
         );
       },
@@ -735,7 +702,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 14),
           Text(
-            'No upcoming shoots scheduled',
+            'Your schedule is clear',
             style: GoogleFonts.plusJakartaSans(
               color: context.textMain,
               fontSize: 17,
@@ -744,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 4),
           Text(
-            'Add your photography bookings to track 7-day countdowns.',
+            'Tap below to schedule your next shoot.',
             style: TextStyle(color: context.textMuted, fontSize: 13),
             textAlign: TextAlign.center,
           ),
@@ -752,7 +719,7 @@ class _HomeScreenState extends State<HomeScreen>
           ElevatedButton.icon(
             onPressed: () => CreateEventSheet.show(context),
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('+ Add First Shoot'),
+            label: const Text('Schedule a Shoot'),
           ),
         ],
       ),
@@ -771,14 +738,8 @@ class _HomeScreenState extends State<HomeScreen>
       padding: const EdgeInsets.all(16),
       onTap: () {
         Navigator.of(context).push(
-          PageRouteBuilder<void>(
-            transitionDuration: const Duration(milliseconds: 280),
-            pageBuilder: (_, _, _) =>
-                EventDetailsScreen(eventId: event.id),
-            transitionsBuilder: (_, animation, _, child) {
-              return FadeTransition(
-                  opacity: animation, child: child);
-            },
+          SmoothPageRoute(
+            builder: (_) => EventDetailsScreen(eventId: event.id),
           ),
         );
       },

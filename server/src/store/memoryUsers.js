@@ -1,6 +1,37 @@
+const fs = require('fs');
+const path = require('path');
 const { randomUUID } = require('crypto');
 
-const users = [];
+const dataDir = path.join(__dirname, '..', '..', 'data');
+const dataFile = path.join(dataDir, 'users.json');
+
+function loadUsersFromDisk() {
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    if (fs.existsSync(dataFile)) {
+      const content = fs.readFileSync(dataFile, 'utf8');
+      return JSON.parse(content);
+    }
+  } catch (e) {
+    console.warn('Could not read users.json from disk:', e.message);
+  }
+  return [];
+}
+
+function saveUsersToDisk(usersList) {
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    fs.writeFileSync(dataFile, JSON.stringify(usersList, null, 2), 'utf8');
+  } catch (e) {
+    console.warn('Could not save users.json to disk:', e.message);
+  }
+}
+
+const users = loadUsersFromDisk();
 
 function publicFields(user) {
   return {
@@ -76,12 +107,14 @@ const memoryUsers = {
       logoUrl: '',
     };
     users.push(user);
+    saveUsersToDisk(users);
     return toDoc(user);
   },
   update(id, fields) {
     const user = users.find((item) => item.id === id);
     if (!user) return null;
     Object.assign(user, fields);
+    saveUsersToDisk(users);
     return toDoc(user);
   },
 };

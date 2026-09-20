@@ -13,6 +13,7 @@ import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import '../events/create_event_sheet.dart';
 import '../events/event_details_screen.dart';
+import '../../routes/smooth_page_route.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -43,7 +44,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     super.initState();
     _enterController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 450),
     )..forward();
   }
 
@@ -185,7 +186,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                     FadeTransition(
                       opacity: _staggered(0.10, 0.40),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(999),
                         onTap: () => MonthlyFinancialSummarySheet.show(
                           context,
                           initialMonth: _month,
@@ -195,7 +196,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: accent.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                                 color: accent.withValues(alpha: 0.3)),
                           ),
@@ -278,51 +279,59 @@ class _CalendarScreenState extends State<CalendarScreen>
                     ),
                     const SizedBox(height: 12),
 
-                    // Day Events
+                    // Day Events with smooth AnimatedSwitcher
                     FadeTransition(
                       opacity: _staggered(0.30, 0.70),
-                      child: dayEvents.isEmpty
-                          ? StudioCard(
-                              borderRadius: 28,
-                              padding: const EdgeInsets.all(24),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(14),
-                                      decoration: BoxDecoration(
-                                        color: accent.withValues(alpha: 0.08),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.event_available_outlined,
-                                        color: textMuted.withValues(alpha: 0.6),
-                                        size: 32,
-                                      ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        child: KeyedSubtree(
+                          key: ValueKey('${_selected.year}-${_selected.month}-${_selected.day}'),
+                          child: dayEvents.isEmpty
+                              ? StudioCard(
+                                  borderRadius: 28,
+                                  padding: const EdgeInsets.all(24),
+                                  child: Center(
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(14),
+                                          decoration: BoxDecoration(
+                                            color: accent.withValues(alpha: 0.08),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.event_available_outlined,
+                                            color: textMuted.withValues(alpha: 0.6),
+                                            size: 32,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          'No events on this day',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(color: textMuted),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      'No shoots booked for this date.',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(color: textMuted),
-                                    ),
-                                  ],
+                                  ),
+                                )
+                              : Column(
+                                  children: dayEvents
+                                      .map(
+                                        (event) => Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
+                                          child: _buildEventCard(context, event),
+                                        ),
+                                      )
+                                      .toList(),
                                 ),
-                              ),
-                            )
-                          : Column(
-                              children: dayEvents
-                                  .map(
-                                    (event) => Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 12),
-                                      child: _buildEventCard(context, event),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -336,12 +345,8 @@ class _CalendarScreenState extends State<CalendarScreen>
 
   void _openEventDetails(BuildContext context, StudioEvent event) {
     Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 280),
-        pageBuilder: (_, _, _) => EventDetailsScreen(eventId: event.id),
-        transitionsBuilder: (_, animation, _, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
+      SmoothPageRoute(
+        builder: (_) => EventDetailsScreen(eventId: event.id),
       ),
     );
   }

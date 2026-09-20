@@ -11,6 +11,7 @@ import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import 'create_event_sheet.dart';
 import 'event_details_screen.dart';
+import '../../routes/smooth_page_route.dart';
 
 class UpcomingEventsScreen extends StatefulWidget {
   const UpcomingEventsScreen({super.key});
@@ -227,12 +228,8 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
       padding: const EdgeInsets.all(16),
       onTap: () {
         Navigator.of(context).push(
-          PageRouteBuilder<void>(
-            transitionDuration: const Duration(milliseconds: 280),
-            pageBuilder: (_, _, _) => EventDetailsScreen(eventId: event.id),
-            transitionsBuilder: (_, animation, _, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+          SmoothPageRoute(
+            builder: (_) => EventDetailsScreen(eventId: event.id),
           ),
         );
       },

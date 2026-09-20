@@ -24,11 +24,11 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const LumenApp());
+  runApp(const IStudioApp());
 }
 
-class LumenApp extends StatelessWidget {
-  const LumenApp({super.key});
+class IStudioApp extends StatelessWidget {
+  const IStudioApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +57,7 @@ class LumenApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'Lumen Studio',
+            title: 'iStudio',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,

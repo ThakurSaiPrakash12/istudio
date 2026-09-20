@@ -49,14 +49,21 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 ),
               ),
               Expanded(
-                child: IndexedStack(
-                  index: _isCreate ? 0 : 1,
-                  children: [
-                    CreateInvoiceForm(
-                      onSaved: (_) => setState(() => _isCreate = false),
-                    ),
-                    const InvoiceHistoryTab(),
-                  ],
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: _isCreate
+                      ? KeyedSubtree(
+                          key: const ValueKey('invoice_create'),
+                          child: CreateInvoiceForm(
+                            onSaved: (_) => setState(() => _isCreate = false),
+                          ),
+                        )
+                      : const KeyedSubtree(
+                          key: ValueKey('invoice_history'),
+                          child: InvoiceHistoryTab(),
+                        ),
                 ),
               ),
             ],

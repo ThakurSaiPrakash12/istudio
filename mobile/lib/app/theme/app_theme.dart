@@ -2,10 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../routes/smooth_page_route.dart';
 import 'app_colors.dart';
 
 class AppTheme {
   const AppTheme._();
+
+  static const PageTransitionsTheme _pageTransitionsTheme =
+      PageTransitionsTheme(
+    builders: {
+      TargetPlatform.android: SmoothPageTransitionsBuilder(),
+      TargetPlatform.iOS: SmoothPageTransitionsBuilder(),
+      TargetPlatform.macOS: SmoothPageTransitionsBuilder(),
+      TargetPlatform.windows: SmoothPageTransitionsBuilder(),
+      TargetPlatform.linux: SmoothPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: SmoothPageTransitionsBuilder(),
+    },
+  );
 
   static ThemeData get dark {
     const colorScheme = ColorScheme(
@@ -45,6 +58,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.ink,
       canvasColor: AppColors.ink,
+      pageTransitionsTheme: _pageTransitionsTheme,
       textTheme: textTheme,
       extensions: const [StudioColors.brand],
       splashFactory: InkRipple.splashFactory,
@@ -240,6 +254,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.lightScaffold,
       canvasColor: AppColors.lightScaffold,
+      pageTransitionsTheme: _pageTransitionsTheme,
       textTheme: textTheme,
       extensions: const [StudioColors.lightBrand],
       splashFactory: InkRipple.splashFactory,
