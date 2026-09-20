@@ -213,34 +213,24 @@ async function uploadLogo(req, res) {
       });
     }
 
-    let logoUrl = '';
-    let source = 'cloudinary';
+    // 1. Upload file strictly to Cloudinary CDN
+    const cloudinaryResult = await uploadToCloudinary(req.file.path, {
+      folder: 'lumen_studio/profiles',
+    });
 
-    try {
-      // Upload actual image to Cloudinary (free permanent CDN)
-      const cloudinaryResult = await uploadToCloudinary(req.file.path, {
-        folder: 'lumen_studio/profiles',
-      });
-      logoUrl = cloudinaryResult.secure_url || cloudinaryResult.url || '';
-      if (logoUrl.startsWith('http://')) {
-        logoUrl = `https://${logoUrl.substring(7)}`;
-      }
-    } catch (cloudinaryError) {
-      console.warn('Cloudinary upload fallback to base64 cloud sync:', cloudinaryError.message);
-      // Read file and convert to permanent base64 data URI so it is NEVER lost on server sleep/restart
-      const fs = require('fs');
-      const fileBuffer = fs.readFileSync(req.file.path);
-      const mimeType = req.file.mimetype || 'image/jpeg';
-      logoUrl = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
-      source = 'base64';
-
-      // Clean up temp file from disk
-      if (fs.existsSync(req.file.path)) {
-        try { fs.unlinkSync(req.file.path); } catch (_) {}
-      }
+    let logoUrl = cloudinaryResult.secure_url || cloudinaryResult.url || '';
+    if (logoUrl.startsWith('http://')) {
+      logoUrl = `https://${logoUrl.substring(7)}`;
     }
 
-    // Save permanent URL/DataURI in MongoDB (persisted forever across server sleeps/restarts)
+    if (!logoUrl.startsWith('https://')) {
+      return res.status(500).json({
+        success: false,
+        message: 'Cloudinary did not return a valid HTTPS image URL.',
+      });
+    }
+
+    // 2. Save ONLY the Cloudinary HTTPS URL in MongoDB (no base64 / binary stored in database)
     const user = await userRepository.updateUser(req.userId, { logoUrl });
     if (!user) {
       return res.status(404).json({

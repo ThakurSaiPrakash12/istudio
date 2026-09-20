@@ -56,17 +56,12 @@ class AuthProvider extends ChangeNotifier {
       // 2. Fetch fresh profile in background without logging user out if server is sleeping
       if (storedToken != null && storedToken.isNotEmpty) {
         try {
-          var user = await _authService.me(storedToken);
-          // Preserve local logo if server returns empty/ephemeral URL but device has a cached logo
-          final isServerLogoInvalid = user.logoUrl.isEmpty || user.logoUrl.contains('/uploads/');
-          final isStoredLogoValid = storedLogo != null && storedLogo.isNotEmpty;
-          if (isServerLogoInvalid && isStoredLogoValid) {
-            user = user.copyWith(logoUrl: storedLogo);
-          } else if (user.logoUrl.isNotEmpty) {
-            await prefs.setString(_logoKey, user.logoUrl);
-          }
+          final user = await _authService.me(storedToken);
           _user = user;
           await prefs.setString(_userKey, jsonEncode(user.toJson()));
+          if (user.logoUrl.isNotEmpty) {
+            await prefs.setString(_logoKey, user.logoUrl);
+          }
           notifyListeners();
         } on ApiException catch (error) {
           if (error.statusCode == 401) {
