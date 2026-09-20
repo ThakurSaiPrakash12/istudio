@@ -57,8 +57,10 @@ class AuthProvider extends ChangeNotifier {
       if (storedToken != null && storedToken.isNotEmpty) {
         try {
           var user = await _authService.me(storedToken);
-          // If server woke up with empty logo but device has cached logo, preserve cached logo
-          if (user.logoUrl.isEmpty && storedLogo != null && storedLogo.isNotEmpty) {
+          // Preserve local logo if server returns empty/ephemeral URL but device has a cached logo
+          final isServerLogoInvalid = user.logoUrl.isEmpty || user.logoUrl.contains('/uploads/');
+          final isStoredLogoValid = storedLogo != null && storedLogo.isNotEmpty;
+          if (isServerLogoInvalid && isStoredLogoValid) {
             user = user.copyWith(logoUrl: storedLogo);
           } else if (user.logoUrl.isNotEmpty) {
             await prefs.setString(_logoKey, user.logoUrl);

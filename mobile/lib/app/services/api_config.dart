@@ -30,7 +30,13 @@ class ApiConfig {
 
   static String resolveMedia(String? path) {
     if (path == null || path.trim().isEmpty) return '';
-    final p = path.trim();
+    var p = path.trim();
+
+    // Convert HTTP to HTTPS for remote URLs to avoid cleartext HTTP blocks on Android/iOS
+    if (p.startsWith('http://') && !p.contains('localhost') && !p.contains('127.0.0.1') && !p.contains('192.168.')) {
+      p = 'https://${p.substring(7)}';
+    }
+
     if (p.startsWith('http://') ||
         p.startsWith('https://') ||
         p.startsWith('data:image/') ||

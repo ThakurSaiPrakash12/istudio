@@ -154,6 +154,7 @@ const PROFILE_FIELDS = [
   'youtube',
   'website',
   'specialties',
+  'logoUrl',
 ];
 
 async function updateProfile(req, res) {
@@ -220,7 +221,10 @@ async function uploadLogo(req, res) {
       const cloudinaryResult = await uploadToCloudinary(req.file.path, {
         folder: 'lumen_studio/profiles',
       });
-      logoUrl = cloudinaryResult.secure_url || cloudinaryResult.url;
+      logoUrl = cloudinaryResult.secure_url || cloudinaryResult.url || '';
+      if (logoUrl.startsWith('http://')) {
+        logoUrl = `https://${logoUrl.substring(7)}`;
+      }
     } catch (cloudinaryError) {
       console.warn('Cloudinary upload fallback to base64 cloud sync:', cloudinaryError.message);
       // Read file and convert to permanent base64 data URI so it is NEVER lost on server sleep/restart
