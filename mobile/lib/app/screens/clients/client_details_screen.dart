@@ -602,7 +602,7 @@ class ClientDetailsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Column(
@@ -644,6 +644,50 @@ class ClientDetailsScreen extends StatelessWidget {
                           color: statusColor,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: 'Add Payment',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => EventDetailsScreen(
+                                eventId: event.id,
+                                autoOpenPayment: true,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: context.accentColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: context.accentColor.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded,
+                                  size: 12, color: context.accentColor),
+                              const SizedBox(width: 3),
+                              Text(
+                                '₹',
+                                style: TextStyle(
+                                  color: context.accentColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -757,33 +801,39 @@ class ClientDetailsScreen extends StatelessWidget {
                               )
                             else
                               const SizedBox.shrink(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.16),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: accent.withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.attachment_rounded,
-                                      size: 11, color: accent),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    'View Proof',
-                                    style: TextStyle(
-                                      color: accent,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
+                            if (p.proof != null && p.proof!.isNotEmpty)
+                              GestureDetector(
+                                onTap: () => _showProofDialog(context, p),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: accent.withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: accent.withValues(alpha: 0.4),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.attachment_rounded,
+                                          size: 11, color: accent),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'View Proof',
+                                        style: TextStyle(
+                                          color: accent,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              const SizedBox.shrink(),
                           ],
                         ),
                       ],
@@ -791,6 +841,144 @@ class ClientDetailsScreen extends StatelessWidget {
                   ),
                 )),
         ],
+      ),
+    );
+  }
+
+  void _showProofDialog(BuildContext context, PaymentRecord p) {
+    final proof = p.proof ?? '';
+    final isNetworkImage = proof.startsWith('http');
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: context.cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.receipt_long_rounded,
+                      color: context.accentColor, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Payment Proof',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: context.textMain,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: context.textMuted, size: 20),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (isNetworkImage)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    proof,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (ctx, child, progress) {
+                      if (progress == null) return child;
+                      return const SizedBox(
+                        height: 160,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (ctx, error, stackTrace) => Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: context.innerBg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Could not load image.',
+                          style: TextStyle(color: context.textMuted),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: context.innerBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: context.cardBorder.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.insert_drive_file_outlined,
+                              color: context.accentColor, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              proof,
+                              style: TextStyle(
+                                color: context.textMain,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (p.reference != null && p.reference!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Ref: ${p.reference}',
+                          style: TextStyle(
+                            color: context.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+              _buildFinanceRow(
+                context,
+                label: 'Method',
+                value: p.method.label,
+                valueColor: context.accentColor,
+              ),
+              const SizedBox(height: 6),
+              _buildFinanceRow(
+                context,
+                label: 'Amount',
+                value: _currency.format(p.amount),
+                valueColor: context.textMain,
+              ),
+              const SizedBox(height: 6),
+              _buildFinanceRow(
+                context,
+                label: 'Date',
+                value: DateFormat('d MMM yyyy').format(p.paidAt),
+                valueColor: context.textMain,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

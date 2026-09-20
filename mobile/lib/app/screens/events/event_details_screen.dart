@@ -14,21 +14,38 @@ import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
 
-class EventDetailsScreen extends StatelessWidget {
+class EventDetailsScreen extends StatefulWidget {
   const EventDetailsScreen({
     super.key,
     required this.eventId,
+    this.autoOpenPayment = false,
   });
 
   final String eventId;
+  final bool autoOpenPayment;
 
+
+  @override
+  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
   static final _currency =
-      NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+      NumberFormat.currency(locale: 'en_IN', symbol: '\u20b9', decimalDigits: 0);
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoOpenPayment) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showAddPaymentSheet(context, widget.eventId);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<EventsProvider>();
-    final event = provider.getById(eventId);
+    final event = provider.getById(widget.eventId);
 
     if (event == null) {
       return Scaffold(
@@ -699,7 +716,7 @@ class EventDetailsScreen extends StatelessWidget {
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                onPressed: () => _showAddPaymentSheet(context, event.id),
+                onPressed: () => _showAddPaymentSheet(context, widget.eventId),
                 icon: Icon(Icons.add, size: 16, color: context.accentColor),
                 label: Text(
                   'Add Payment',
@@ -1894,28 +1911,51 @@ class EventDetailsScreen extends StatelessWidget {
                     StudioButton(
                       label: 'Log Payment',
                       onPressed: () {
-                        final amount = double.tryParse(amountController.text.trim());
-                        if (amount != null && amount > 0) {
-                          final payment = PaymentRecord(
-                            id: 'pay-${DateTime.now().millisecondsSinceEpoch}',
-                            title: titleController.text.trim().isEmpty
-                                ? 'Payment'
-                                : titleController.text.trim(),
-                            amount: amount,
-                            paidAt: DateTime.now(),
-                            method: selectedMethod,
-                            reference: refController.text.trim().isNotEmpty
-                                ? refController.text.trim()
-                                : null,
-                            proof: attachProof && proofController.text.trim().isNotEmpty
-                                ? proofController.text.trim()
-                                : null,
+                        final amountText = amountController.text.trim();
+                        final amount = double.tryParse(amountText);
+                        if (amountText.isEmpty) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please enter the payment amount.'),
+                              duration: Duration(seconds: 2),
+                            ),
                           );
-                          context
-                              .read<EventsProvider>()
-                              .addPayment(eventId, payment);
-                          Navigator.of(sheetContext).pop();
+                          return;
                         }
+                        if (amount == null || amount <= 0) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('Enter a valid amount greater than 0.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
+                        final payment = PaymentRecord(
+                          id: 'pay-${DateTime.now().millisecondsSinceEpoch}',
+                          title: titleController.text.trim().isEmpty
+                              ? 'Payment'
+                              : titleController.text.trim(),
+                          amount: amount,
+                          paidAt: DateTime.now(),
+                          method: selectedMethod,
+                          reference: refController.text.trim().isNotEmpty
+                              ? refController.text.trim()
+                              : null,
+                          proof: attachProof && proofController.text.trim().isNotEmpty
+                              ? proofController.text.trim()
+                              : null,
+                        );
+                        modalContext
+                            .read<EventsProvider>()
+                            .addPayment(eventId, payment);
+                        Navigator.of(sheetContext).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Payment of ₹${amount.toInt()} recorded!'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
                       },
                     ),
                   ],
