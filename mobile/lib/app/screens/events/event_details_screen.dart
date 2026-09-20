@@ -1757,35 +1757,109 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       const SizedBox(height: 10),
                       if (proofController.text.trim().isNotEmpty) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                            color: context.innerBg,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: context.accentColor.withValues(alpha: 0.4),
+                            ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Payment Proof Image Attached',
-                                  style: TextStyle(
-                                    color: context.textMain,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
+                              if (proofController.text.startsWith('http') ||
+                                  proofController.text.startsWith('data:'))
+                                GestureDetector(
+                                  onTap: () => _showFullScreenProof(
+                                      context, proofController.text.trim()),
+                                  child: Stack(
+                                    children: [
+                                      Image.network(
+                                        proofController.text.trim(),
+                                        height: 140,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => Container(
+                                          height: 80,
+                                          color: context.cardBg,
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            'Proof Image: ${proofController.text}',
+                                            style: TextStyle(
+                                              color: context.textMuted,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        right: 8,
+                                        bottom: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.7),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.zoom_in_rounded,
+                                                  color: Colors.white, size: 14),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'Tap to preview',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                              IconButton(
-                                constraints: const BoxConstraints(),
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.close_rounded, size: 18, color: Colors.redAccent),
-                                onPressed: () {
-                                  setModalState(() {
-                                    proofController.clear();
-                                  });
-                                },
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded,
+                                        color: Color(0xFF10B981), size: 16),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'Payment Proof Image Attached',
+                                        style: TextStyle(
+                                          color: context.textMain,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setModalState(() {
+                                          proofController.clear();
+                                        });
+                                      },
+                                      child: const Text(
+                                        'Remove',
+                                        style: TextStyle(
+                                          color: Colors.redAccent,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -2059,23 +2133,58 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         ),
                         if (hasImageProof) ...[
                           const SizedBox(height: 14),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              payment.proof!,
-                              height: 160,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (ctx, err, stack) => Container(
-                                height: 80,
-                                color: context.cardBg,
-                                child: Center(
-                                  child: Text('Image Proof: ${payment.proof}',
-                                      style: TextStyle(
-                                          color: context.textMuted,
-                                          fontSize: 11)),
+                          GestureDetector(
+                            onTap: () => _showFullScreenProof(context, payment.proof!),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    payment.proof!,
+                                    height: 160,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (ctx, err, stack) => Container(
+                                      height: 80,
+                                      color: context.cardBg,
+                                      child: Center(
+                                        child: Text('Image Proof: ${payment.proof}',
+                                            style: TextStyle(
+                                                color: context.textMuted,
+                                                fontSize: 11)),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                Positioned(
+                                  right: 8,
+                                  bottom: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.7),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.zoom_in_rounded,
+                                            color: Colors.white, size: 14),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Full Screen',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -2381,6 +2490,58 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showFullScreenProof(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black.withValues(alpha: 0.9),
+        insetPadding: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Center(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      );
+                    },
+                    errorBuilder: (_, _, _) => const Center(
+                      child: Text(
+                        'Could not load image proof.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black54,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
