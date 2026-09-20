@@ -143,6 +143,7 @@ async function me(req, res) {
   }
 }
 
+const fs = require('fs');
 const PROFILE_FIELDS = [
   'studioName',
   'ownerName',
