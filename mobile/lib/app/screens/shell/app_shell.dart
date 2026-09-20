@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,11 +20,8 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell>
-    with SingleTickerProviderStateMixin {
+class _AppShellState extends State<AppShell> {
   int _index = 0;
-  late AnimationController _pageTransitionController;
-  late Animation<double> _pageFade;
 
   static const _pages = [
     HomeScreen(),
@@ -31,32 +30,10 @@ class _AppShellState extends State<AppShell>
     ClientsScreen(),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _pageTransitionController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _pageFade = CurvedAnimation(
-      parent: _pageTransitionController,
-      curve: Curves.easeOutCubic,
-    );
-    _pageTransitionController.value = 1.0;
-  }
-
-  @override
-  void dispose() {
-    _pageTransitionController.dispose();
-    super.dispose();
-  }
-
   void _switchTab(int newIndex) {
     if (newIndex == _index) return;
     HapticFeedback.lightImpact();
-    _pageTransitionController.value = 0.0;
     setState(() => _index = newIndex);
-    _pageTransitionController.forward();
   }
 
   @override
@@ -76,12 +53,24 @@ class _AppShellState extends State<AppShell>
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            Positioned.fill(
-              child: FadeTransition(
-                opacity: _pageFade,
-                child: _pages[_index],
+            // Persistent Kept-Alive Tab Stack with silky smooth cross-fade
+            for (int i = 0; i < _pages.length; i++)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: i != _index,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeInOutCubic,
+                    opacity: i == _index ? 1.0 : 0.0,
+                    child: TickerMode(
+                      enabled: i == _index,
+                      child: _pages[i],
+                    ),
+                  ),
+                ),
               ),
-            ),
+
+            // Floating Frosted Glass Dock
             Positioned(
               left: 16,
               right: 16,
@@ -124,72 +113,80 @@ class _LiquidGlassDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(24);
+    final radius = BorderRadius.circular(999);
 
-    return Container(
-      height: 64,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
-        border: Border.all(
-          color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
+            borderRadius: radius,
             color: isDark
-                ? Colors.black.withValues(alpha: 0.4)
-                : const Color(0x120F172A),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+                ? AppColors.glassSurfaceDark.withValues(alpha: 0.90)
+                : Colors.white.withValues(alpha: 0.88),
+            border: Border.all(
+              color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.35)
+                    : const Color(0x120F172A),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        child: Row(
-          children: [
-                      _DockItem(
-                        icon: Icons.space_dashboard_outlined,
-                        activeIcon: Icons.space_dashboard_rounded,
-                        label: 'Home',
-                        isSelected: currentIndex == 0,
-                        onTap: () => onTabSelected(0),
-                        isDark: isDark,
-                        badgeCount: unreadAlerts,
-                      ),
-                      _DockItem(
-                        icon: Icons.calendar_month_outlined,
-                        activeIcon: Icons.calendar_month_rounded,
-                        label: 'Calendar',
-                        isSelected: currentIndex == 1,
-                        onTap: () => onTabSelected(1),
-                        isDark: isDark,
-                        badgeCount: shootsIn7Days,
-                        isUrgentBadge: shootsIn7Days > 0,
-                      ),
-                      _DockItem(
-                        icon: Icons.receipt_long_outlined,
-                        activeIcon: Icons.receipt_long_rounded,
-                        label: 'Invoices',
-                        isSelected: currentIndex == 2,
-                        onTap: () => onTabSelected(2),
-                        isDark: isDark,
-                      ),
-                      _DockItem(
-                        icon: Icons.badge_outlined,
-                        activeIcon: Icons.badge_rounded,
-                        label: 'Clients',
-                        isSelected: currentIndex == 3,
-                        onTap: () => onTabSelected(3),
-                        isDark: isDark,
-                      ),
-                    ],
-                  ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              children: [
+                _DockItem(
+                  icon: Icons.space_dashboard_outlined,
+                  activeIcon: Icons.space_dashboard_rounded,
+                  label: 'Home',
+                  isSelected: currentIndex == 0,
+                  onTap: () => onTabSelected(0),
+                  isDark: isDark,
+                  badgeCount: unreadAlerts,
                 ),
-              );
-            }
-          }
+                _DockItem(
+                  icon: Icons.calendar_month_outlined,
+                  activeIcon: Icons.calendar_month_rounded,
+                  label: 'Calendar',
+                  isSelected: currentIndex == 1,
+                  onTap: () => onTabSelected(1),
+                  isDark: isDark,
+                  badgeCount: shootsIn7Days,
+                  isUrgentBadge: shootsIn7Days > 0,
+                ),
+                _DockItem(
+                  icon: Icons.receipt_long_outlined,
+                  activeIcon: Icons.receipt_long_rounded,
+                  label: 'Invoices',
+                  isSelected: currentIndex == 2,
+                  onTap: () => onTabSelected(2),
+                  isDark: isDark,
+                ),
+                _DockItem(
+                  icon: Icons.badge_outlined,
+                  activeIcon: Icons.badge_rounded,
+                  label: 'Clients',
+                  isSelected: currentIndex == 3,
+                  onTap: () => onTabSelected(3),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _DockItem extends StatefulWidget {
   const _DockItem({
@@ -226,11 +223,20 @@ class _DockItemState extends State<_DockItem>
     super.initState();
     _springController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 320),
     );
-    _scaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _springController, curve: Curves.elasticOut),
-    );
+    _scaleAnim = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.92)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.92, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 65,
+      ),
+    ]).animate(_springController);
     _springController.value = 1.0;
   }
 
@@ -264,23 +270,22 @@ class _DockItemState extends State<_DockItem>
           child: ScaleTransition(
             scale: _scaleAnim,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 260),
+              duration: const Duration(milliseconds: 280),
               curve: Curves.easeOutCubic,
-              padding:
-                  const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
                 color: widget.isSelected
                     ? activeColor.withValues(
                         alpha: widget.isDark ? 0.16 : 0.12)
                     : Colors.transparent,
-                border: widget.isSelected
-                    ? Border.all(
-                        color: activeColor.withValues(
-                            alpha: widget.isDark ? 0.35 : 0.25),
-                        width: 1.1,
-                      )
-                    : null,
+                border: Border.all(
+                  color: widget.isSelected
+                      ? activeColor.withValues(
+                          alpha: widget.isDark ? 0.35 : 0.25)
+                      : Colors.transparent,
+                  width: 1.1,
+                ),
               ),
               child: Center(
                 child: FittedBox(
@@ -293,7 +298,8 @@ class _DockItemState extends State<_DockItem>
                         clipBehavior: Clip.none,
                         children: [
                           AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
+                            duration: const Duration(milliseconds: 240),
+                            switchInCurve: Curves.easeOutCubic,
                             child: Icon(
                               widget.isSelected
                                   ? widget.activeIcon

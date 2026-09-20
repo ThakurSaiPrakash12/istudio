@@ -9,6 +9,7 @@ import '../../providers/invoices_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/invoice_pdf_service.dart';
 import '../../theme/app_colors.dart';
+import '../../routes/smooth_page_route.dart';
 
 class InvoicePreviewScreen extends StatefulWidget {
   const InvoicePreviewScreen({
@@ -26,15 +27,11 @@ class InvoicePreviewScreen extends StatefulWidget {
     bool isDraft = false,
   }) {
     return Navigator.of(context).push<Invoice?>(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 280),
-        pageBuilder: (_, _, _) => InvoicePreviewScreen(
+      SmoothPageRoute(
+        builder: (_) => InvoicePreviewScreen(
           invoice: invoice,
           isDraft: isDraft,
         ),
-        transitionsBuilder: (_, animation, _, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
       ),
     );
   }

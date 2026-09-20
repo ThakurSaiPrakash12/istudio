@@ -42,7 +42,7 @@ class InvoicePdfService {
     final doc = pw.Document();
     final studioName = (studio?.displayStudioName.trim().isNotEmpty ?? false)
         ? studio!.displayStudioName
-        : 'Lumen Studio';
+        : 'My Studio';
     final owner = studio?.displayOwner ?? '';
     final studioPhone = studio?.phone ?? '';
     final studioEmail = studio?.email ?? '';

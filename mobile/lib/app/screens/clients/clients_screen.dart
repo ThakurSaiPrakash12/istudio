@@ -12,6 +12,7 @@ import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
 import 'client_details_screen.dart';
+import '../../routes/smooth_page_route.dart';
 
 enum ClientFilter {
   all,
@@ -57,7 +58,7 @@ class _ClientsScreenState extends State<ClientsScreen>
     super.initState();
     _enterController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 450),
     )..forward();
   }
 
@@ -230,57 +231,63 @@ class _ClientsScreenState extends State<ClientsScreen>
                 ),
               ),
 
-              // Client List
+              // Client List with smooth AnimatedSwitcher
               Expanded(
-                child: filteredClients.isEmpty
-                    ? FadeTransition(
-                        opacity: _staggered(0.20, 0.55),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(18),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        accent.withValues(alpha: 0.08),
-                                    shape: BoxShape.circle,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: filteredClients.isEmpty
+                      ? FadeTransition(
+                          key: const ValueKey('empty_clients'),
+                          opacity: _staggered(0.20, 0.55),
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(18),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          accent.withValues(alpha: 0.08),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                        Icons.person_search_rounded,
+                                        size: 40,
+                                        color: textMuted.withValues(
+                                            alpha: 0.6)),
                                   ),
-                                  child: Icon(
-                                      Icons.person_search_rounded,
-                                      size: 40,
-                                      color: textMuted.withValues(
-                                          alpha: 0.6)),
-                                ),
-                                const SizedBox(height: 14),
-                                Text(
-                                  'No clients found',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: textMain,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    'No clients found',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: textMain,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Try modifying your search or filters.',
-                                  style: TextStyle(
-                                      color: textMuted, fontSize: 13),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Adjust your search or clear filters',
+                                    style: TextStyle(
+                                        color: textMuted, fontSize: 13),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding:
-                            const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                        itemCount: filteredClients.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 10),
+                        )
+                      : ListView.separated(
+                          key: const ValueKey('clients_list'),
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                          itemCount: filteredClients.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final client = filteredClients[index];
                           final events = provider.getEventsForClient(
@@ -300,7 +307,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                             padding: const EdgeInsets.all(16),
                             onTap: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(
+                                SmoothPageRoute(
                                   builder: (_) => ClientDetailsScreen(
                                       clientId: client.id),
                                 ),
@@ -495,7 +502,8 @@ class _ClientsScreenState extends State<ClientsScreen>
                           );
                         },
                       ),
-              ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -513,6 +521,7 @@ class _ClientsScreenState extends State<ClientsScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: context.cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),

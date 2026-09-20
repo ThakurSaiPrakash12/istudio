@@ -251,7 +251,7 @@ class _DayCell extends StatelessWidget {
     final textMuted = context.textMuted;
 
     Color bgColor = Colors.transparent;
-    Border? border;
+    Border border = Border.all(color: Colors.transparent, width: 1.5);
     List<BoxShadow>? shadows;
 
     if (isSelected) {
@@ -268,7 +268,7 @@ class _DayCell extends StatelessWidget {
       ];
     } else if (isToday) {
       bgColor = accent.withValues(alpha: 0.14);
-      border = Border.all(color: accent.withValues(alpha: 0.50));
+      border = Border.all(color: accent.withValues(alpha: 0.50), width: 1.5);
     } else if (isUpcoming) {
       bgColor = accent.withValues(alpha: 0.10);
     }
@@ -303,6 +303,7 @@ class _DayCell extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(10),

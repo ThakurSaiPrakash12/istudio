@@ -12,6 +12,7 @@ import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
 import '../events/event_details_screen.dart';
+import '../../routes/smooth_page_route.dart';
 
 class ClientDetailsScreen extends StatelessWidget {
   const ClientDetailsScreen({
@@ -35,7 +36,7 @@ class ClientDetailsScreen extends StatelessWidget {
       return Scaffold(
         appBar: const StudioAppBar(
           title: 'Client Not Found',
-          subtitle: 'LUMEN Studio',
+          subtitle: 'Client details',
         ),
         body: Center(
           child: Column(
@@ -591,7 +592,7 @@ class ClientDetailsScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
+              SmoothPageRoute(
                 builder: (_) => EventDetailsScreen(eventId: event.id),
               ),
             );
@@ -654,7 +655,7 @@ class ClientDetailsScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                         onTap: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(
+                            SmoothPageRoute(
                               builder: (_) => EventDetailsScreen(
                                 eventId: event.id,
                                 autoOpenPayment: true,

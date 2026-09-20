@@ -9,15 +9,15 @@ void main() {
 
   Future<void> pumpAuth(WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(const LumenApp());
+    await tester.pumpWidget(const IStudioApp());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 900));
   }
 
-  testWidgets('shows the Lumen login screen', (WidgetTester tester) async {
+  testWidgets('shows the login screen', (WidgetTester tester) async {
     await pumpAuth(tester);
 
-    expect(find.textContaining('LUMEN'), findsWidgets);
+    expect(find.textContaining('iSTUDIO'), findsWidgets);
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Phone number'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);

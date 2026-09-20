@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../models/studio_event.dart';
 import '../providers/events_provider.dart';
 import '../screens/events/event_details_screen.dart';
+import '../routes/smooth_page_route.dart';
 import '../theme/app_colors.dart';
 import 'studio_card.dart';
 
@@ -496,12 +497,8 @@ class _MonthlyFinancialSummarySheetState
       onTap: () {
         Navigator.of(context).pop();
         Navigator.of(context).push(
-          PageRouteBuilder<void>(
-            transitionDuration: const Duration(milliseconds: 280),
-            pageBuilder: (_, _, _) => EventDetailsScreen(eventId: event.id),
-            transitionsBuilder: (_, animation, _, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+          SmoothPageRoute(
+            builder: (_) => EventDetailsScreen(eventId: event.id),
           ),
         );
       },

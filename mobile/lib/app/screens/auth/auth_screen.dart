@@ -164,7 +164,7 @@ class _AuthScreenState extends State<AuthScreen>
                                             color: context.accentColor, size: 18),
                                         const SizedBox(width: 8),
                                         Text(
-                                          'Explore Studio in Demo Mode →',
+                                          'Try without signing in →',
                                           style: TextStyle(
                                             color: context.accentColor,
                                             fontWeight: FontWeight.w700,
