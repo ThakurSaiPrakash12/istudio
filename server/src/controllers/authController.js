@@ -267,7 +267,6 @@ async function uploadLogo(req, res) {
     return res.json({
       success: true,
       imageUrl: logoUrl,
-      source,
       user: user.toPublicJSON(),
       extractedTxn,
     });
