@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const repository = require('../repositories/businessRepository');
 const { uploadToCloudinary } = require('../config/cloudinary');
 
@@ -137,12 +138,18 @@ async function getPayment(req, res) {
 async function uploadPaymentProof(req, res) {
   const payment = await repository.findPaymentForUser(req.params.id, req.userId);
   if (!payment) return res.status(404).json({ success: false, message: 'Payment not found.' });
-  if (!req.file) return res.status(400).json({ success: false, message: 'Choose a payment proof image.' });
+  if (!req.file) return res.status(400).json({ success: false, message: 'Choose a payment proof image or PDF.' });
   try {
-    const result = await uploadToCloudinary(req.file.path, {
+    const isPdf = path.extname(req.file.originalname || '').toLowerCase() === '.pdf' ||
+      req.file.mimetype === 'application/pdf';
+    const uploadOptions = {
       folder: `lumen_studio/payments/${req.userId}`,
-      resource_type: 'image',
-    });
+      resource_type: isPdf ? 'raw' : 'auto',
+    };
+    if (!isPdf) {
+      uploadOptions.transformation = [{ quality: 'auto' }];
+    }
+    const result = await uploadToCloudinary(req.file.path, uploadOptions);
     if (!result.secure_url || !result.secure_url.startsWith('https://')) {
       return res.status(500).json({ success: false, message: 'Payment proof upload failed.' });
     }

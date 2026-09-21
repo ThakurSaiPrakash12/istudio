@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
 const allowedMimeTypes = new Set([
   'image/jpeg',
   'image/jpg',
@@ -22,19 +22,20 @@ const allowedMimeTypes = new Set([
   'image/png',
   'image/gif',
   'image/webp',
+  'application/pdf',
 ]);
 
 const fileFilter = (_req, file, cb) => {
   const ext = path.extname(file.originalname || '').toLowerCase();
-  const isImageMime = allowedMimeTypes.has(file.mimetype) ||
+  const isImageOrPdfMime = allowedMimeTypes.has(file.mimetype) ||
     file.mimetype === 'application/octet-stream' ||
     !file.mimetype;
   const isAllowedExt = allowedExtensions.includes(ext);
 
-  if (isImageMime && isAllowedExt) {
+  if (isImageOrPdfMime && isAllowedExt) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid image format. Please upload an image file (.jpg, .jpeg, .png, .webp, etc.).'));
+    cb(new Error('Invalid file format. Please upload an image or PDF file (.jpg, .jpeg, .png, .webp, .pdf).'));
   }
 };
 
@@ -46,14 +47,14 @@ const uploadMiddleware = multer({
 
 function hasSupportedImageSignature(filePath) {
   const bytes = fs.readFileSync(filePath);
-  if (bytes.length < 12) return false;
+  if (bytes.length < 4) return false;
   const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  const isPng = bytes.subarray(0, 8).equals(Buffer.from('\x89PNG\r\n\x1a\n', 'binary'));
-  const header = bytes.subarray(0, 6).toString('ascii');
-  const isGif = header === 'GIF87a' || header === 'GIF89a';
-  const isWebp = bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
+  const isPng = bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from('\x89PNG\r\n\x1a\n', 'binary'));
+  const isGif = bytes.length >= 6 && (bytes.subarray(0, 6).toString('ascii') === 'GIF87a' || bytes.subarray(0, 6).toString('ascii') === 'GIF89a');
+  const isWebp = bytes.length >= 12 && bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
     bytes.subarray(8, 12).toString('ascii') === 'WEBP';
-  return isJpeg || isPng || isGif || isWebp;
+  const isPdf = bytes.subarray(0, 4).toString('ascii') === '%PDF';
+  return isJpeg || isPng || isGif || isWebp || isPdf;
 }
 
 // Accepts single file under field 'logo', 'image', 'avatar', or 'profileImage'
@@ -68,3 +69,4 @@ module.exports = {
   uploadPaymentProof,
   hasSupportedImageSignature,
 };
+

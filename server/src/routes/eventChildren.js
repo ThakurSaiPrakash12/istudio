@@ -51,7 +51,7 @@ router.post('/payments/:id/proof', controller.authorizePaymentProof, (req, res, 
     if (error) return res.status(400).json({ success: false, message: error.message || 'Invalid payment proof.' });
     if (!req.file || !hasSupportedImageSignature(req.file.path)) {
       if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-      return res.status(400).json({ success: false, message: 'Upload a valid JPG, PNG, GIF, or WebP proof.' });
+      return res.status(400).json({ success: false, message: 'Upload a valid JPG, PNG, GIF, WebP, or PDF proof.' });
     }
     return next();
   });

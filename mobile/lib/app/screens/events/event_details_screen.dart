@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1788,9 +1789,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           onChanged: (val) {
                             setModalState(() {
                               attachProof = val;
-                              if (val && proofController.text.isEmpty) {
-                                proofController.text =
-                                    'receipt_${selectedMethod.name}_${DateTime.now().millisecondsSinceEpoch % 10000}.jpg';
+                              if (!val) {
+                                proofController.clear();
+                                proofBytes = null;
+                                proofFilename = null;
                               }
                             });
                           },
@@ -1799,7 +1801,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     ),
                     if (attachProof) ...[
                       const SizedBox(height: 10),
-                      if (proofController.text.trim().isNotEmpty) ...[
+                      if (proofBytes != null) ...[
                         Container(
                           clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
@@ -1812,73 +1814,64 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (proofController.text.startsWith('http') ||
-                                  proofController.text.startsWith('data:'))
-                                GestureDetector(
-                                  onTap: () => _showFullScreenProof(
-                                    context,
-                                    proofController.text.trim(),
-                                  ),
-                                  child: Stack(
-                                    children: [
-                                      Image.network(
-                                        proofController.text.trim(),
+                              GestureDetector(
+                                onTap: () => _showFullScreenMemoryProof(
+                                  context,
+                                  Uint8List.fromList(proofBytes!),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(13),
+                                      ),
+                                      child: Image.memory(
+                                        Uint8List.fromList(proofBytes!),
                                         height: 140,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) => Container(
-                                          height: 80,
-                                          color: context.cardBg,
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            'Proof Image: ${proofController.text}',
-                                            style: TextStyle(
-                                              color: context.textMuted,
-                                              fontSize: 11,
-                                            ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: 8,
+                                      bottom: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.7,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
                                           ),
                                         ),
-                                      ),
-                                      Positioned(
-                                        right: 8,
-                                        bottom: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.7,
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.zoom_in_rounded,
+                                              color: Colors.white,
+                                              size: 14,
                                             ),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.zoom_in_rounded,
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Tap to preview',
+                                              style: TextStyle(
                                                 color: Colors.white,
-                                                size: 14,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
                                               ),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                'Tap to preview',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
+                              ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -1894,12 +1887,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
-                                        'Payment Proof Image Attached',
+                                        proofFilename ??
+                                            'Payment Proof Image Attached',
                                         style: TextStyle(
                                           color: context.textMain,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     TextButton(
@@ -1925,6 +1920,38 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.innerBg,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: context.cardBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.image_outlined,
+                                color: context.textMuted,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'No proof attached yet. Tap below to select.',
+                                  style: TextStyle(
+                                    color: context.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                       ],
                       SizedBox(
                         width: double.infinity,
@@ -1943,10 +1970,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 ),
                           label: Text(
                             isUploadingProof
-                                ? 'Uploading Image to Cloud...'
-                                : (proofController.text.trim().isNotEmpty
+                                ? 'Selecting...'
+                                : (proofBytes != null
                                       ? 'Change Proof Image'
-                                      : 'Upload Image (Cloudinary)'),
+                                      : 'Select Proof Image'),
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -2315,13 +2342,19 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         _buildProofDetailRow(
                           context,
                           'Transaction Ref',
-                          payment.reference ?? 'REF-AUTO-9281',
+                          (payment.reference != null &&
+                                  payment.reference!.trim().isNotEmpty)
+                              ? payment.reference!.trim()
+                              : 'None provided',
                         ),
                         const SizedBox(height: 8),
                         _buildProofDetailRow(
                           context,
                           'Attachment File',
-                          payment.proof ?? 'receipt_doc.pdf',
+                          (payment.proof != null &&
+                                  payment.proof!.trim().isNotEmpty)
+                              ? payment.proof!.trim()
+                              : 'No attachment',
                         ),
                       ],
                     ),
@@ -2671,6 +2704,46 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         style: TextStyle(color: Colors.white70),
                       ),
                     ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black54,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFullScreenMemoryProof(BuildContext context, Uint8List bytes) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black.withValues(alpha: 0.9),
+        insetPadding: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Center(
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
