@@ -101,7 +101,7 @@ class _AddDeliverableSheetState extends State<AddDeliverableSheet> {
                 ),
               ),
               Text(
-                isEdit ? 'Edit deliverable' : 'Add deliverable',
+                isEdit ? 'Edit item' : 'Add item',
                 style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontSize: 22,
@@ -110,17 +110,17 @@ class _AddDeliverableSheetState extends State<AddDeliverableSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Name the coverage, album, or print and set its cost.',
+                'Name the item or service and set the cost.',
                 style: TextStyle(color: textMuted, fontSize: 13),
               ),
               const SizedBox(height: 18),
               StudioTextField(
-                label: 'Deliverable name',
-                hint: 'e.g. Full wedding coverage',
+                label: 'Item name',
+                hint: 'e.g. Wedding photos, Album, Prints',
                 controller: _nameController,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Enter a deliverable name';
+                    return 'Enter an item name';
                   }
                   return null;
                 },
@@ -147,7 +147,7 @@ class _AddDeliverableSheetState extends State<AddDeliverableSheet> {
               ),
               const SizedBox(height: 22),
               StudioButton(
-                label: isEdit ? 'Save deliverable' : 'Add deliverable',
+                label: isEdit ? 'Save item' : 'Add item',
                 onPressed: _submit,
               ),
             ],
@@ -226,29 +226,29 @@ class InvoiceActionsSheet extends StatelessWidget {
             const SizedBox(height: 8),
             _ActionTile(
               icon: Icons.check_circle_outline_rounded,
-              label: 'Mark as paid',
+              label: 'Mark paid ✓',
               enabled: !paid,
               onTap: () => Navigator.pop(context, InvoiceSheetAction.paid),
             ),
             _ActionTile(
               icon: Icons.payments_outlined,
-              label: 'Mark as partially paid',
+              label: 'Record advance / part pay',
               enabled: !paid,
               onTap: () => Navigator.pop(context, InvoiceSheetAction.partial),
             ),
             _ActionTile(
               icon: Icons.event_repeat_rounded,
-              label: 'Extend invoice due date',
+              label: 'Change due date',
               onTap: () => Navigator.pop(context, InvoiceSheetAction.extendDue),
             ),
             _ActionTile(
               icon: Icons.ios_share_rounded,
-              label: 'Share invoice',
+              label: 'Share receipt',
               onTap: () => Navigator.pop(context, InvoiceSheetAction.share),
             ),
             _ActionTile(
               icon: Icons.delete_outline_rounded,
-              label: 'Delete invoice',
+              label: 'Delete receipt',
               destructive: true,
               onTap: () => Navigator.pop(context, InvoiceSheetAction.delete),
             ),
@@ -329,7 +329,7 @@ class _PartialPaymentSheetState extends State<PartialPaymentSheet> {
                 ),
               ),
               Text(
-                'Partial payment',
+                'Part payment',
                 style: GoogleFonts.plusJakartaSans(
                   color: context.textMain,
                   fontSize: 22,
@@ -338,7 +338,7 @@ class _PartialPaymentSheetState extends State<PartialPaymentSheet> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Balance due ${_money.format(remaining)}',
+                'Balance to pay ${_money.format(remaining)}',
                 style: TextStyle(color: context.textMuted, fontSize: 13),
               ),
               const SizedBox(height: 16),
@@ -365,7 +365,7 @@ class _PartialPaymentSheetState extends State<PartialPaymentSheet> {
                 },
               ),
               const SizedBox(height: 22),
-              StudioButton(label: 'Add payment', onPressed: _submit),
+              StudioButton(label: 'Save payment', onPressed: _submit),
             ],
           ),
         ),

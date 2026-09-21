@@ -153,7 +153,7 @@ class _MonthlyFinancialSummarySheetState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Monthly Financial Summary',
+                            'Monthly Earnings',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
@@ -165,7 +165,7 @@ class _MonthlyFinancialSummarySheetState
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Real-time earnings, collections & expenses',
+                            'Income, collections & expenses',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -213,19 +213,16 @@ class _MonthlyFinancialSummarySheetState
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              Icon(Icons.calendar_month_rounded,
+                                  color: accent, size: 18),
+                              const SizedBox(width: 8),
                               Text(
                                 DateFormat('MMMM yyyy').format(_selectedMonth),
                                 style: GoogleFonts.plusJakartaSans(
                                   color: textMain,
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_drop_down_rounded,
-                                color: accent,
-                                size: 22,
                               ),
                             ],
                           ),
@@ -247,7 +244,7 @@ class _MonthlyFinancialSummarySheetState
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   children: [
-                    // Premium LUMEN Financial Hero Card
+                    // Premium Financial Hero Card
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -268,7 +265,7 @@ class _MonthlyFinancialSummarySheetState
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: accent.withValues(alpha: 0.35),
                           width: 1.2,
@@ -295,7 +292,7 @@ class _MonthlyFinancialSummarySheetState
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
-                                  '$totalEvents ${totalEvents == 1 ? 'Event' : 'Events'} Conducted',
+                                  '$totalEvents ${totalEvents == 1 ? 'Shoot' : 'Shoots'}',
                                   style: TextStyle(
                                     color: accent,
                                     fontSize: 12,
@@ -316,7 +313,7 @@ class _MonthlyFinancialSummarySheetState
                               Expanded(
                                 child: _buildStatTile(
                                   context,
-                                  label: 'Total Event Value',
+                                  label: 'Total Booked',
                                   value: _currency.format(totalIncome),
                                   valueColor: textMain,
                                 ),
@@ -325,9 +322,9 @@ class _MonthlyFinancialSummarySheetState
                               Expanded(
                                 child: _buildStatTile(
                                   context,
-                                  label: 'Amount Received',
+                                  label: 'Received',
                                   value: _currency.format(totalReceived),
-                                  valueColor: const Color(0xFF38BDF8),
+                                  valueColor: AppColors.receivedGreen,
                                 ),
                               ),
                             ],
@@ -338,7 +335,7 @@ class _MonthlyFinancialSummarySheetState
                               Expanded(
                                 child: _buildStatTile(
                                   context,
-                                  label: 'Total Expenditure',
+                                  label: 'Expenses',
                                   value: _currency.format(totalExpenditure),
                                   valueColor: AppColors.urgencyWarning(context),
                                 ),
@@ -347,7 +344,7 @@ class _MonthlyFinancialSummarySheetState
                               Expanded(
                                 child: _buildStatTile(
                                   context,
-                                  label: 'Net Amount Left',
+                                  label: 'Profit (Net)',
                                   value: _currency.format(amountLeft),
                                   valueColor: netColor,
                                   isBold: true,
@@ -365,7 +362,7 @@ class _MonthlyFinancialSummarySheetState
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Event Breakdown',
+                          'Shoots Breakdown',
                           style: GoogleFonts.plusJakartaSans(
                             color: textMain,
                             fontSize: 16,

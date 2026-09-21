@@ -50,24 +50,14 @@ class StudioAppBar extends StatelessWidget implements PreferredSizeWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: ShaderMask(
-                      shaderCallback: (bounds) => LinearGradient(
-                        colors: [
-                          AppColors.textMain(context),
-                          AppColors.accent(context),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ).createShader(bounds),
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        style: GoogleFonts.syne(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.1,
-                        ),
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.textMain(context),
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
                       ),
                     ),
                   ),

@@ -357,7 +357,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Icon(
                                   Icons.camera_alt_rounded,
                                   size: 18,
-                                  color: AppColors.ink,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),

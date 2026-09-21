@@ -33,7 +33,7 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
     return switch (status) {
       InvoiceStatus.paid => context.accentColor,
       InvoiceStatus.pending =>
-        context.isDark ? const Color(0xFF64B5F6) : const Color(0xFF0284C7),
+        context.isDark ? const Color(0xFFB39DDB) : const Color(0xFF5F259F),
       InvoiceStatus.partial =>
         context.isDark ? const Color(0xFFE8B86D) : const Color(0xFFD97706),
       InvoiceStatus.overdue =>
@@ -239,7 +239,7 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                   showCheckmark: false,
                   labelStyle: TextStyle(
                     color: selected
-                        ? (context.isDark ? AppColors.ink : Colors.white)
+                        ? Colors.white
                         : textMain,
                     fontSize: 12,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
@@ -275,7 +275,7 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'No invoices here',
+                          'No bills yet',
                           style: GoogleFonts.plusJakartaSans(
                             color: textMain,
                             fontSize: 18,
@@ -284,7 +284,7 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Create an invoice or try another filter.',
+                          'Make a bill or try another filter.',
                           style: TextStyle(color: textMuted, fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
@@ -410,7 +410,7 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                           ),
                           Semantics(
                             button: true,
-                            label: 'Invoice actions for ${invoice.number}',
+                            label: 'Actions for ${invoice.number}',
                             child: IconButton(
                               tooltip: 'More actions',
                               onPressed: () => _openActions(invoice),

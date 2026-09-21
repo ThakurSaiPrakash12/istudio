@@ -1,23 +1,31 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/invoice.dart';
 import '../../models/studio_event.dart';
+import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
+import '../../providers/invoices_provider.dart';
 import '../../providers/notifications_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/countdown_chip.dart';
 import '../../widgets/event_countdown_banner.dart';
+import '../../widgets/monthly_financial_summary_sheet.dart';
+import '../../widgets/notifications_sheet.dart';
 import '../../widgets/profile_avatar.dart';
-import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import '../events/create_event_sheet.dart';
 import '../events/event_details_screen.dart';
 import '../events/past_events_screen.dart';
 import '../events/upcoming_events_screen.dart';
 import '../profile/profile_screen.dart';
+import '../shell/app_shell.dart';
 import '../../routes/smooth_page_route.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -30,9 +38,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final PageController _pageController;
+  late final PageController _bannerPageController;
   late final AnimationController _staggerController;
   int _currentCarouselIndex = 0;
+  int _currentBannerIndex = 0;
   bool _dismissedHeroAlert = false;
+  Timer? _bannerAutoScrollTimer;
 
   static final _currency =
       NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
@@ -41,24 +52,41 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.88);
+    _bannerPageController = PageController(viewportFraction: 1.0);
     _staggerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
+
+    // Auto-scroll banners every 4 seconds
+    _bannerAutoScrollTimer = Timer.periodic(
+      const Duration(seconds: 4),
+      (_) {
+        if (!mounted || !_bannerPageController.hasClients) return;
+        final nextPage = (_currentBannerIndex + 1) % 3;
+        _bannerPageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
+      },
+    );
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _bannerPageController.dispose();
     _staggerController.dispose();
+    _bannerAutoScrollTimer?.cancel();
     super.dispose();
   }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return 'Hi';
+    if (hour < 17) return 'Hi';
+    return 'Hi';
   }
 
   Animation<double> _staggered(double begin, double end) =>
@@ -71,68 +99,65 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
     final eventsProvider = context.watch<EventsProvider>();
+    final invoicesProvider = context.watch<InvoicesProvider>();
     final notifsProvider = context.watch<NotificationsProvider?>();
 
     final upcoming = eventsProvider.upcomingEvents;
     final past = eventsProvider.pastEvents.take(4).toList();
+    final overview = invoicesProvider.overview;
+    final unreadAlerts = notifsProvider?.unreadCount ?? 0;
 
     final shootsWithin7Days = upcoming.where((e) => e.isWithin7Days).toList();
     final nearestHeroEvent =
         shootsWithin7Days.isNotEmpty ? shootsWithin7Days.first : null;
 
+    return Scaffold(
+      backgroundColor: context.scaffoldBg,
+      body: SafeArea(
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Column(
+              children: [
+                // 1. Authentic PhonePe Top Header Banner
+                _buildPhonePeHeader(
+                  context,
+                  user: user,
+                  unreadAlerts: unreadAlerts,
+                ),
 
-
-    return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860),
-          child: Column(
-            children: [
-              StudioAppBar(
-                title: user?.displayStudioName ?? 'Studio',
-                subtitle: 'Your studio dashboard',
-                showNotificationBell: true,
-                actions: [
-                  Semantics(
-                    button: true,
-                    label: 'Open profile',
-                    child: IconButton(
-                      tooltip: 'Profile',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          SmoothPageRoute(
-                            builder: (_) => const ProfileScreen(),
-                          ),
-                        );
-                      },
-                      icon: ProfileAvatar(
-                          logoUrl: user?.logoUrl, size: 40),
-                    ),
-                  ),
-                ],
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                  children: [
-                    // 1. Welcome Greeting & Studio Header
-                    _AnimatedSection(
-                      animation: _staggered(0.0, 0.25),
-                      child: _buildEditorialHeader(
-                        context,
-                        ownerName: user?.displayOwner ?? 'Photographer',
-                        greeting: _getGreeting(),
+                // 2. Main Content Body
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+                    children: [
+                      // Studio Services (PhonePe 4-Circle Action Card)
+                      _AnimatedSection(
+                        animation: _staggered(0.0, 0.25),
+                        child: _buildQuickActionGrid(context),
                       ),
-                    ),
-                    const SizedBox(height: 18),
+                      const SizedBox(height: 12),
 
+                      // PhonePe Studio Earnings & Dues Strip
+                      _AnimatedSection(
+                        animation: _staggered(0.06, 0.32),
+                        child: _buildEarningsStrip(context, overview),
+                      ),
+                      const SizedBox(height: 14),
 
+                      // Promotional Banners Carousel
+                      _AnimatedSection(
+                        animation: _staggered(0.12, 0.40),
+                        child: _buildBannerCarousel(context),
+                      ),
+                      const SizedBox(height: 18),
 
-                    // 3. 7-Day Countdown Alert Hero Banner
+                    // 4. 7-Day Countdown Alert Hero Banner
                     if (nearestHeroEvent != null &&
                         !_dismissedHeroAlert) ...[
                       _AnimatedSection(
-                        animation: _staggered(0.15, 0.45),
+                        animation: _staggered(0.20, 0.50),
                         child: EventCountdownBanner(
                           event: nearestHeroEvent,
                           onDismiss: () =>
@@ -142,21 +167,14 @@ class _HomeScreenState extends State<HomeScreen>
                       const SizedBox(height: 22),
                     ],
 
-                    // 4. Quick Action Controls Bar
-                    _AnimatedSection(
-                      animation: _staggered(0.20, 0.50),
-                      child: _buildQuickActionBar(context, notifsProvider),
-                    ),
-                    const SizedBox(height: 26),
-
-                    // 5. Upcoming Events Section Header
+                    // 5. Coming Up Section Header
                     _AnimatedSection(
                       animation: _staggered(0.28, 0.58),
                       child: _buildSectionHeader(
                         context,
-                        title: 'Upcoming Events',
+                        title: 'Coming Up',
                         badgeCount: upcoming.length,
-                        actionLabel: 'View all →',
+                        actionLabel: 'See all',
                         onAction: () {
                           Navigator.of(context).push(
                             SmoothPageRoute(
@@ -179,13 +197,13 @@ class _HomeScreenState extends State<HomeScreen>
 
                     const SizedBox(height: 30),
 
-                    // 7. Past Events Portfolio Header
+                    // 7. Done Section Header
                     _AnimatedSection(
                       animation: _staggered(0.45, 0.75),
                       child: _buildSectionHeader(
                         context,
-                        title: 'Past Events',
-                        actionLabel: 'View all →',
+                        title: 'Done',
+                        actionLabel: 'See all',
                         onAction: () {
                           Navigator.of(context).push(
                             SmoothPageRoute(
@@ -206,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen>
                               padding: const EdgeInsets.all(22),
                               child: Center(
                                 child: Text(
-                                  'Completed shoots will appear here.',
+                                  'No shoots yet',
                                   style: TextStyle(
                                     color: context.textMuted
                                         .withValues(alpha: 0.8),
@@ -233,143 +251,583 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ),
+    ),
+  );
+}
+
+  // ================= 1. Authentic PhonePe Top Header =================
+  Widget _buildPhonePeHeader(
+    BuildContext context, {
+    required User? user,
+    required int unreadAlerts,
+  }) {
+    final dateStr = DateFormat('EEE, d MMM').format(DateTime.now());
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppColors.phonePeHeaderGradient,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x335F259F),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 15),
+      child: Row(
+        children: [
+          // Profile Avatar with clean white ring
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              SmoothPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  width: 1.5,
+                ),
+              ),
+              child: ProfileAvatar(logoUrl: user?.logoUrl, size: 42),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Studio & Greeting
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user?.displayStudioName ?? 'Studio',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFB800),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'PRO',
+                        style: TextStyle(
+                          color: Color(0xFF1A0A2E),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_getGreeting()}, ${user?.displayOwner ?? 'User'} 👋 · $dateStr',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.88),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Theme Toggle
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: IconButton(
+              tooltip: context.isDark ? 'Light mode' : 'Dark mode',
+              iconSize: 20,
+              color: Colors.white,
+              icon: Icon(
+                context.isDark
+                    ? Icons.light_mode_rounded
+                    : Icons.dark_mode_rounded,
+              ),
+              onPressed: () => context.read<ThemeProvider?>()?.toggleTheme(),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Notification Bell
+          _buildHeaderNotificationBell(context, unreadAlerts),
+        ],
+      ),
     );
   }
 
-  // ================= 1. Editorial Header =================
-  Widget _buildEditorialHeader(
-    BuildContext context, {
-    required String ownerName,
-    required String greeting,
-  }) {
-    final textMain = context.textMain;
-    final textMuted = context.textMuted;
-    final accent = context.accentColor;
-    final dateStr = DateFormat('EEEE, d MMMM').format(DateTime.now());
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: accent.withValues(alpha: 0.30),
+  Widget _buildHeaderNotificationBell(BuildContext context, int unreadAlerts) {
+    return Semantics(
+      label: 'Notifications ($unreadAlerts unread)',
+      button: true,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: IconButton(
+              tooltip: 'Notifications',
+              iconSize: 20,
+              color: Colors.white,
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () => NotificationsSheet.show(context),
+            ),
+          ),
+          if (unreadAlerts > 0)
+            Positioned(
+              right: 2,
+              top: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF3B30),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Text(
+                  unreadAlerts > 9 ? '9+' : '$unreadAlerts',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-              child: Row(
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ================= 2. PhonePe Quick Action Grid =================
+  Widget _buildQuickActionGrid(BuildContext context) {
+    final isDark = context.isDark;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
+          width: 0.8,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.22)
+                : const Color(0x080F172A),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Studio Services',
+                style: TextStyle(
+                  color: isDark ? AppColors.paper : const Color(0xFF111827),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5F259F).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Quick 4',
+                  style: TextStyle(
+                    color: Color(0xFF5F259F),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _QuickActionItem(
+                icon: Icons.camera_alt_rounded,
+                label: 'New Shoot',
+                color: const Color(0xFF5F259F),
+                isDark: isDark,
+                onTap: () => CreateEventSheet.show(context),
+              ),
+              _QuickActionItem(
+                icon: Icons.receipt_long_rounded,
+                label: 'Make Bill',
+                color: const Color(0xFFFF9F43),
+                isDark: isDark,
+                onTap: () => AppShellScope.of(context)?.switchTab(2),
+              ),
+              _QuickActionItem(
+                icon: Icons.calendar_month_rounded,
+                label: 'Calendar',
+                color: const Color(0xFF10B981),
+                isDark: isDark,
+                onTap: () => AppShellScope.of(context)?.switchTab(1),
+              ),
+              _QuickActionItem(
+                icon: Icons.people_rounded,
+                label: 'Clients',
+                color: const Color(0xFF0284C7),
+                isDark: isDark,
+                onTap: () => AppShellScope.of(context)?.switchTab(3),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= 3. PhonePe Studio Earnings Strip =================
+  Widget _buildEarningsStrip(BuildContext context, InvoiceOverview overview) {
+    final isDark = context.isDark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
+          width: 0.8,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.20)
+                : const Color(0x080F172A),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5F259F).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_rounded,
+              color: Color(0xFF5F259F),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Studio Earnings',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.muted : const Color(0xFF6B7280),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      _currency.format(overview.received),
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                    Text(
+                      ' recvd',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppColors.muted : const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                    if (overview.pending > 0) ...[
+                      Text(
+                        ' · ',
+                        style: TextStyle(
+                          color: isDark ? AppColors.muted : const Color(0xFF9CA3AF),
+                        ),
+                      ),
+                      Text(
+                        _currency.format(overview.pending),
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFF59E0B),
+                        ),
+                      ),
+                      Text(
+                        ' due',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppColors.muted : const Color(0xFF9CA3AF),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: () => MonthlyFinancialSummarySheet.show(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF5F259F).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.auto_awesome_rounded,
-                      size: 12, color: accent),
-                  const SizedBox(width: 6),
                   Text(
-                    'PRO STUDIO',
+                    'Summary',
                     style: TextStyle(
-                      color: accent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.4,
+                      color: Color(0xFF5F259F),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
                     ),
+                  ),
+                  SizedBox(width: 3),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: Color(0xFF5F259F),
+                    size: 9,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                dateStr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: textMuted,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          '$greeting, $ownerName',
-          style: GoogleFonts.plusJakartaSans(
-            color: textMain,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.3,
           ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          'Here\'s what\'s happening today',
-          style: TextStyle(
-            color: textMuted,
-            fontSize: 13,
-            height: 1.35,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-
-
-  // ================= 3. Quick Action Bar =================
-  Widget _buildQuickActionBar(
-      BuildContext context, NotificationsProvider? notifs) {
-    final isDark = context.isDark;
-
-    return _PressableButton(
-      onTap: () => CreateEventSheet.show(context),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-        decoration: BoxDecoration(
-          gradient: isDark
-              ? AppColors.skyGradient
-              : const LinearGradient(
-                  colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
-                ),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.45),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.sky.withValues(alpha: isDark ? 0.35 : 0.22),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
+  // ================= 3. Promotional Banner Carousel =================
+  Widget _buildBannerCarousel(BuildContext context) {
+    final banners = [
+      _BannerData(
+        title: 'Send Bills with QR',
+        subtitle: 'Fast & easy receipts to WhatsApp',
+        icon: Icons.receipt_long_rounded,
+        actionLabel: 'Make Bill',
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7B3FE4), Color(0xFF5F259F)],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(
-              Icons.add_rounded,
-              color: Color(0xFF040C1A),
-              size: 22,
-            ),
-            SizedBox(width: 8),
-            Text(
-              'Add Event',
-              style: TextStyle(
-                color: Color(0xFF040C1A),
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.3,
-              ),
-            ),
-          ],
-        ),
+        onTap: () => AppShellScope.of(context)?.switchTab(2),
       ),
+      _BannerData(
+        title: 'Plan Studio Shoots',
+        subtitle: 'Never double-book wedding dates',
+        icon: Icons.calendar_today_rounded,
+        actionLabel: 'Calendar',
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF9F43), Color(0xFFE65100)],
+        ),
+        onTap: () => AppShellScope.of(context)?.switchTab(1),
+      ),
+      _BannerData(
+        title: 'Monthly Earnings',
+        subtitle: 'Check income, profit & pending',
+        icon: Icons.account_balance_wallet_rounded,
+        actionLabel: 'See Profit',
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF047857)],
+        ),
+        onTap: () => MonthlyFinancialSummarySheet.show(context),
+      ),
+    ];
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 126,
+          child: PageView.builder(
+            controller: _bannerPageController,
+            physics: const BouncingScrollPhysics(),
+            itemCount: banners.length,
+            onPageChanged: (index) {
+              setState(() => _currentBannerIndex = index);
+            },
+            itemBuilder: (context, index) {
+              final banner = banners[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(22),
+                    onTap: banner.onTap,
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: banner.gradient,
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: banner.gradient.colors.first.withValues(alpha: 0.32),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 18, 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  banner.title,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  banner.subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.90),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.22),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        banner.actionLabel,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.arrow_forward_rounded,
+                                        color: Colors.white,
+                                        size: 11,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.35),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              banner.icon,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Banner dots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(banners.length, (index) {
+            final isCurrent = index == _currentBannerIndex;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: isCurrent ? 20 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isCurrent
+                    ? context.accentColor
+                    : context.cardBorder.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
@@ -432,13 +890,21 @@ class _HomeScreenState extends State<HomeScreen>
           child: Padding(
             padding: const EdgeInsets.symmetric(
                 horizontal: 10, vertical: 5),
-            child: Text(
-              actionLabel,
-              style: TextStyle(
-                color: accent,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  actionLabel,
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    color: accent, size: 10),
+              ],
             ),
           ),
         ),
@@ -497,7 +963,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ================= 6. Upcoming VIP Shoot Card =================
+  // ================= 6. Upcoming Shoot Card =================
   Widget _buildUpcomingCard(BuildContext context, StudioEvent event) {
     final dateStr = DateFormat('d MMM yyyy').format(event.startsAt);
     final dayStr = DateFormat('EEEE').format(event.startsAt);
@@ -646,7 +1112,7 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Text(
                   remaining > 0
                       ? '${_currency.format(remaining)} due'
-                      : '✓ All Settled',
+                      : 'Paid ✓',
                   style: TextStyle(
                     color: remaining > 0
                         ? AppColors.urgencyWarning(context)
@@ -662,7 +1128,7 @@ class _HomeScreenState extends State<HomeScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Shoot Brief',
+                    'View',
                     style: TextStyle(
                       color: accent,
                       fontSize: 12,
@@ -702,7 +1168,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 14),
           Text(
-            'Your schedule is clear',
+            'No shoots yet',
             style: GoogleFonts.plusJakartaSans(
               color: context.textMain,
               fontSize: 17,
@@ -711,7 +1177,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 4),
           Text(
-            'Tap below to schedule your next shoot.',
+            'Add your first shoot',
             style: TextStyle(color: context.textMuted, fontSize: 13),
             textAlign: TextAlign.center,
           ),
@@ -719,7 +1185,7 @@ class _HomeScreenState extends State<HomeScreen>
           ElevatedButton.icon(
             onPressed: () => CreateEventSheet.show(context),
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Schedule a Shoot'),
+            label: const Text('+ New Shoot'),
           ),
         ],
       ),
@@ -794,7 +1260,7 @@ class _HomeScreenState extends State<HomeScreen>
                         color: statusColor, size: 12),
                     SizedBox(width: 4),
                     Text(
-                      'Completed',
+                      'Done',
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 10.5,
@@ -824,13 +1290,13 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 Expanded(
                   child: _buildCompactMetric(
-                      context, 'Received',
+                      context, 'Got',
                       _currency.format(event.amountReceived)),
                 ),
                 Expanded(
                   child: _buildCompactMetric(
                     context,
-                    'Expenses',
+                    'Spent',
                     _currency.format(event.totalExpenses),
                     valueColor: AppColors.expense(context),
                   ),
@@ -838,7 +1304,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Expanded(
                   child: _buildCompactMetric(
                     context,
-                    'Net Profit',
+                    'Profit',
                     _currency.format(event.netProfit),
                     valueColor: AppColors.profit(context),
                     isBold: true,
@@ -913,6 +1379,83 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
+}
+
+// ===================== Quick Action Item Widget =====================
+class _QuickActionItem extends StatelessWidget {
+  const _QuickActionItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.28),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDark ? AppColors.paper : const Color(0xFF1F2937),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ===================== Banner Data Model =====================
+class _BannerData {
+  const _BannerData({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.gradient,
+    required this.actionLabel,
+    this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final LinearGradient gradient;
+  final String actionLabel;
+  final VoidCallback? onTap;
 }
 
 // ===================== Animated Section Widget =====================

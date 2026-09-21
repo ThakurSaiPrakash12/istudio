@@ -58,7 +58,7 @@ class _StudioButtonState extends State<StudioButton> {
                 : const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                    colors: [Color(0xFF7B3FE4), Color(0xFF5F259F)],
                   ),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.5),
@@ -75,7 +75,7 @@ class _StudioButtonState extends State<StudioButton> {
 
     final textColor = widget.isSecondary
         ? (isDark ? AppColors.paper : AppColors.lightTextMain)
-        : const Color(0xFF040C1A); // High-contrast crisp obsidian on radiant Sky Blue
+        : Colors.white; // High-contrast crisp white on PhonePe Indigo
 
     return Semantics(
       button: true,

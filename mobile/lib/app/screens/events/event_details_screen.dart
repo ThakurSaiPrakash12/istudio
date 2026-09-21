@@ -205,8 +205,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       Flexible(
                         child: Text(
                           days == 0
-                              ? 'IMMINENT SHOOT'
-                              : 'UPCOMING SHOOT IN 7 DAYS',
+                              ? 'TODAY'
+                              : 'SHOOT COMING UP',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -487,7 +487,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Event Financials',
+                  'Payment Details',
                   style: GoogleFonts.plusJakartaSans(
                     color: context.textMain,
                     fontSize: 18,
@@ -529,7 +529,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    'Fully Paid',
+                    'Paid ✓',
                     style: TextStyle(
                       color: context.accentColor,
                       fontSize: 12,
@@ -554,32 +554,32 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               children: [
                 _buildFinanceRow(
                   context,
-                  label: 'Total Package',
+                  label: 'Total Amount',
                   value: _currency.format(event.totalAmount),
                   valueColor: context.textMain,
                 ),
                 Divider(color: context.cardBorder, height: 16),
                 _buildFinanceRow(
                   context,
-                  label: 'Amount Received',
+                  label: 'Received',
                   value: _currency.format(event.amountReceived),
                   valueColor: context.accentColor,
                 ),
                 Divider(color: context.cardBorder, height: 16),
                 _buildFinanceRow(
                   context,
-                  label: 'Remaining Balance',
+                  label: 'Due Amount',
                   value: _currency.format(event.remainingAmount),
                   valueColor: hasRemaining ? dueColor : context.textMuted,
-                  subtitle: hasRemaining ? 'Pending client settlement' : 'Settled',
+                  subtitle: hasRemaining ? 'Pending' : 'Settled',
                 ),
                 Divider(color: context.cardBorder, height: 16),
                 _buildFinanceRow(
                   context,
-                  label: 'Total Expenses',
+                  label: 'Expenses',
                   value: _currency.format(event.totalExpenses),
                   valueColor: AppColors.expense(context),
-                  subtitle: '${event.expenses.length} recorded items',
+                  subtitle: '${event.expenses.length} items',
                 ),
                 Divider(color: context.accentColor.withValues(alpha: 0.4), height: 20),
                 // Prominent Net Profit
@@ -591,7 +591,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Net Profit',
+                            'Profit',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1516,7 +1516,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   child: Icon(
                     isCompleted ? Icons.check_rounded : Icons.circle_outlined,
                     color: isCompleted
-                        ? (context.isDark ? AppColors.ink : Colors.white)
+                        ? Colors.white
                         : Colors.transparent,
                     size: 18,
                   ),
@@ -1696,7 +1696,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             method.icon,
                             size: 14,
                             color: isSelected
-                                ? (context.isDark ? AppColors.ink : Colors.white)
+                                ? Colors.white
                                 : context.textMuted,
                           ),
                           label: Text(method.label),
@@ -1705,7 +1705,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           backgroundColor: context.innerBg,
                           labelStyle: TextStyle(
                             color: isSelected
-                                ? (context.isDark ? AppColors.ink : Colors.white)
+                                ? Colors.white
                                 : context.textMain,
                             fontSize: 12,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -2363,7 +2363,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: context.accentColor,
-                    foregroundColor: context.isDark ? AppColors.ink : Colors.white,
+                    foregroundColor: Colors.white,
                   ),
                   onPressed: () {
                     context.read<EventsProvider>().updateEvent(

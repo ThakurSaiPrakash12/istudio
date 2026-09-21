@@ -88,8 +88,8 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
             child: Column(
               children: [
                 StudioAppBar(
-                  title: 'Past Events',
-                  subtitle: 'Completed shoots & business history',
+                  title: 'Done',
+                  subtitle: 'Past shoots',
                   leading: IconButton(
                     tooltip: 'Back',
                     icon: Icon(Icons.arrow_back_ios_new_rounded,

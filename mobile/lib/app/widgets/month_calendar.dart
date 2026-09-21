@@ -245,7 +245,6 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
     final accent = context.accentColor;
     final textMain = context.textMain;
     final textMuted = context.textMuted;
@@ -276,7 +275,7 @@ class _DayCell extends StatelessWidget {
     Color textColor;
     FontWeight textWeight;
     if (isSelected) {
-      textColor = isDark ? AppColors.ink : Colors.white;
+      textColor = Colors.white;
       textWeight = FontWeight.w700;
     } else if (isNearest) {
       textColor = accent;
@@ -294,7 +293,7 @@ class _DayCell extends StatelessWidget {
 
     Color dotColor = Colors.transparent;
     if (isSelected && (isUpcoming || isNearest || isToday)) {
-      dotColor = isDark ? AppColors.ink : Colors.white;
+      dotColor = Colors.white;
     } else if (isNearest || isUpcoming) {
       dotColor = accent;
     } else if (isPastMarked) {

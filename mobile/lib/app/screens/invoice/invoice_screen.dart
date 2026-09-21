@@ -25,13 +25,13 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           child: Column(
             children: [
               StudioAppBar(
-                title: 'Invoices',
+                title: 'Receipt',
                 subtitle: _isCreate
-                    ? 'Create and send a bill'
-                    : 'Payments, pending and overdue',
+                    ? 'Make a bill'
+                    : 'All bills',
                 actions: [
                   IconButton(
-                    tooltip: 'Monthly Financial Summary',
+                    tooltip: 'Summary',
                     icon: Icon(
                       Icons.insights_rounded,
                       color: context.accentColor,
@@ -89,7 +89,7 @@ class _InvoiceModeToggle extends StatelessWidget {
     final isDark = context.isDark;
 
     return Semantics(
-      label: isCreate ? 'Create selected' : 'History selected',
+      label: isCreate ? 'New selected' : 'Past selected',
       child: Container(
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
@@ -121,7 +121,7 @@ class _InvoiceModeToggle extends StatelessWidget {
                           : const LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                              colors: [Color(0xFF7B3FE4), Color(0xFF5F259F)],
                             ),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.5),
@@ -140,12 +140,12 @@ class _InvoiceModeToggle extends StatelessWidget {
                 Row(
                   children: [
                     _Tab(
-                      label: 'Create',
+                      label: 'New',
                       selected: isCreate,
                       onTap: () => onChanged(true),
                     ),
                     _Tab(
-                      label: 'History',
+                      label: 'Past',
                       selected: !isCreate,
                       onTap: () => onChanged(false),
                     ),
@@ -184,7 +184,7 @@ class _Tab extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
                 color: selected
-                    ? const Color(0xFF080C14)
+                    ? Colors.white
                     : context.textMuted,
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 fontSize: 14,
