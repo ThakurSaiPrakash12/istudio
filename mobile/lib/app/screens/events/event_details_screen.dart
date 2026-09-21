@@ -5,9 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/studio_event.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
-import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
@@ -24,14 +22,16 @@ class EventDetailsScreen extends StatefulWidget {
   final String eventId;
   final bool autoOpenPayment;
 
-
   @override
   State<EventDetailsScreen> createState() => _EventDetailsScreenState();
 }
 
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
-  static final _currency =
-      NumberFormat.currency(locale: 'en_IN', symbol: '\u20b9', decimalDigits: 0);
+  static final _currency = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: '\u20b9',
+    decimalDigits: 0,
+  );
   @override
   void initState() {
     super.initState();
@@ -156,14 +156,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: isDark
-              ? [
-                  urgencyColor.withValues(alpha: 0.22),
-                  context.cardBg,
-                ]
-              : [
-                  urgencyColor.withValues(alpha: 0.12),
-                  Colors.white,
-                ],
+              ? [urgencyColor.withValues(alpha: 0.22), context.cardBg]
+              : [urgencyColor.withValues(alpha: 0.12), Colors.white],
         ),
         border: Border.all(
           color: urgencyColor.withValues(alpha: 0.5),
@@ -184,8 +178,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             children: [
               Expanded(
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: urgencyColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -235,8 +231,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           const SizedBox(height: 14),
           // Clock units
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: context.innerBg.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(14),
@@ -248,40 +243,46 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildClockUnit(
-                    context,
-                    days.clamp(0, 99).toString().padLeft(2, '0'),
-                    'DAYS',
-                    urgencyColor),
-                Text(':',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: urgencyColor)),
+                  context,
+                  days.clamp(0, 99).toString().padLeft(2, '0'),
+                  'DAYS',
+                  urgencyColor,
+                ),
+                Text(
+                  ':',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: urgencyColor,
+                  ),
+                ),
                 _buildClockUnit(
-                    context,
-                    hours.clamp(0, 23).toString().padLeft(2, '0'),
-                    'HOURS',
-                    urgencyColor),
-                Text(':',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: urgencyColor)),
+                  context,
+                  hours.clamp(0, 23).toString().padLeft(2, '0'),
+                  'HOURS',
+                  urgencyColor,
+                ),
+                Text(
+                  ':',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: urgencyColor,
+                  ),
+                ),
                 _buildClockUnit(
-                    context,
-                    mins.clamp(0, 59).toString().padLeft(2, '0'),
-                    'MINS',
-                    urgencyColor),
+                  context,
+                  mins.clamp(0, 59).toString().padLeft(2, '0'),
+                  'MINS',
+                  urgencyColor,
+                ),
               ],
             ),
           ),
           const SizedBox(height: 10),
           Text(
             'Scheduled start: ${event.startTime} on ${DateFormat('EEEE, d MMMM yyyy').format(event.startsAt)} at ${event.location}.',
-            style: TextStyle(
-              color: context.textMuted,
-              fontSize: 11.5,
-            ),
+            style: TextStyle(color: context.textMuted, fontSize: 11.5),
           ),
         ],
       ),
@@ -289,7 +290,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   Widget _buildClockUnit(
-      BuildContext context, String val, String unit, Color accent) {
+    BuildContext context,
+    String val,
+    String unit,
+    Color accent,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -364,9 +369,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             decoration: BoxDecoration(
               color: context.innerBg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: context.cardBorder,
-              ),
+              border: Border.all(color: context.cardBorder),
             ),
             child: Column(
               children: [
@@ -475,7 +478,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   Widget _buildFinancialSummary(BuildContext context, StudioEvent event) {
     final remaining = event.remainingAmount;
     final hasRemaining = remaining > 0;
-    final dueColor = context.isDark ? const Color(0xFFE8B86D) : const Color(0xFFB57200);
+    final dueColor = context.isDark
+        ? const Color(0xFFE8B86D)
+        : const Color(0xFFB57200);
 
     return StudioCard(
       padding: const EdgeInsets.all(20),
@@ -501,7 +506,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               if (hasRemaining)
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: dueColor.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(999),
@@ -523,7 +531,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: context.accentColor.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(999),
@@ -546,9 +557,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             decoration: BoxDecoration(
               color: context.innerBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: context.cardBorder,
-              ),
+              border: Border.all(color: context.cardBorder),
             ),
             child: Column(
               children: [
@@ -571,7 +580,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   label: 'Remaining Balance',
                   value: _currency.format(event.remainingAmount),
                   valueColor: hasRemaining ? dueColor : context.textMuted,
-                  subtitle: hasRemaining ? 'Pending client settlement' : 'Settled',
+                  subtitle: hasRemaining
+                      ? 'Pending client settlement'
+                      : 'Settled',
                 ),
                 Divider(color: context.cardBorder, height: 16),
                 _buildFinanceRow(
@@ -581,7 +592,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   valueColor: AppColors.expense(context),
                   subtitle: '${event.expenses.length} recorded items',
                 ),
-                Divider(color: context.accentColor.withValues(alpha: 0.4), height: 20),
+                Divider(
+                  color: context.accentColor.withValues(alpha: 0.4),
+                  height: 20,
+                ),
                 // Prominent Net Profit
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -712,7 +726,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -745,13 +762,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               final dateStr = DateFormat('d MMM yyyy').format(p.paidAt);
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: context.innerBg,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: context.cardBorder,
-                  ),
+                  border: Border.all(color: context.cardBorder),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -791,7 +809,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                   Flexible(
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 5, vertical: 1),
+                                        horizontal: 5,
+                                        vertical: 1,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: context.cardBorder,
                                         borderRadius: BorderRadius.circular(4),
@@ -865,19 +885,28 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: context.accentColor.withValues(alpha: 0.16),
+                                  color: context.accentColor.withValues(
+                                    alpha: 0.16,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: context.accentColor.withValues(alpha: 0.4),
+                                    color: context.accentColor.withValues(
+                                      alpha: 0.4,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.attachment_rounded,
-                                        size: 11, color: context.accentColor),
+                                    Icon(
+                                      Icons.attachment_rounded,
+                                      size: 11,
+                                      color: context.accentColor,
+                                    ),
                                     const SizedBox(width: 3),
                                     Text(
                                       'View Proof',
@@ -947,7 +976,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -994,13 +1026,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 },
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: context.innerBg,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: context.cardBorder,
-                    ),
+                    border: Border.all(color: context.cardBorder),
                   ),
                   child: Row(
                     children: [
@@ -1011,8 +1044,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           color: expColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.receipt_outlined,
-                            color: expColor, size: 18),
+                        child: Icon(
+                          Icons.receipt_outlined,
+                          color: expColor,
+                          size: 18,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1151,7 +1187,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   value: value,
                   minHeight: 8,
                   backgroundColor: context.cardBorder,
-                  valueColor: AlwaysStoppedAnimation<Color>(context.accentColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    context.accentColor,
+                  ),
                 ),
               );
             },
@@ -1363,7 +1401,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildAllWorkCompleteCard(BuildContext context, int completed, int total) {
+  Widget _buildAllWorkCompleteCard(
+    BuildContext context,
+    int completed,
+    int total,
+  ) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
       width: double.infinity,
@@ -1382,11 +1424,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.verified_rounded,
-            color: context.accentColor,
-            size: 28,
-          ),
+          Icon(Icons.verified_rounded, color: context.accentColor, size: 28),
           const SizedBox(height: 8),
           Text(
             'ALL WORK COMPLETED',
@@ -1506,10 +1544,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: isCompleted ? context.accentColor : Colors.transparent,
+                    color: isCompleted
+                        ? context.accentColor
+                        : Colors.transparent,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isCompleted ? context.accentColor : context.textMuted,
+                      color: isCompleted
+                          ? context.accentColor
+                          : context.textMuted,
                       width: 1.4,
                     ),
                   ),
@@ -1523,11 +1565,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(
-                _taskIcon(task.title),
-                color: statusColor,
-                size: 18,
-              ),
+              Icon(_taskIcon(task.title), color: statusColor, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -1542,8 +1580,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             ? context.textMain.withValues(alpha: 0.78)
                             : context.textMain,
                         fontSize: 14,
-                        fontWeight:
-                            isCompleted ? FontWeight.w600 : FontWeight.w700,
+                        fontWeight: isCompleted
+                            ? FontWeight.w600
+                            : FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1621,6 +1660,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     PaymentMethod selectedMethod = PaymentMethod.upi;
     bool attachProof = false;
     bool isUploadingProof = false;
+    bool isSavingPayment = false;
+    List<int>? proofBytes;
+    String? proofFilename;
 
     showModalBottomSheet(
       context: context,
@@ -1696,7 +1738,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             method.icon,
                             size: 14,
                             color: isSelected
-                                ? (context.isDark ? AppColors.ink : Colors.white)
+                                ? (context.isDark
+                                      ? AppColors.ink
+                                      : Colors.white)
                                 : context.textMuted,
                           ),
                           label: Text(method.label),
@@ -1705,10 +1749,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           backgroundColor: context.innerBg,
                           labelStyle: TextStyle(
                             color: isSelected
-                                ? (context.isDark ? AppColors.ink : Colors.white)
+                                ? (context.isDark
+                                      ? AppColors.ink
+                                      : Colors.white)
                                 : context.textMain,
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                           ),
                           onSelected: (selected) {
                             if (selected) {
@@ -1772,7 +1820,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                   proofController.text.startsWith('data:'))
                                 GestureDetector(
                                   onTap: () => _showFullScreenProof(
-                                      context, proofController.text.trim()),
+                                    context,
+                                    proofController.text.trim(),
+                                  ),
                                   child: Stack(
                                     children: [
                                       Image.network(
@@ -1798,18 +1848,25 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                         bottom: 8,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 4),
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: Colors.black
-                                                .withValues(alpha: 0.7),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
+                                            color: Colors.black.withValues(
+                                              alpha: 0.7,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: const Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(Icons.zoom_in_rounded,
-                                                  color: Colors.white, size: 14),
+                                              Icon(
+                                                Icons.zoom_in_rounded,
+                                                color: Colors.white,
+                                                size: 14,
+                                              ),
                                               SizedBox(width: 4),
                                               Text(
                                                 'Tap to preview',
@@ -1828,11 +1885,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.check_circle_rounded,
-                                        color: Color(0xFF10B981), size: 16),
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Color(0xFF10B981),
+                                      size: 16,
+                                    ),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
@@ -1873,108 +1935,101 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
-                              : const Icon(Icons.cloud_upload_outlined, size: 18),
+                              : const Icon(
+                                  Icons.cloud_upload_outlined,
+                                  size: 18,
+                                ),
                           label: Text(
                             isUploadingProof
                                 ? 'Uploading Image to Cloud...'
                                 : (proofController.text.trim().isNotEmpty
-                                    ? 'Change Proof Image'
-                                    : 'Upload Image (Cloudinary)'),
+                                      ? 'Change Proof Image'
+                                      : 'Upload Image (Cloudinary)'),
                             style: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w600),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: context.accentColor,
                             side: BorderSide(
-                                color: context.accentColor.withValues(alpha: 0.5)),
+                              color: context.accentColor.withValues(alpha: 0.5),
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                           onPressed: isUploadingProof
                               ? null
                               : () async {
-                                  final token = context.read<AuthProvider>().token;
                                   setModalState(() => isUploadingProof = true);
                                   try {
-                                    final picked = await ImagePicker().pickImage(
-                                      source: ImageSource.gallery,
-                                      imageQuality: 85,
-                                    );
+                                    final picked = await ImagePicker()
+                                        .pickImage(
+                                          source: ImageSource.gallery,
+                                          imageQuality: 85,
+                                        );
                                     if (picked != null) {
                                       final bytes = await picked.readAsBytes();
-                                      final api = ApiService();
-                                      final res = await api.postMultipart(
-                                        '/auth/logo',
-                                        fieldName: 'logo',
-                                        bytes: bytes,
-                                        filename: picked.name,
-                                        token: token,
-                                      );
-                                      final imageUrl = res['imageUrl'] as String?;
-                                      if (imageUrl != null && imageUrl.isNotEmpty) {
-                                        final extracted = res['extractedTxn'] as Map<String, dynamic>?;
-                                        final fname = picked.name.toLowerCase();
+                                      final fname = picked.name.toLowerCase();
+                                      proofBytes = bytes;
+                                      proofFilename = picked.name;
+                                      setModalState(() {
+                                        proofController.text = picked.name;
 
-                                        setModalState(() {
-                                          proofController.text = imageUrl;
+                                        if (fname.contains('card') ||
+                                            fname.contains('pos')) {
+                                          selectedMethod = PaymentMethod.card;
+                                        } else if (fname.contains('bank') ||
+                                            fname.contains('utr') ||
+                                            fname.contains('transfer')) {
+                                          selectedMethod =
+                                              PaymentMethod.bankTransfer;
+                                        } else {
+                                          selectedMethod = PaymentMethod.upi;
+                                        }
 
-                                          if (extracted != null && extracted['method'] != null) {
-                                            final m = extracted['method'].toString();
-                                            if (m == 'card') {
-                                              selectedMethod = PaymentMethod.card;
-                                            } else if (m == 'bankTransfer') {
-                                              selectedMethod = PaymentMethod.bankTransfer;
-                                            } else {
-                                              selectedMethod = PaymentMethod.upi;
-                                            }
-                                          } else if (fname.contains('card') || fname.contains('pos')) {
-                                            selectedMethod = PaymentMethod.card;
-                                          } else if (fname.contains('bank') || fname.contains('utr') || fname.contains('transfer')) {
-                                            selectedMethod = PaymentMethod.bankTransfer;
+                                        if (titleController.text
+                                                .trim()
+                                                .isEmpty ||
+                                            titleController.text.trim() ==
+                                                'Payment') {
+                                          if (selectedMethod ==
+                                              PaymentMethod.card) {
+                                            titleController.text =
+                                                'Credit/Debit Card Payment';
+                                          } else if (selectedMethod ==
+                                              PaymentMethod.bankTransfer) {
+                                            titleController.text =
+                                                'Bank Transfer Payment';
                                           } else {
-                                            selectedMethod = PaymentMethod.upi;
+                                            titleController.text =
+                                                'UPI Payment';
                                           }
+                                        }
 
-                                          if (refController.text.trim().isEmpty) {
-                                            if (extracted != null && extracted['reference'] != null && extracted['reference'].toString().isNotEmpty) {
-                                              refController.text = extracted['reference'].toString();
-                                            } else {
-                                              final now = DateTime.now();
-                                              final randDigits = (now.microsecondsSinceEpoch % 1000000000).toString();
-                                              if (selectedMethod == PaymentMethod.card) {
-                                                refController.text = 'POS/$randDigits';
-                                              } else if (selectedMethod == PaymentMethod.bankTransfer) {
-                                                refController.text = 'UTR/$randDigits';
-                                              } else {
-                                                refController.text = 'UPI/${now.year}/$randDigits';
-                                              }
-                                            }
-                                          }
-
-                                          if (titleController.text.trim().isEmpty || titleController.text.trim() == 'Payment') {
-                                            if (selectedMethod == PaymentMethod.card) {
-                                              titleController.text = 'Credit/Debit Card Payment';
-                                            } else if (selectedMethod == PaymentMethod.bankTransfer) {
-                                              titleController.text = 'Bank Transfer Payment';
-                                            } else {
-                                              titleController.text = 'UPI Payment';
-                                            }
-                                          }
-
-                                          final rem = event?.remainingAmount ?? 0;
-                                           if (amountController.text.trim().isEmpty && rem > 0) {
-                                             amountController.text = rem.toInt().toString();
-                                           }
-                                        });
-                                      }
+                                        final rem = event?.remainingAmount ?? 0;
+                                        if (amountController.text
+                                                .trim()
+                                                .isEmpty &&
+                                            rem > 0) {
+                                          amountController.text = rem
+                                              .toInt()
+                                              .toString();
+                                        }
+                                      });
                                     }
                                   } catch (e) {
                                     debugPrint('Upload proof error: $e');
                                   } finally {
-                                    setModalState(() => isUploadingProof = false);
+                                    setModalState(
+                                      () => isUploadingProof = false,
+                                    );
                                   }
                                 },
                         ),
@@ -1984,53 +2039,86 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     const SizedBox(height: 20),
                     StudioButton(
                       label: 'Log Payment',
-                      onPressed: () {
-                        final amountText = amountController.text.trim();
-                        final amount = double.tryParse(amountText);
-                        if (amountText.isEmpty) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter the payment amount.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                          return;
-                        }
-                        if (amount == null || amount <= 0) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            const SnackBar(
-                              content: Text('Enter a valid amount greater than 0.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                          return;
-                        }
-                        final payment = PaymentRecord(
-                          id: 'pay-${DateTime.now().millisecondsSinceEpoch}',
-                          title: titleController.text.trim().isEmpty
-                              ? 'Payment'
-                              : titleController.text.trim(),
-                          amount: amount,
-                          paidAt: DateTime.now(),
-                          method: selectedMethod,
-                          reference: refController.text.trim().isNotEmpty
-                              ? refController.text.trim()
-                              : null,
-                          proof: attachProof && proofController.text.trim().isNotEmpty
-                              ? proofController.text.trim()
-                              : null,
-                        );
-                        modalContext
-                            .read<EventsProvider>()
-                            .addPayment(eventId, payment);
-                        Navigator.of(sheetContext).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Payment of ₹${amount.toInt()} recorded!'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
+                      onPressed: isSavingPayment
+                          ? null
+                          : () async {
+                              setModalState(() => isSavingPayment = true);
+                              try {
+                                final amountText = amountController.text.trim();
+                                final amount = double.tryParse(amountText);
+                                if (amountText.isEmpty) {
+                                  ScaffoldMessenger.of(
+                                    sheetContext,
+                                  ).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please enter the payment amount.',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                if (amount == null || amount <= 0) {
+                                  ScaffoldMessenger.of(
+                                    sheetContext,
+                                  ).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Enter a valid amount greater than 0.',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final payment = PaymentRecord(
+                                  id: 'pay-${DateTime.now().millisecondsSinceEpoch}',
+                                  title: titleController.text.trim().isEmpty
+                                      ? 'Payment'
+                                      : titleController.text.trim(),
+                                  amount: amount,
+                                  paidAt: DateTime.now(),
+                                  method: selectedMethod,
+                                  reference:
+                                      refController.text.trim().isNotEmpty
+                                      ? refController.text.trim()
+                                      : null,
+                                  proof: null,
+                                );
+                                final provider = modalContext
+                                    .read<EventsProvider>();
+                                final saved = await provider.addPayment(
+                                  eventId,
+                                  payment,
+                                );
+                                if (saved != null &&
+                                    proofBytes != null &&
+                                    proofFilename != null) {
+                                  await provider.uploadPaymentProof(
+                                    eventId,
+                                    saved.id,
+                                    proofBytes!,
+                                    proofFilename!,
+                                  );
+                                }
+                                if (!modalContext.mounted) return;
+                                Navigator.of(sheetContext).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Payment of ₹${amount.toInt()} recorded!',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              } finally {
+                                if (modalContext.mounted) {
+                                  setModalState(() => isSavingPayment = false);
+                                }
+                              }
+                            },
+                      isLoading: isSavingPayment,
                     ),
                   ],
                 ),
@@ -2044,7 +2132,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   void _showProofDialog(BuildContext context, PaymentRecord payment) {
     final dateStr = DateFormat('d MMMM yyyy, h:mm a').format(payment.paidAt);
-    final hasImageProof = payment.proof != null &&
+    final hasImageProof =
+        payment.proof != null &&
         payment.proof!.trim().isNotEmpty &&
         (payment.proof!.startsWith('http') ||
             payment.proof!.startsWith('data:image'));
@@ -2134,7 +2223,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         if (hasImageProof) ...[
                           const SizedBox(height: 14),
                           GestureDetector(
-                            onTap: () => _showFullScreenProof(context, payment.proof!),
+                            onTap: () =>
+                                _showFullScreenProof(context, payment.proof!),
                             child: Stack(
                               children: [
                                 ClipRRect(
@@ -2144,16 +2234,20 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                     height: 160,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (ctx, err, stack) => Container(
-                                      height: 80,
-                                      color: context.cardBg,
-                                      child: Center(
-                                        child: Text('Image Proof: ${payment.proof}',
-                                            style: TextStyle(
+                                    errorBuilder: (ctx, err, stack) =>
+                                        Container(
+                                          height: 80,
+                                          color: context.cardBg,
+                                          child: Center(
+                                            child: Text(
+                                              'Image Proof: ${payment.proof}',
+                                              style: TextStyle(
                                                 color: context.textMuted,
-                                                fontSize: 11)),
-                                      ),
-                                    ),
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                   ),
                                 ),
                                 Positioned(
@@ -2161,16 +2255,23 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                   bottom: 8,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.7),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.7,
+                                      ),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.zoom_in_rounded,
-                                            color: Colors.white, size: 14),
+                                        Icon(
+                                          Icons.zoom_in_rounded,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
                                         SizedBox(width: 4),
                                         Text(
                                           'Full Screen',
@@ -2191,15 +2292,25 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         const SizedBox(height: 16),
                         Divider(color: context.cardBorder, height: 1),
                         const SizedBox(height: 14),
-                        _buildProofDetailRow(context, 'Description', payment.title),
+                        _buildProofDetailRow(
+                          context,
+                          'Description',
+                          payment.title,
+                        ),
                         const SizedBox(height: 8),
                         _buildProofDetailRow(context, 'Date & Time', dateStr),
                         const SizedBox(height: 8),
-                        _buildProofDetailRow(context, 'Transaction Ref',
-                            payment.reference ?? 'REF-AUTO-9281'),
+                        _buildProofDetailRow(
+                          context,
+                          'Transaction Ref',
+                          payment.reference ?? 'REF-AUTO-9281',
+                        ),
                         const SizedBox(height: 8),
-                        _buildProofDetailRow(context, 'Attachment File',
-                            payment.proof ?? 'receipt_doc.pdf'),
+                        _buildProofDetailRow(
+                          context,
+                          'Attachment File',
+                          payment.proof ?? 'receipt_doc.pdf',
+                        ),
                       ],
                     ),
                   ),
@@ -2217,7 +2328,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildProofDetailRow(BuildContext context, String label, String value) {
+  Widget _buildProofDetailRow(
+    BuildContext context,
+    String label,
+    String value,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2225,10 +2340,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           width: 110,
           child: Text(
             label,
-            style: TextStyle(
-              color: context.textMuted,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: context.textMuted, fontSize: 12),
           ),
         ),
         Expanded(
@@ -2306,24 +2418,36 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: ['Crew', 'Travel', 'Equipment', 'Printing', 'Studio', 'Others']
-                          .map((cat) {
-                        final selected = category == cat;
-                        return ChoiceChip(
-                          label: Text(cat),
-                          selected: selected,
-                          onSelected: (val) {
-                            if (val) setModalState(() => category = cat);
-                          },
-                          selectedColor: context.accentColor.withValues(alpha: 0.25),
-                          backgroundColor: context.innerBg,
-                          labelStyle: TextStyle(
-                            color: selected ? context.accentColor : context.textMain,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.normal,
-                          ),
-                        );
-                      }).toList(),
+                      children:
+                          [
+                            'Crew',
+                            'Travel',
+                            'Equipment',
+                            'Printing',
+                            'Studio',
+                            'Others',
+                          ].map((cat) {
+                            final selected = category == cat;
+                            return ChoiceChip(
+                              label: Text(cat),
+                              selected: selected,
+                              onSelected: (val) {
+                                if (val) setModalState(() => category = cat);
+                              },
+                              selectedColor: context.accentColor.withValues(
+                                alpha: 0.25,
+                              ),
+                              backgroundColor: context.innerBg,
+                              labelStyle: TextStyle(
+                                color: selected
+                                    ? context.accentColor
+                                    : context.textMain,
+                                fontWeight: selected
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              ),
+                            );
+                          }).toList(),
                     ),
                     if (category == 'Others') ...[
                       const SizedBox(height: 12),
@@ -2337,13 +2461,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     StudioButton(
                       label: 'Save Expense',
                       onPressed: () {
-                        final amount =
-                            double.tryParse(amountController.text.trim());
+                        final amount = double.tryParse(
+                          amountController.text.trim(),
+                        );
                         if (amount != null &&
                             amount > 0 &&
                             titleController.text.trim().isNotEmpty) {
-                          final finalCategory = category == 'Others' &&
-                                  customCategoryController.text.trim().isNotEmpty
+                          final finalCategory =
+                              category == 'Others' &&
+                                  customCategoryController.text
+                                      .trim()
+                                      .isNotEmpty
                               ? customCategoryController.text.trim()
                               : (category == 'Others' ? 'Other' : category);
 
@@ -2354,9 +2482,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             category: finalCategory,
                             incurredAt: DateTime.now(),
                           );
-                          context
-                              .read<EventsProvider>()
-                              .addExpense(eventId, expense);
+                          context.read<EventsProvider>().addExpense(
+                            eventId,
+                            expense,
+                          );
                           Navigator.of(sheetContext).pop();
                         }
                       },
@@ -2383,7 +2512,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             return AlertDialog(
               backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: Text(
                 'Edit Event Details',
                 style: GoogleFonts.plusJakartaSans(
@@ -2415,7 +2545,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? context.accentColor.withValues(alpha: 0.15)
@@ -2456,7 +2588,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     const SizedBox(height: 16),
                     StudioTextField(
                       label: 'Notes & Instructions',
-                      hint: 'Edit shoot notes, client requirements or special instructions...',
+                      hint:
+                          'Edit shoot notes, client requirements or special instructions...',
                       controller: notesController,
                       maxLines: 4,
                     ),
@@ -2466,21 +2599,25 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text('Cancel',
-                      style: TextStyle(color: context.textMuted)),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: context.textMuted),
+                  ),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: context.accentColor,
-                    foregroundColor: context.isDark ? AppColors.ink : Colors.white,
+                    foregroundColor: context.isDark
+                        ? AppColors.ink
+                        : Colors.white,
                   ),
                   onPressed: () {
                     context.read<EventsProvider>().updateEvent(
-                          event.copyWith(
-                            status: selectedStatus,
-                            notes: notesController.text.trim(),
-                          ),
-                        );
+                      event.copyWith(
+                        status: selectedStatus,
+                        notes: notesController.text.trim(),
+                      ),
+                    );
                     Navigator.of(dialogContext).pop();
                   },
                   child: const Text('Save'),

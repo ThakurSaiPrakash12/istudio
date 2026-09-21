@@ -112,11 +112,35 @@ void main() {
   group('NotificationsProvider Unit Tests', () {
     test('Generates notifications for events within 7 days', () {
       final eventsProvider = EventsProvider();
+      final now = DateTime.now();
+      eventsProvider.addEvent(
+        StudioEvent(
+          id: 'test-notification-1',
+          title: 'Wedding Shoot',
+          clientName: 'Aanya',
+          eventType: 'Wedding',
+          startsAt: now.add(const Duration(days: 2)),
+          location: 'Lotus Pavilion',
+          status: EventStatus.upcoming,
+          totalAmount: 45000,
+        ),
+      );
+      eventsProvider.addEvent(
+        StudioEvent(
+          id: 'test-notification-2',
+          title: 'Maternity Shoot',
+          clientName: 'Meera',
+          eventType: 'Maternity',
+          startsAt: now.add(const Duration(days: 5)),
+          location: 'Studio',
+          status: EventStatus.upcoming,
+          totalAmount: 30000,
+        ),
+      );
       final notifsProvider = NotificationsProvider();
 
       notifsProvider.syncEvents(eventsProvider);
 
-      // Default sample data has 2 events within 7 days (2 days and 5 days)
       final upcomingNotifs = notifsProvider.upcomingShootNotifications;
       expect(upcomingNotifs.length, greaterThanOrEqualTo(2));
 
@@ -134,7 +158,12 @@ void main() {
 
       // Test dismiss
       notifsProvider.dismiss(firstNotif.id);
-      expect(notifsProvider.upcomingShootNotifications.any((n) => n.id == firstNotif.id), isFalse);
+      expect(
+        notifsProvider.upcomingShootNotifications.any(
+          (n) => n.id == firstNotif.id,
+        ),
+        isFalse,
+      );
     });
   });
 }

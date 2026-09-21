@@ -36,7 +36,14 @@ class IStudioApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()..bootstrap()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..bootstrap()),
-        ChangeNotifierProvider(create: (_) => EventsProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, EventsProvider>(
+          create: (_) => EventsProvider(),
+          update: (_, auth, events) {
+            final provider = events ?? EventsProvider();
+            provider.syncAuth(auth);
+            return provider;
+          },
+        ),
         ChangeNotifierProxyProvider<EventsProvider, NotificationsProvider>(
           create: (_) => NotificationsProvider(),
           update: (_, events, previous) {
@@ -86,10 +93,7 @@ class _AuthGate extends StatelessWidget {
       layoutBuilder: (currentChild, previousChildren) {
         return Stack(
           fit: StackFit.expand,
-          children: [
-            ...previousChildren,
-            ?currentChild,
-          ],
+          children: [...previousChildren, ?currentChild],
         );
       },
       child: auth.isLoggedIn

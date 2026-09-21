@@ -94,12 +94,6 @@ async function updateInvoice(id, userId, fields) {
     return memoryInvoices.update(id, userId, next);
   }
 
-  const invoice = await findByIdForUser(id, userId);
-  if (!invoice) return null;
-
-  if (fields.deliverables) {
-    invoice.deliverables = normalizeDeliverables(fields.deliverables);
-  }
   const allowed = [
     'eventName',
     'contactName',
@@ -110,13 +104,81 @@ async function updateInvoice(id, userId, fields) {
     'upiId',
     'amountReceived',
   ];
-  for (const key of allowed) {
-    if (fields[key] !== undefined) invoice[key] = fields[key];
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const invoice = await findByIdForUser(id, userId);
+    if (!invoice) return null;
+    const deliverables = fields.deliverables
+      ? normalizeDeliverables(fields.deliverables)
+      : invoice.deliverables;
+    const nextFields = {};
+    for (const key of allowed) {
+      if (fields[key] !== undefined) nextFields[key] = fields[key];
+    }
+    const totals = invoiceTotals(
+      deliverables,
+      fields.amountReceived !== undefined
+        ? fields.amountReceived
+        : invoice.amountReceived,
+    );
+    nextFields.amountReceived = totals.received;
+    if (fields.deliverables) nextFields.deliverables = deliverables;
+    const updated = await Invoice.findOneAndUpdate(
+      { _id: invoice._id, userId, __v: invoice.__v || 0 },
+      { $set: nextFields, $inc: { __v: 1 } },
+      { new: true, runValidators: true },
+    );
+    if (updated) return updated;
   }
-  const totals = invoiceTotals(invoice.deliverables, invoice.amountReceived);
-  invoice.amountReceived = totals.received;
-  await invoice.save();
-  return invoice;
+  throw new Error('Invoice was changed concurrently. Please retry.');
+}
+
+async function addPartialPayment(id, userId, amount) {
+  if (usesMemory()) {
+    const invoice = memoryInvoices.findByIdForUser(id, userId);
+    if (!invoice) return null;
+    const totals = invoiceTotals(invoice.deliverables, invoice.amountReceived);
+    if (amount > totals.pending + 0.009) return { overpayment: true };
+    return memoryInvoices.update(id, userId, {
+      amountReceived: totals.received + amount,
+    });
+  }
+  const updated = await Invoice.findOneAndUpdate(
+    {
+      _id: id,
+      userId,
+      $expr: {
+        $lte: [
+          { $add: [{ $ifNull: ['$amountReceived', 0] }, amount] },
+          { $sum: '$deliverables.cost' },
+        ],
+      },
+    },
+    { $inc: { amountReceived: amount } },
+    { new: true, runValidators: true },
+  );
+  return updated || { overpayment: true };
+}
+
+async function markPaidAtomic(id, userId) {
+  if (usesMemory()) {
+    const invoice = memoryInvoices.findByIdForUser(id, userId);
+    if (!invoice) return null;
+    return memoryInvoices.update(id, userId, {
+      amountReceived: invoiceTotals(invoice.deliverables).total,
+    });
+  }
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const invoice = await findByIdForUser(id, userId);
+    if (!invoice) return null;
+    const total = invoiceTotals(invoice.deliverables).total;
+    const updated = await Invoice.findOneAndUpdate(
+      { _id: invoice._id, userId, __v: invoice.__v || 0 },
+      { $set: { amountReceived: total }, $inc: { __v: 1 } },
+      { new: true, runValidators: true },
+    );
+    if (updated) return updated;
+  }
+  throw new Error('Invoice was changed concurrently. Please retry.');
 }
 
 async function deleteInvoice(id, userId) {
@@ -135,5 +197,7 @@ module.exports = {
   nextNumber,
   createInvoice,
   updateInvoice,
+  addPartialPayment,
+  markPaidAtomic,
   deleteInvoice,
 };

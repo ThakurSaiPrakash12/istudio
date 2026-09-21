@@ -2,9 +2,9 @@ const jwt = require('jsonwebtoken');
 
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
-  const [, token] = header.split(' ');
+  const [scheme, token] = header.split(' ');
 
-  if (!token) {
+  if (scheme !== 'Bearer' || !token || header.split(' ').length !== 2) {
     return res.status(401).json({
       success: false,
       message: 'Please sign in to continue.',
@@ -12,7 +12,12 @@ function requireAuth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ['HS256'],
+    });
+    if (!payload.id || typeof payload.id !== 'string') {
+      throw new Error('Invalid token subject');
+    }
     req.userId = payload.id;
     return next();
   } catch (_) {

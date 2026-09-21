@@ -16,6 +16,96 @@ import 'package:lumen_studio/app/theme/app_theme.dart';
 import 'package:lumen_studio/app/widgets/monthly_financial_summary_sheet.dart';
 import 'package:provider/provider.dart';
 
+EventsProvider _populatedProvider() {
+  final provider = EventsProvider();
+  provider.addClient(
+    const Client(
+      id: 'cli-1',
+      name: 'Aanya Sharma',
+      phone: '+91 98765 43210',
+      email: 'aanya.sharma@example.com',
+    ),
+  );
+  provider.addClient(
+    const Client(
+      id: 'cli-2',
+      name: 'Meera Kapoor',
+      phone: '+91 98234 56789',
+      email: 'meera.kapoor@example.com',
+    ),
+  );
+  provider.addClient(
+    const Client(
+      id: 'cli-3',
+      name: 'Northwind Atelier',
+      phone: '+91 91234 56780',
+      email: 'campaigns@northwindatelier.com',
+    ),
+  );
+  provider.addClient(
+    const Client(
+      id: 'cli-4',
+      name: 'The Iyer Family',
+      phone: '+91 99887 76655',
+      email: 'arjun.iyer@example.com',
+    ),
+  );
+  provider.addClient(
+    const Client(
+      id: 'cli-5',
+      name: 'Aarav & Priya',
+      phone: '+91 98111 22334',
+      email: 'aarav.priya@example.com',
+    ),
+  );
+  final now = DateTime.now();
+  provider.addEvent(
+    StudioEvent(
+      id: 'evt-up-2',
+      clientId: 'cli-2',
+      title: 'Maternity Session — Meera',
+      clientName: 'Meera Kapoor',
+      eventType: 'Maternity',
+      startsAt: now.add(const Duration(days: 5)),
+      location: 'Studio Floor B',
+      status: EventStatus.upcoming,
+      totalAmount: 40000,
+      payments: [
+        PaymentRecord(
+          id: 'p-103',
+          title: 'Advance Deposit',
+          amount: 25000,
+          paidAt: now,
+          proof: 'receipt.png',
+        ),
+      ],
+    ),
+  );
+  provider.addEvent(
+    StudioEvent(
+      id: 'evt-past-2',
+      clientId: 'cli-2',
+      title: 'Meera — Maternity Studio Shoot',
+      clientName: 'Meera Kapoor',
+      eventType: 'Maternity',
+      startsAt: now.subtract(const Duration(days: 20)),
+      location: 'Studio Floor B',
+      status: EventStatus.completed,
+      totalAmount: 35000,
+      payments: [
+        PaymentRecord(
+          id: 'p-302',
+          title: 'Final Settlement',
+          amount: 35000,
+          paidAt: now,
+          proof: 'receipt-final.png',
+        ),
+      ],
+    ),
+  );
+  return provider;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -98,255 +188,271 @@ void main() {
       expect(event.payments[1].hasProof, isFalse);
     });
 
-    test('EventsProvider manages Clients and multi-event client aggregations', () {
-      final provider = EventsProvider();
+    test(
+      'EventsProvider manages Clients and multi-event client aggregations',
+      () {
+        final provider = _populatedProvider();
 
-      // Verify seed clients exist
-      expect(provider.clients.length, greaterThanOrEqualTo(5));
+        // Verify seed clients exist
+        expect(provider.clients.length, greaterThanOrEqualTo(5));
 
-      // Check Meera Kapoor has multiple events (upcoming & past)
-      final meeraEvents = provider.getEventsForClient('cli-2', clientName: 'Meera Kapoor');
-      expect(meeraEvents.length, 2);
+        // Check Meera Kapoor has multiple events (upcoming & past)
+        final meeraEvents = provider.getEventsForClient(
+          'cli-2',
+          clientName: 'Meera Kapoor',
+        );
+        expect(meeraEvents.length, 2);
 
-      // Total Value across Meera's events = 40000 + 35000 = 75000
-      expect(provider.getClientTotalValue('cli-2'), 75000);
-      // Total Received across Meera's events = 25000 + 35000 = 60000
-      expect(provider.getClientTotalReceived('cli-2'), 60000);
-      // Total Remaining across Meera's events = 15000 + 0 = 15000
-      expect(provider.getClientTotalRemaining('cli-2'), 15000);
+        // Total Value across Meera's events = 40000 + 35000 = 75000
+        expect(provider.getClientTotalValue('cli-2'), 75000);
+        // Total Received across Meera's events = 25000 + 35000 = 60000
+        expect(provider.getClientTotalReceived('cli-2'), 60000);
+        // Total Remaining across Meera's events = 15000 + 0 = 15000
+        expect(provider.getClientTotalRemaining('cli-2'), 15000);
 
-      // Add payment to Meera's event
-      provider.addPayment(
-        'evt-up-2',
-        PaymentRecord(
-          id: 'pay-new',
-          title: 'Settlement',
-          amount: 15000,
-          paidAt: DateTime.now(),
-          method: PaymentMethod.upi,
-        ),
-      );
+        // Add payment to Meera's event
+        provider.addPayment(
+          'evt-up-2',
+          PaymentRecord(
+            id: 'pay-new',
+            title: 'Settlement',
+            amount: 15000,
+            paidAt: DateTime.now(),
+            method: PaymentMethod.upi,
+          ),
+        );
 
-      // Now Meera should have remaining = 0
-      expect(provider.getClientTotalRemaining('cli-2'), 0);
-    });
+        // Now Meera should have remaining = 0
+        expect(provider.getClientTotalRemaining('cli-2'), 0);
+      },
+    );
   });
 
   group('ClientsScreen UI & Flow Tests', () {
-    testWidgets('ClientsScreen displays client list, search bar, and filter chips',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets(
+      'ClientsScreen displays client list, search bar, and filter chips',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
 
-      final provider = EventsProvider();
+        final provider = _populatedProvider();
 
-      await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: provider,
-          child: MaterialApp(
-            theme: AppTheme.dark,
-            home: const Scaffold(body: ClientsScreen()),
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: provider,
+            child: MaterialApp(
+              theme: AppTheme.dark,
+              home: const Scaffold(body: ClientsScreen()),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Clients'), findsOneWidget);
-      expect(find.text('Aanya Sharma'), findsOneWidget);
-      expect(find.text('Meera Kapoor'), findsOneWidget);
-      expect(find.text('Northwind Atelier'), findsOneWidget);
-      expect(find.text('The Iyer Family'), findsOneWidget);
+        expect(find.text('Clients'), findsOneWidget);
+        expect(find.text('Aanya Sharma'), findsOneWidget);
+        expect(find.text('Meera Kapoor'), findsOneWidget);
+        expect(find.text('Northwind Atelier'), findsOneWidget);
+        expect(find.text('The Iyer Family'), findsOneWidget);
 
-      // Verify filter chips
-      expect(find.text('All'), findsOneWidget);
-      expect(find.text('Upcoming'), findsOneWidget);
-      expect(find.text('Active'), findsOneWidget);
-      expect(find.text('Past'), findsOneWidget);
-      expect(find.text('Payment Due'), findsOneWidget);
+        // Verify filter chips
+        expect(find.text('All'), findsOneWidget);
+        expect(find.text('Upcoming'), findsOneWidget);
+        expect(find.text('Active'), findsOneWidget);
+        expect(find.text('Past'), findsOneWidget);
+        expect(find.text('Payment Due'), findsOneWidget);
 
-      // Test Search by phone
-      await tester.enterText(find.byType(TextField), '98234');
-      await tester.pumpAndSettle();
+        // Test Search by phone
+        await tester.enterText(find.byType(TextField), '98234');
+        await tester.pumpAndSettle();
 
-      expect(find.text('Meera Kapoor'), findsOneWidget);
-      expect(find.text('Northwind Atelier'), findsNothing);
-    });
+        expect(find.text('Meera Kapoor'), findsOneWidget);
+        expect(find.text('Northwind Atelier'), findsNothing);
+      },
+    );
 
-    testWidgets('ClientDetailsScreen displays contact info, events, and opens EventDetailsScreen',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets(
+      'ClientDetailsScreen displays contact info, events, and opens EventDetailsScreen',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
 
-      final provider = EventsProvider();
+        final provider = _populatedProvider();
 
-      await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: provider,
-          child: MaterialApp(
-            theme: AppTheme.dark,
-            home: const ClientDetailsScreen(clientId: 'cli-2'),
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: provider,
+            child: MaterialApp(
+              theme: AppTheme.dark,
+              home: const ClientDetailsScreen(clientId: 'cli-2'),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Contact info
-      expect(find.text('Meera Kapoor'), findsWidgets);
-      expect(find.text('+91 98234 56789'), findsOneWidget);
-      expect(find.text('meera.kapoor@example.com'), findsOneWidget);
+        // Contact info
+        expect(find.text('Meera Kapoor'), findsWidgets);
+        expect(find.text('+91 98234 56789'), findsOneWidget);
+        expect(find.text('meera.kapoor@example.com'), findsOneWidget);
 
-      // Financial Summary (Value, Received, Remaining - NO profit)
-      expect(find.text('Financial Summary'), findsOneWidget);
-      expect(find.text('Total Event Value'), findsOneWidget);
-      expect(find.text('Total Received'), findsOneWidget);
-      expect(find.text('Total Remaining'), findsOneWidget);
-      expect(find.text('Net Profit'), findsNothing); // Crucial: No profit on client screen
+        // Financial Summary (Value, Received, Remaining - NO profit)
+        expect(find.text('Financial Summary'), findsOneWidget);
+        expect(find.text('Total Event Value'), findsOneWidget);
+        expect(find.text('Total Received'), findsOneWidget);
+        expect(find.text('Total Remaining'), findsOneWidget);
+        expect(
+          find.text('Net Profit'),
+          findsNothing,
+        ); // Crucial: No profit on client screen
 
-      // Events belonging to client
-      expect(find.text('Client Events'), findsOneWidget);
-      expect(find.text('Maternity Session — Meera'), findsOneWidget);
-      expect(find.text('Meera — Maternity Studio Shoot'), findsOneWidget);
+        // Events belonging to client
+        expect(find.text('Client Events'), findsOneWidget);
+        expect(find.text('Maternity Session — Meera'), findsOneWidget);
+        expect(find.text('Meera — Maternity Studio Shoot'), findsOneWidget);
 
-      // Payment History & View Proof
-      expect(find.text('Payment History'), findsOneWidget);
-      expect(find.text('View Proof'), findsWidgets);
+        // Payment History & View Proof
+        expect(find.text('Payment History'), findsOneWidget);
+        expect(find.text('View Proof'), findsWidgets);
 
-      // Tap on an event -> navigates to EventDetailsScreen
-      await tester.tap(find.text('Maternity Session — Meera'));
-      await tester.pumpAndSettle();
+        // Tap on an event -> navigates to EventDetailsScreen
+        await tester.tap(find.text('Maternity Session — Meera'));
+        await tester.pumpAndSettle();
 
-      // Verify EventDetailsScreen opened
-      expect(find.text('Event Financials'), findsOneWidget);
-      expect(find.text('Work Progress'), findsOneWidget);
-    });
+        // Verify EventDetailsScreen opened
+        expect(find.text('Event Financials'), findsOneWidget);
+        expect(find.text('Work Progress'), findsOneWidget);
+      },
+    );
   });
 
   group('HomeScreen & Event Details UI', () {
-    testWidgets('Home screen displays Upcoming Events, Add Event button and Past Events',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets(
+      'Home screen displays Upcoming Events, Add Event button and Past Events',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider(create: (_) => AuthProvider()),
-            ChangeNotifierProvider(create: (_) => EventsProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.dark,
-            home: const Scaffold(body: HomeScreen()),
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => AuthProvider()),
+              ChangeNotifierProvider(create: (_) => _populatedProvider()),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.dark,
+              home: const Scaffold(body: HomeScreen()),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Upcoming Events'), findsOneWidget);
-      expect(find.textContaining('Add Event'), findsOneWidget);
-      expect(find.text('Past Events'), findsOneWidget);
-      expect(find.text('View all →'), findsNWidgets(2));
-    });
+        expect(find.text('Upcoming Events'), findsOneWidget);
+        expect(find.textContaining('Add Event'), findsOneWidget);
+        expect(find.text('Past Events'), findsOneWidget);
+        expect(find.text('View all →'), findsNWidgets(2));
+      },
+    );
 
-    testWidgets('AppShell renders and navigates between tabs without exceptions',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets(
+      'AppShell renders and navigates between tabs without exceptions',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
 
-      final auth = AuthProvider();
-      final events = EventsProvider();
-      final notifs = NotificationsProvider();
-      notifs.syncEvents(events);
-      final invoices = InvoicesProvider();
-      invoices.syncAuth(auth);
+        final auth = AuthProvider();
+        final events = _populatedProvider();
+        final notifs = NotificationsProvider();
+        notifs.syncEvents(events);
+        final invoices = InvoicesProvider();
+        invoices.syncAuth(auth);
 
-      tester.view.physicalSize = const Size(420, 850);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
+        tester.view.physicalSize = const Size(420, 850);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: auth),
-            ChangeNotifierProvider.value(value: events),
-            ChangeNotifierProvider.value(value: notifs),
-            ChangeNotifierProvider.value(value: invoices),
-            ChangeNotifierProvider(create: (_) => ThemeProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.dark,
-            home: const AppShell(),
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: auth),
+              ChangeNotifierProvider.value(value: events),
+              ChangeNotifierProvider.value(value: notifs),
+              ChangeNotifierProvider.value(value: invoices),
+              ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ],
+            child: MaterialApp(theme: AppTheme.dark, home: const AppShell()),
           ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Calendar'), findsWidgets);
+        expect(find.text('Calendar'), findsWidgets);
 
-      await tester.tap(find.text('Calendar').last);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Booked sessions & shoot schedule'), findsOneWidget);
+        await tester.tap(find.text('Calendar').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Booked sessions & shoot schedule'), findsOneWidget);
 
-      // Tap Invoices
-      await tester.tap(find.text('Invoices').last);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        // Tap Invoices
+        await tester.tap(find.text('Invoices').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // Tap Clients
-      await tester.tap(find.text('Clients').last);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        // Tap Clients
+        await tester.tap(find.text('Clients').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      notifs.dispose();
-    });
+        notifs.dispose();
+      },
+    );
 
-    testWidgets('MonthlyFinancialSummarySheet renders monthly stats and event breakdown',
-        (WidgetTester tester) async {
-      final notifs = NotificationsProvider();
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider(create: (_) => EventsProvider()),
-            ChangeNotifierProvider(create: (_) => notifs),
-            ChangeNotifierProvider(create: (_) => AuthProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.dark,
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: ElevatedButton(
-                  onPressed: () => MonthlyFinancialSummarySheet.show(
-                    context,
-                    initialMonth: DateTime(2026, 8),
+    testWidgets(
+      'MonthlyFinancialSummarySheet renders monthly stats and event breakdown',
+      (WidgetTester tester) async {
+        final notifs = NotificationsProvider();
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => _populatedProvider()),
+              ChangeNotifierProvider(create: (_) => notifs),
+              ChangeNotifierProvider(create: (_) => AuthProvider()),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.dark,
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: ElevatedButton(
+                    onPressed: () => MonthlyFinancialSummarySheet.show(
+                      context,
+                      initialMonth: DateTime(2026, 8),
+                    ),
+                    child: const Text('Open Summary'),
                   ),
-                  child: const Text('Open Summary'),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Open Summary'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Open Summary'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Monthly Financial Summary'), findsOneWidget);
-      expect(find.text('August 2026'), findsOneWidget);
-      expect(find.text('Total Event Value'), findsOneWidget);
-      expect(find.text('Amount Received'), findsOneWidget);
-      expect(find.text('Total Expenditure'), findsOneWidget);
-      expect(find.text('Net Amount Left'), findsOneWidget);
+        expect(find.text('Monthly Financial Summary'), findsOneWidget);
+        expect(find.text('August 2026'), findsOneWidget);
+        expect(find.text('Total Event Value'), findsOneWidget);
+        expect(find.text('Amount Received'), findsOneWidget);
+        expect(find.text('Total Expenditure'), findsOneWidget);
+        expect(find.text('Net Amount Left'), findsOneWidget);
 
-      notifs.dispose();
-    });
+        notifs.dispose();
+      },
+    );
   });
 }

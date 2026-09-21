@@ -145,6 +145,12 @@ async function createInvoice(req, res) {
         message: 'Each deliverable needs a name and a cost greater than 0.',
       });
     }
+    if (fields.amountReceived > invoiceTotals(fields.deliverables).total) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount received cannot exceed the invoice total.',
+      });
+    }
     if (fields.phone.length !== 10) {
       return res.status(400).json({
         success: false,
@@ -234,6 +240,15 @@ async function updateInvoice(req, res) {
       fields.amountReceived = Number(body.amountReceived) || 0;
     }
 
+    const nextDeliverables = fields.deliverables || current.deliverables;
+    if (fields.amountReceived !== undefined &&
+        fields.amountReceived > invoiceTotals(nextDeliverables).total) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount received cannot exceed the invoice total.',
+      });
+    }
+
     const invoice = await invoiceRepository.updateInvoice(
       req.params.id,
       req.userId,
@@ -289,12 +304,7 @@ async function markPaid(req, res) {
         message: 'Invoice not found.',
       });
     }
-    const totals = invoiceTotals(invoice.deliverables, invoice.amountReceived);
-    const updated = await invoiceRepository.updateInvoice(
-      req.params.id,
-      req.userId,
-      { amountReceived: totals.total },
-    );
+    const updated = await invoiceRepository.markPaidAtomic(req.params.id, req.userId);
     return res.json({
       success: true,
       invoice: updated.toPublicJSON(),
@@ -312,10 +322,7 @@ async function markPartial(req, res) {
   if (sendValidationError(req, res)) return;
 
   try {
-    const invoice = await invoiceRepository.findByIdForUser(
-      req.params.id,
-      req.userId,
-    );
+    const invoice = await invoiceRepository.findByIdForUser(req.params.id, req.userId);
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -331,19 +338,13 @@ async function markPartial(req, res) {
       });
     }
 
-    const totals = invoiceTotals(invoice.deliverables, invoice.amountReceived);
-    if (amount > totals.pending + 0.009) {
+    const updated = await invoiceRepository.addPartialPayment(req.params.id, req.userId, amount);
+    if (updated?.overpayment) {
       return res.status(400).json({
         success: false,
         message: 'Payment cannot exceed the remaining balance.',
       });
     }
-
-    const updated = await invoiceRepository.updateInvoice(
-      req.params.id,
-      req.userId,
-      { amountReceived: totals.received + amount },
-    );
     return res.json({
       success: true,
       invoice: updated.toPublicJSON(),

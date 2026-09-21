@@ -10,7 +10,11 @@ const {
   normalizePhone,
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/auth');
-const { uploadLogo: logoUpload } = require('../middleware/upload');
+const {
+  uploadLogo: logoUpload,
+  hasSupportedImageSignature,
+} = require('../middleware/upload');
+const fs = require('fs');
 
 const router = express.Router();
 
@@ -53,6 +57,13 @@ function handleLogoUpload(req, res, next) {
       return res.status(400).json({
         success: false,
         message: err.message || 'Please upload a valid image.',
+      });
+    }
+    if (!req.file || !hasSupportedImageSignature(req.file.path)) {
+      if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: 'Upload a valid JPG, PNG, GIF, or WebP image.',
       });
     }
     return next();

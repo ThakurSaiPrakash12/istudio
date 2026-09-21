@@ -18,6 +18,8 @@ class ApiException implements Exception {
 class ApiService {
   ApiService({http.Client? client}) : _client = client ?? http.Client();
 
+  static Future<void> Function()? onUnauthorized;
+
   final http.Client _client;
   static const Duration _timeout = Duration(seconds: 20);
 
@@ -33,16 +35,21 @@ class ApiService {
     String endpoint,
     Map<String, dynamic> body, {
     String? token,
+    String? idempotencyKey,
   }) async {
     try {
       final response = await _client
           .post(
             Uri.parse('${ApiConfig.baseUrl}$endpoint'),
-            headers: _headers(token: token),
+            headers: {
+              ..._headers(token: token),
+              if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+                'Idempotency-Key': idempotencyKey,
+            },
             body: jsonEncode(body),
           )
           .timeout(_timeout);
-      return _decode(response);
+      return _decode(response, token: token);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -67,7 +74,32 @@ class ApiService {
             body: jsonEncode(body),
           )
           .timeout(_timeout);
-      return _decode(response);
+      return _decode(response, token: token);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException('The studio is taking too long to respond.');
+    } catch (_) {
+      throw const ApiException(
+        'Unable to reach the studio. Check your connection.',
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> put(
+    String endpoint,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('${ApiConfig.baseUrl}$endpoint'),
+            headers: _headers(token: token),
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
+      return _decode(response, token: token);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -99,7 +131,7 @@ class ApiService {
       );
       final streamed = await _client.send(request).timeout(_timeout);
       final response = await http.Response.fromStream(streamed);
-      return _decode(response);
+      return _decode(response, token: token);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -119,7 +151,7 @@ class ApiService {
             headers: _headers(token: token),
           )
           .timeout(_timeout);
-      return _decode(response);
+      return _decode(response, token: token);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -131,10 +163,7 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> delete(
-    String endpoint, {
-    String? token,
-  }) async {
+  Future<Map<String, dynamic>> delete(String endpoint, {String? token}) async {
     try {
       final response = await _client
           .delete(
@@ -142,7 +171,7 @@ class ApiService {
             headers: _headers(token: token),
           )
           .timeout(_timeout);
-      return _decode(response);
+      return _decode(response, token: token);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -154,7 +183,7 @@ class ApiService {
     }
   }
 
-  Map<String, dynamic> _decode(http.Response response) {
+  Map<String, dynamic> _decode(http.Response response, {String? token}) {
     Map<String, dynamic> payload;
     try {
       payload = jsonDecode(response.body) as Map<String, dynamic>;
@@ -165,6 +194,9 @@ class ApiService {
       );
     }
 
+    if (response.statusCode == 401 && token != null && token.isNotEmpty) {
+      onUnauthorized?.call();
+    }
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return payload;
     }

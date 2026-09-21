@@ -115,14 +115,14 @@ class PaymentRecord {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'amount': amount,
-        'paidAt': paidAt.toIso8601String(),
-        'method': method.name,
-        'reference': reference,
-        'proof': proof,
-      };
+    'id': id,
+    'title': title,
+    'amount': amount,
+    'paidAt': paidAt.toIso8601String(),
+    'method': method.name,
+    'reference': reference,
+    'proof': proof,
+  };
 
   factory PaymentRecord.fromJson(Map<String, dynamic> json) {
     return PaymentRecord(
@@ -154,12 +154,12 @@ class ExpenseRecord {
   final DateTime incurredAt;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'amount': amount,
-        'category': category,
-        'incurredAt': incurredAt.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'amount': amount,
+    'category': category,
+    'incurredAt': incurredAt.toIso8601String(),
+  };
 
   factory ExpenseRecord.fromJson(Map<String, dynamic> json) {
     return ExpenseRecord(
@@ -193,10 +193,10 @@ class DeliverableTask {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'isCompleted': isCompleted,
-      };
+    'id': id,
+    'title': title,
+    'isCompleted': isCompleted,
+  };
 
   factory DeliverableTask.fromJson(Map<String, dynamic> json) {
     return DeliverableTask(
@@ -232,7 +232,8 @@ class StudioEvent {
   final String? clientId;
   final String title;
   final String clientName;
-  final String eventType; // Wedding, Maternity, Commercial, Newborn, Portrait, etc.
+  final String
+  eventType; // Wedding, Maternity, Commercial, Newborn, Portrait, etc.
   final DateTime startsAt;
   final String startTime;
   final String endTime;
@@ -387,6 +388,71 @@ class StudioEvent {
       expenses: expenses ?? this.expenses,
       deliverables: deliverables ?? this.deliverables,
       notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'clientId': clientId,
+    'title': title,
+    'clientName': clientName,
+    'eventType': eventType,
+    'startsAt': startsAt.toIso8601String(),
+    'startTime': startTime,
+    'endTime': endTime,
+    'location': location,
+    'status': status.name,
+    'totalAmount': totalAmount,
+    'amountReceived': _customAmountReceived,
+    'payments': payments.map((item) => item.toJson()).toList(),
+    'expenses': expenses.map((item) => item.toJson()).toList(),
+    'deliverables': deliverables.map((item) => item.toJson()).toList(),
+    'notes': notes,
+  };
+
+  factory StudioEvent.fromJson(Map<String, dynamic> json) {
+    final payments = (json['payments'] as List<dynamic>? ?? [])
+        .map(
+          (item) =>
+              PaymentRecord.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+    final expenses = (json['expenses'] as List<dynamic>? ?? [])
+        .map(
+          (item) =>
+              ExpenseRecord.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+    final deliverables = (json['deliverables'] as List<dynamic>? ?? [])
+        .map(
+          (item) =>
+              DeliverableTask.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+    final statusName = json['status'] as String? ?? EventStatus.upcoming.name;
+    final status = EventStatus.values.firstWhere(
+      (item) => item.name == statusName,
+      orElse: () => EventStatus.upcoming,
+    );
+    return StudioEvent(
+      id: json['id'] as String? ?? '',
+      clientId: json['clientId'] as String?,
+      title: json['title'] as String? ?? '',
+      clientName: json['clientName'] as String? ?? '',
+      eventType: json['eventType'] as String? ?? '',
+      startsAt:
+          DateTime.tryParse(json['startsAt'] as String? ?? '') ??
+          DateTime.now(),
+      startTime: json['startTime'] as String? ?? '10:00 AM',
+      endTime: json['endTime'] as String? ?? '04:00 PM',
+      location: json['location'] as String? ?? '',
+      status: status,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      amountReceived: (json['amountReceived'] as num?)?.toDouble(),
+      payments: payments,
+      expenses: expenses,
+      deliverables: deliverables,
+      notes: json['notes'] as String? ?? '',
     );
   }
 }

@@ -24,7 +24,7 @@ function signToken(user) {
       phone: user.phone,
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d', algorithm: 'HS256' },
   );
 }
 
@@ -143,7 +143,6 @@ async function me(req, res) {
   }
 }
 
-const fs = require('fs');
 const PROFILE_FIELDS = [
   'studioName',
   'ownerName',
@@ -157,6 +156,32 @@ const PROFILE_FIELDS = [
   'specialties',
   'logoUrl',
 ];
+
+function validateProfileFields(fields) {
+  const textFields = PROFILE_FIELDS.filter((key) => key !== 'logoUrl');
+  for (const key of textFields) {
+    if (fields[key] !== undefined && String(fields[key]).length > 240) {
+      return `${key} is too long.`;
+    }
+  }
+  if (fields.email && !/^\S+@\S+\.\S+$/.test(fields.email)) {
+    return 'Enter a valid email address.';
+  }
+  for (const key of ['website', 'instagram', 'youtube']) {
+    if (fields[key]) {
+      try {
+        const url = new URL(fields[key].startsWith('http') ? fields[key] : `https://${fields[key]}`);
+        if (!['http:', 'https:'].includes(url.protocol)) return `Enter a valid ${key} URL.`;
+      } catch (_) {
+        return `Enter a valid ${key} URL.`;
+      }
+    }
+  }
+  if (fields.logoUrl && (!fields.logoUrl.startsWith('https://') || !fields.logoUrl.includes('cloudinary.com'))) {
+    return 'Profile images must be hosted securely.';
+  }
+  return null;
+}
 
 async function updateProfile(req, res) {
   try {
@@ -182,6 +207,10 @@ async function updateProfile(req, res) {
         });
       }
       fields.phone = phone;
+    }
+    const validationMessage = validateProfileFields(fields);
+    if (validationMessage) {
+      return res.status(400).json({ success: false, message: validationMessage });
     }
 
     const user = await userRepository.updateUser(req.userId, fields);
@@ -240,35 +269,10 @@ async function uploadLogo(req, res) {
       });
     }
 
-    // Smart transaction metadata extraction from proof image (UPI, Bank Transfer, Card)
-    const filename = (req.file && req.file.originalname) ? req.file.originalname : '';
-    const lower = filename.toLowerCase();
-    let extractedTxn = {
-      method: 'upi',
-      reference: '',
-      description: 'UPI Payment'
-    };
-
-    if (lower.includes('card') || lower.includes('pos') || lower.includes('visa') || lower.includes('master')) {
-      extractedTxn.method = 'card';
-      extractedTxn.description = 'Credit/Debit Card Payment';
-      extractedTxn.reference = `POS/${Math.floor(100000 + Math.random() * 900000)}`;
-    } else if (lower.includes('bank') || lower.includes('imps') || lower.includes('neft') || lower.includes('rtgs') || lower.includes('utr') || lower.includes('transfer')) {
-      extractedTxn.method = 'bankTransfer';
-      extractedTxn.description = 'Bank Transfer (IMPS/NEFT)';
-      extractedTxn.reference = `UTR/${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-    } else {
-      extractedTxn.method = 'upi';
-      extractedTxn.description = 'UPI Payment (Google Pay / PhonePe)';
-      const year = new Date().getFullYear();
-      extractedTxn.reference = `UPI/${year}/${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-    }
-
     return res.json({
       success: true,
       imageUrl: logoUrl,
       user: user.toPublicJSON(),
-      extractedTxn,
     });
   } catch (error) {
     console.error('Logo upload error:', error);

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user.dart';
@@ -9,13 +10,16 @@ import '../utils/validators.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider({AuthService? authService})
-    : _authService = authService ?? AuthService();
+    : _authService = authService ?? AuthService() {
+    ApiService.onUnauthorized = handleUnauthorized;
+  }
 
   static const _tokenKey = 'lumen_auth_token';
   static const _userKey = 'lumen_cached_user';
-  static const _logoKey = 'lumen_cached_studio_logo';
+  static const _logoKeyPrefix = 'lumen_cached_studio_logo_';
 
   final AuthService _authService;
+  static const _secureStorage = FlutterSecureStorage();
 
   User? _user;
   String? _token;
@@ -33,19 +37,30 @@ class AuthProvider extends ChangeNotifier {
   Future<void> bootstrap() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final storedToken = prefs.getString(_tokenKey);
+      final storedToken = await _readToken(prefs);
       final storedUserJson = prefs.getString(_userKey);
-      final storedLogo = prefs.getString(_logoKey);
+      final tokenIsUsable =
+          storedToken != null &&
+          storedToken.isNotEmpty &&
+          !_isTokenExpired(storedToken);
 
       // 1. Immediately restore cached session and logo so UI doesn't flicker or wait for cold start
-      if (storedToken != null && storedToken.isNotEmpty) {
+      if (tokenIsUsable) {
         _token = storedToken;
         if (storedUserJson != null && storedUserJson.isNotEmpty) {
           try {
-            _user = User.fromJson(jsonDecode(storedUserJson) as Map<String, dynamic>);
+            _user = User.fromJson(
+              jsonDecode(storedUserJson) as Map<String, dynamic>,
+            );
           } catch (_) {}
         }
-        if (_user != null && _user!.logoUrl.isEmpty && storedLogo != null && storedLogo.isNotEmpty) {
+        final storedLogo = _user == null
+            ? null
+            : prefs.getString('$_logoKeyPrefix${_user!.id}');
+        if (_user != null &&
+            _user!.logoUrl.isEmpty &&
+            storedLogo != null &&
+            storedLogo.isNotEmpty) {
           _user = _user!.copyWith(logoUrl: storedLogo);
         }
       }
@@ -54,14 +69,12 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
 
       // 2. Fetch fresh profile in background without logging user out if server is sleeping
-      if (storedToken != null && storedToken.isNotEmpty) {
+      if (tokenIsUsable) {
         try {
           final user = await _authService.me(storedToken);
           _user = user;
           await prefs.setString(_userKey, jsonEncode(user.toJson()));
-          if (user.logoUrl.isNotEmpty) {
-            await prefs.setString(_logoKey, user.logoUrl);
-          }
+          await _persistLogo(prefs, user);
           notifyListeners();
         } on ApiException catch (error) {
           if (error.statusCode == 401) {
@@ -73,6 +86,10 @@ class AuthProvider extends ChangeNotifier {
           // Server sleeping / cold start - retain cached user session
         }
       }
+      if (!tokenIsUsable && storedToken != null && storedToken.isNotEmpty) {
+        await _clearSession();
+        notifyListeners();
+      }
     } catch (_) {
       // SharedPreferences error fallback
       _isBootstrapping = false;
@@ -80,10 +97,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> login({
-    required String phone,
-    required String password,
-  }) async {
+  Future<bool> login({required String phone, required String password}) async {
     return _runAuth(() async {
       final result = await _authService.login(
         phone: Validators.normalizePhone(phone),
@@ -91,25 +105,6 @@ class AuthProvider extends ChangeNotifier {
       );
       await _persistSession(result);
     });
-  }
-
-  void loginDemo() {
-    _token = 'lumen-studio-demo-token';
-    _user = const User(
-      id: 'usr-demo-01',
-      username: 'alex',
-      phone: '+91 98765 43210',
-      ownerName: 'Alex Mercer',
-      studioName: 'Lumen Art Studio',
-      email: 'alex@lumenstudio.art',
-      city: 'Indiranagar, Bengaluru',
-      address: 'Studio Loft 4B, 100ft Road',
-      about: 'Editorial, Fashion & Fine Art Wedding Photography.',
-      specialties: 'Weddings · Maternity · Commercial',
-      instagram: '@lumenstudio.art',
-      website: 'lumenstudio.art',
-    );
-    notifyListeners();
   }
 
   Future<bool> signup({
@@ -128,7 +123,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> updateProfile(Map<String, dynamic> fields) async {
-    if (_token == null) return false;
+    if (_token == null) {
+      _errorMessage = 'Please sign in before updating your profile.';
+      notifyListeners();
+      return false;
+    }
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -140,9 +139,9 @@ class AuthProvider extends ChangeNotifier {
         if (fields.containsKey('logoUrl')) {
           final newLogo = fields['logoUrl'] as String? ?? '';
           if (newLogo.isEmpty) {
-            await prefs.remove(_logoKey);
+            await prefs.remove('$_logoKeyPrefix${_user!.id}');
           } else {
-            await prefs.setString(_logoKey, newLogo);
+            await prefs.setString('$_logoKeyPrefix${_user!.id}', newLogo);
           }
         }
       }
@@ -163,17 +162,19 @@ class AuthProvider extends ChangeNotifier {
     if (_user != null) {
       _user = _user!.copyWith(logoUrl: logoUrl);
       notifyListeners();
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.setString(_logoKey, logoUrl);
-        prefs.setString(_userKey, jsonEncode(_user!.toJson()));
+      final user = _user!;
+      SharedPreferences.getInstance().then((prefs) async {
+        await _persistLogo(prefs, user);
+        await prefs.setString(_userKey, jsonEncode(user.toJson()));
       });
     }
   }
 
   Future<bool> uploadLogo(List<int> bytes, String filename) async {
     if (_token == null) {
+      _errorMessage = 'Please sign in before uploading a profile image.';
       notifyListeners();
-      return true;
+      return false;
     }
     _isLoading = true;
     _errorMessage = null;
@@ -187,9 +188,7 @@ class AuthProvider extends ChangeNotifier {
       _user = updatedUser;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_userKey, jsonEncode(updatedUser.toJson()));
-      if (updatedUser.logoUrl.isNotEmpty) {
-        await prefs.setString(_logoKey, updatedUser.logoUrl);
-      }
+      await _persistLogo(prefs, updatedUser);
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -204,6 +203,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await _clearSession();
+    notifyListeners();
+  }
+
+  Future<void> handleUnauthorized() async {
+    if (_token == null && _user == null) return;
     await _clearSession();
     notifyListeners();
   }
@@ -236,21 +241,64 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _persistSession(AuthResult result) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, result.token);
+    await _secureStorage.write(key: _tokenKey, value: result.token);
+    await prefs.remove(_tokenKey);
     await prefs.setString(_userKey, jsonEncode(result.user.toJson()));
-    if (result.user.logoUrl.isNotEmpty) {
-      await prefs.setString(_logoKey, result.user.logoUrl);
-    }
+    await _persistLogo(prefs, result.user);
     _token = result.token;
     _user = result.user;
   }
 
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
+    await _secureStorage.delete(key: _tokenKey);
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
-    await prefs.remove(_logoKey);
     _token = null;
     _user = null;
+  }
+
+  Future<String?> _readToken(SharedPreferences prefs) async {
+    try {
+      final token = await _secureStorage
+          .read(key: _tokenKey)
+          .timeout(const Duration(milliseconds: 250));
+      if (token != null && token.isNotEmpty) return token;
+    } catch (_) {
+      // Platform secure storage may be unavailable in desktop/test environments.
+    }
+    final legacyToken = prefs.getString(_tokenKey);
+    if (legacyToken != null && legacyToken.isNotEmpty) {
+      try {
+        await _secureStorage.write(key: _tokenKey, value: legacyToken);
+        await prefs.remove(_tokenKey);
+      } catch (_) {}
+    }
+    return legacyToken;
+  }
+
+  bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final normalized = base64Url.normalize(parts[1]);
+      final payload =
+          jsonDecode(utf8.decode(base64Url.decode(normalized)))
+              as Map<String, dynamic>;
+      final expiresAt = (payload['exp'] as num?)?.toInt();
+      return expiresAt == null ||
+          expiresAt <= DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> _persistLogo(SharedPreferences prefs, User user) async {
+    final key = '$_logoKeyPrefix${user.id}';
+    if (user.logoUrl.isEmpty) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setString(key, user.logoUrl);
+    }
   }
 }

@@ -31,6 +31,7 @@ class CreateEventSheet extends StatefulWidget {
 
 class _CreateEventSheetState extends State<CreateEventSheet> {
   final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
 
   final _nameController = TextEditingController();
   final _clientController = TextEditingController();
@@ -49,8 +50,11 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
   double _totalAmount = 0;
   double _advanceReceived = 0;
 
-  static final _currency =
-      NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+  static final _currency = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: '₹',
+    decimalDigits: 0,
+  );
 
   final List<String> _eventTypes = [
     'Wedding',
@@ -96,7 +100,9 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
         (c) => c.name.toLowerCase() == name.toLowerCase(),
         orElse: () => const Client(id: '', name: '', phone: '', email: ''),
       );
-      if (match.id.isNotEmpty && match.phone.isNotEmpty && _phoneController.text.isEmpty) {
+      if (match.id.isNotEmpty &&
+          match.phone.isNotEmpty &&
+          _phoneController.text.isEmpty) {
         _phoneController.text = match.phone;
       }
     }
@@ -181,94 +187,122 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
 
-    final startsAt = DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-      _startTime.hour,
-      _startTime.minute,
-    );
-
-    final payments = <PaymentRecord>[];
-    if (_advanceReceived > 0) {
-      payments.add(
-        PaymentRecord(
-          id: 'pay-${DateTime.now().millisecondsSinceEpoch}',
-          title: 'Advance Received',
-          amount: _advanceReceived,
-          paidAt: DateTime.now(),
-          method: PaymentMethod.upi,
-        ),
+    try {
+      final startsAt = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _startTime.hour,
+        _startTime.minute,
       );
-    }
+      final formattedStartTime = _startTime.format(context);
+      final formattedEndTime = _endTime.format(context);
 
-    final provider = context.read<EventsProvider>();
+      final payments = <PaymentRecord>[];
+      if (_advanceReceived > 0) {
+        payments.add(
+          PaymentRecord(
+            id: 'pay-${DateTime.now().millisecondsSinceEpoch}',
+            title: 'Advance Received',
+            amount: _advanceReceived,
+            paidAt: DateTime.now(),
+            method: PaymentMethod.upi,
+          ),
+        );
+      }
 
-    // Auto-link or auto-create client if client does not exist
-    final clientName = _clientController.text.trim();
-    final clientPhone = _phoneController.text.trim();
-    String matchedClientId = '';
+      final provider = context.read<EventsProvider>();
 
-    final existing = provider.clients.firstWhere(
-      (c) => c.name.toLowerCase() == clientName.toLowerCase(),
-      orElse: () => const Client(id: '', name: '', phone: '', email: ''),
-    );
+      // Auto-link or auto-create client if client does not exist
+      final clientName = _clientController.text.trim();
+      final clientPhone = _phoneController.text.trim();
+      String matchedClientId = '';
 
-    if (existing.id.isNotEmpty) {
-      matchedClientId = existing.id;
-    } else {
-      final newClient = Client(
-        id: 'cli-${DateTime.now().millisecondsSinceEpoch}',
-        name: clientName,
-        phone: clientPhone,
-        email: '',
-        createdAt: DateTime.now(),
+      final existing = provider.clients.firstWhere(
+        (c) => c.name.toLowerCase() == clientName.toLowerCase(),
+        orElse: () => const Client(id: '', name: '', phone: '', email: ''),
       );
-      provider.addClient(newClient);
-      matchedClientId = newClient.id;
+
+      if (existing.id.isNotEmpty) {
+        matchedClientId = existing.id;
+      } else {
+        final newClient = Client(
+          id: 'cli-${DateTime.now().millisecondsSinceEpoch}',
+          name: clientName,
+          phone: clientPhone,
+          email: '',
+          createdAt: DateTime.now(),
+        );
+        final createdClient = await provider.addClient(newClient);
+        matchedClientId = createdClient.id;
+      }
+
+      final effectiveEventType =
+          (_eventType == 'Others' &&
+              _customEventTypeController.text.trim().isNotEmpty)
+          ? _customEventTypeController.text.trim()
+          : _eventType;
+
+      final newEvent = StudioEvent(
+        id: 'evt-${DateTime.now().millisecondsSinceEpoch}',
+        title: _nameController.text.trim(),
+        eventType: effectiveEventType,
+        clientId: matchedClientId,
+        clientName: clientName,
+        status: EventStatus.upcoming,
+        location: _locationController.text.trim().isEmpty
+            ? 'Studio / On Location'
+            : _locationController.text.trim(),
+        startsAt: startsAt,
+        startTime: formattedStartTime,
+        endTime: formattedEndTime,
+        totalAmount: _totalAmount,
+        payments: payments,
+        notes: _notesController.text.trim(),
+        deliverables: const [
+          DeliverableTask(
+            id: 't-1',
+            title: 'Consultation & Moodboard',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-2',
+            title: 'Shoot Execution',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-3',
+            title: 'Backup & Selection',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-4',
+            title: 'Editing & Retouching',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-5',
+            title: 'Final Delivery',
+            isCompleted: false,
+          ),
+        ],
+      );
+
+      await provider.addEvent(newEvent);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Event "${newEvent.title}" added to schedule.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
-
-    final effectiveEventType = (_eventType == 'Others' &&
-            _customEventTypeController.text.trim().isNotEmpty)
-        ? _customEventTypeController.text.trim()
-        : _eventType;
-
-    final newEvent = StudioEvent(
-      id: 'evt-${DateTime.now().millisecondsSinceEpoch}',
-      title: _nameController.text.trim(),
-      eventType: effectiveEventType,
-      clientId: matchedClientId,
-      clientName: clientName,
-      status: EventStatus.upcoming,
-      location: _locationController.text.trim().isEmpty
-          ? 'Studio / On Location'
-          : _locationController.text.trim(),
-      startsAt: startsAt,
-      startTime: _startTime.format(context),
-      endTime: _endTime.format(context),
-      totalAmount: _totalAmount,
-      payments: payments,
-      notes: _notesController.text.trim(),
-      deliverables: const [
-        DeliverableTask(id: 't-1', title: 'Consultation & Moodboard', isCompleted: true),
-        DeliverableTask(id: 't-2', title: 'Shoot Execution', isCompleted: false),
-        DeliverableTask(id: 't-3', title: 'Backup & Selection', isCompleted: false),
-        DeliverableTask(id: 't-4', title: 'Editing & Retouching', isCompleted: false),
-        DeliverableTask(id: 't-5', title: 'Final Delivery', isCompleted: false),
-      ],
-    );
-
-    provider.addEvent(newEvent);
-    Navigator.of(context).pop();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Event "${newEvent.title}" added to schedule.'),
-      ),
-    );
   }
 
   @override
@@ -384,8 +418,9 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                         ),
                         labelStyle: TextStyle(
                           color: selected ? accent : textMain,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                         ),
                       );
                     }).toList(),
@@ -521,15 +556,18 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                   // Automated Remaining Calculation Card
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: context.cardBg,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _remainingAmount > 0
                             ? (context.isDark
-                                ? const Color(0xFFE8B86D)
-                                : const Color(0xFFD97706)).withValues(alpha: 0.4)
+                                      ? const Color(0xFFE8B86D)
+                                      : const Color(0xFFD97706))
+                                  .withValues(alpha: 0.4)
                             : accent.withValues(alpha: 0.4),
                       ),
                     ),
@@ -571,8 +609,8 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                             style: TextStyle(
                               color: _remainingAmount > 0
                                   ? (context.isDark
-                                      ? const Color(0xFFE8B86D)
-                                      : const Color(0xFFD97706))
+                                        ? const Color(0xFFE8B86D)
+                                        : const Color(0xFFD97706))
                                   : accent,
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -587,7 +625,8 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                   // Save Button
                   StudioButton(
                     label: 'Create Event',
-                    onPressed: _submit,
+                    onPressed: _isSubmitting ? null : _submit,
+                    isLoading: _isSubmitting,
                   ),
                 ],
               ),
@@ -611,7 +650,10 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Divider(color: context.cardBorder.withValues(alpha: 0.3), thickness: 0.8),
+          child: Divider(
+            color: context.cardBorder.withValues(alpha: 0.3),
+            thickness: 0.8,
+          ),
         ),
       ],
     );
@@ -636,9 +678,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
         decoration: BoxDecoration(
           color: context.cardBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: context.cardBorder,
-          ),
+          border: Border.all(color: context.cardBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -647,10 +687,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
               children: [
                 Icon(icon, color: accent, size: 14),
                 const SizedBox(width: 4),
-                Text(
-                  title,
-                  style: TextStyle(color: textMuted, fontSize: 11),
-                ),
+                Text(title, style: TextStyle(color: textMuted, fontSize: 11)),
               ],
             ),
             const SizedBox(height: 4),

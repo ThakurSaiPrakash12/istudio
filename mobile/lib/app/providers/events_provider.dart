@@ -1,27 +1,51 @@
 import 'package:flutter/foundation.dart';
 import '../models/client.dart';
 import '../models/studio_event.dart';
+import '../services/business_service.dart';
+import 'auth_provider.dart';
 
 class EventsProvider extends ChangeNotifier {
-  EventsProvider() {
-    _initDefaultClients();
-    _initDefaultEvents();
-  }
+  String? _userId;
+  bool _loading = false;
+  String? _token;
+  bool _creatingEvent = false;
+  bool _addingPayment = false;
+  final BusinessService _service;
+
+  EventsProvider({BusinessService? service})
+    : _service = service ?? BusinessService();
 
   final List<Client> _clients = [];
   final List<StudioEvent> _events = [];
 
   List<Client> get clients => List.unmodifiable(_clients);
   List<StudioEvent> get events => List.unmodifiable(_events);
+  bool get isLoading => _loading;
+
+  void syncAuth(AuthProvider auth) {
+    if (auth.isBootstrapping) return;
+    final userId = auth.user?.id;
+    final token = auth.token;
+    if (userId == _userId && token == _token) return;
+    _userId = userId;
+    _token = token;
+    _clients.clear();
+    _events.clear();
+    _loading = userId != null;
+    notifyListeners();
+    if (userId != null && token != null) _loadFromServer(token);
+  }
 
   List<StudioEvent> get upcomingEvents {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return _events
-        .where((e) =>
-            e.status != EventStatus.completed &&
-            e.status != EventStatus.cancelled &&
-            !e.startsAt.isBefore(today))
+        .where(
+          (e) =>
+              e.status != EventStatus.completed &&
+              e.status != EventStatus.cancelled &&
+              !e.startsAt.isBefore(today),
+        )
         .toList()
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
   }
@@ -30,9 +54,10 @@ class EventsProvider extends ChangeNotifier {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return _events
-        .where((e) =>
-            e.status == EventStatus.completed ||
-            e.startsAt.isBefore(today))
+        .where(
+          (e) =>
+              e.status == EventStatus.completed || e.startsAt.isBefore(today),
+        )
         .toList()
       ..sort((a, b) => b.startsAt.compareTo(a.startsAt));
   }
@@ -63,15 +88,18 @@ class EventsProvider extends ChangeNotifier {
         return true;
       }
       if (clientName != null &&
-          e.clientName.trim().toLowerCase() == clientName.trim().toLowerCase()) {
+          e.clientName.trim().toLowerCase() ==
+              clientName.trim().toLowerCase()) {
         return true;
       }
       return false;
-    }).toList()
-      ..sort((a, b) => b.startsAt.compareTo(a.startsAt));
+    }).toList()..sort((a, b) => b.startsAt.compareTo(a.startsAt));
   }
 
-  List<PaymentRecord> getPaymentsForClient(String clientId, {String? clientName}) {
+  List<PaymentRecord> getPaymentsForClient(
+    String clientId, {
+    String? clientName,
+  }) {
     final clientEvents = getEventsForClient(clientId, clientName: clientName);
     final allPayments = <PaymentRecord>[];
     for (final event in clientEvents) {
@@ -96,14 +124,23 @@ class EventsProvider extends ChangeNotifier {
     return clientEvents.fold(0.0, (acc, e) => acc + e.remainingAmount);
   }
 
-  void addClient(Client client) {
-    _clients.insert(0, client);
+  Future<Client> addClient(Client client) async {
+    if (_token == null) {
+      _clients.insert(0, client);
+      notifyListeners();
+      return client;
+    }
+    final created = await _service.createClient(_token!, client);
+    _clients.insert(0, created);
     notifyListeners();
+    return created;
   }
 
-  void updateClient(Client client) {
+  Future<void> updateClient(Client client) async {
     final index = _clients.indexWhere((c) => c.id == client.id);
     if (index != -1) {
+      final previousClient = _clients[index];
+      final previousEvents = List<StudioEvent>.from(_events);
       _clients[index] = client;
       // Also update clientName in associated events if name changed
       for (int i = 0; i < _events.length; i++) {
@@ -112,11 +149,24 @@ class EventsProvider extends ChangeNotifier {
           _events[i] = _events[i].copyWith(clientName: client.name);
         }
       }
+      try {
+        if (_token != null) {
+          _clients[index] = await _service.updateClient(_token!, client);
+        }
+      } catch (_) {
+        _clients[index] = previousClient;
+        _events
+          ..clear()
+          ..addAll(previousEvents);
+        notifyListeners();
+        rethrow;
+      }
       notifyListeners();
     }
   }
 
-  void deleteClient(String id) {
+  Future<void> deleteClient(String id) async {
+    if (_token != null) await _service.deleteClient(_token!, id);
     _clients.removeWhere((c) => c.id == id);
     notifyListeners();
   }
@@ -131,71 +181,176 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
-  void addEvent(StudioEvent event) {
-    _events.insert(0, event);
-    notifyListeners();
+  Future<void> addEvent(StudioEvent event) async {
+    if (_creatingEvent) return;
+    _creatingEvent = true;
+    try {
+      if (_token == null) {
+        _events.insert(0, event);
+        notifyListeners();
+        return;
+      }
+      final created = await _service.createEvent(_token!, event);
+      _events.insert(0, created);
+      try {
+        for (final payment in event.payments) {
+          await _service.addPayment(_token!, created.id, payment);
+        }
+        for (final task in event.deliverables) {
+          await _service.createDeliverable(_token!, created.id, task);
+        }
+        final refreshed = (await _service.listEvents(
+          _token!,
+        )).firstWhere((item) => item.id == created.id, orElse: () => created);
+        _events[_events.indexWhere((item) => item.id == created.id)] =
+            refreshed;
+        notifyListeners();
+      } catch (_) {
+        try {
+          await _service.deleteEvent(_token!, created.id);
+        } catch (_) {}
+        _events.removeWhere((item) => item.id == created.id);
+        notifyListeners();
+        rethrow;
+      }
+    } finally {
+      _creatingEvent = false;
+    }
   }
 
-  void updateEvent(StudioEvent event) {
+  Future<void> updateEvent(StudioEvent event) async {
     final index = _events.indexWhere((e) => e.id == event.id);
     if (index != -1) {
+      final previous = _events[index];
       _events[index] = event;
+      try {
+        if (_token != null) {
+          _events[index] = await _service.updateEvent(_token!, event);
+        }
+      } catch (_) {
+        _events[index] = previous;
+        notifyListeners();
+        rethrow;
+      }
       notifyListeners();
     }
   }
 
-  void deleteEvent(String id) {
+  Future<void> deleteEvent(String id) async {
+    if (_token != null) await _service.deleteEvent(_token!, id);
     _events.removeWhere((e) => e.id == id);
     notifyListeners();
   }
 
-  void addExpense(String eventId, ExpenseRecord expense) {
+  Future<void> addExpense(String eventId, ExpenseRecord expense) async {
     final index = _events.indexWhere((e) => e.id == eventId);
     if (index != -1) {
       final current = _events[index];
+      final previous = current;
       final updatedExpenses = [...current.expenses, expense];
       _events[index] = current.copyWith(expenses: updatedExpenses);
+      try {
+        if (_token != null) {
+          final saved = await _service.addExpense(_token!, eventId, expense);
+          _events[index] = _events[index].copyWith(
+            expenses: [
+              ..._events[index].expenses.where((item) => item.id != expense.id),
+              saved,
+            ],
+          );
+        }
+      } catch (_) {
+        _events[index] = previous;
+        notifyListeners();
+        rethrow;
+      }
       notifyListeners();
     }
   }
 
-  void deleteExpense(String eventId, String expenseId) {
+  Future<void> deleteExpense(String eventId, String expenseId) async {
     final index = _events.indexWhere((e) => e.id == eventId);
     if (index != -1) {
       final current = _events[index];
-      final updatedExpenses =
-          current.expenses.where((ex) => ex.id != expenseId).toList();
+      final previous = current;
+      final updatedExpenses = current.expenses
+          .where((ex) => ex.id != expenseId)
+          .toList();
       _events[index] = current.copyWith(expenses: updatedExpenses);
+      try {
+        if (_token != null) {
+          await _service.deleteExpense(_token!, expenseId);
+        }
+      } catch (_) {
+        _events[index] = previous;
+        notifyListeners();
+        rethrow;
+      }
       notifyListeners();
     }
   }
 
-  void addPayment(String eventId, PaymentRecord payment) {
+  Future<PaymentRecord?> addPayment(
+    String eventId,
+    PaymentRecord payment,
+  ) async {
+    if (_addingPayment) return null;
     final index = _events.indexWhere((e) => e.id == eventId);
-    if (index != -1) {
-      final current = _events[index];
-      final updatedPayments = [...current.payments, payment];
-      final newAmountReceived =
-          updatedPayments.fold(0.0, (acc, p) => acc + p.amount);
-      final newStatus = newAmountReceived >= current.totalAmount
-          ? (current.status == EventStatus.paymentDue
-              ? EventStatus.upcoming
-              : current.status)
-          : current.status;
+    if (index == -1) return null;
 
-      _events[index] = current.copyWith(
-        payments: updatedPayments,
-        amountReceived: newAmountReceived,
-        status: newStatus,
+    _addingPayment = true;
+    try {
+      if (_token == null) {
+        final current = _events[index];
+        _events[index] = current.copyWith(
+          payments: [...current.payments, payment],
+        );
+        notifyListeners();
+        return payment;
+      }
+
+      final saved = await _service.addPayment(_token!, eventId, payment);
+      final refreshed = (await _service.listEvents(_token!)).firstWhere(
+        (item) => item.id == eventId,
+        orElse: () => _events[index].copyWith(
+          payments: [..._events[index].payments, saved],
+        ),
       );
+      _events[index] = refreshed;
       notifyListeners();
+      return saved;
+    } finally {
+      _addingPayment = false;
     }
   }
 
-  void toggleDeliverable(String eventId, String taskId) {
+  Future<void> uploadPaymentProof(
+    String eventId,
+    String paymentId,
+    List<int> bytes,
+    String filename,
+  ) async {
+    final index = _events.indexWhere((item) => item.id == eventId);
+    if (index == -1 || _token == null) return;
+    final saved = await _service.uploadPaymentProof(
+      _token!,
+      paymentId,
+      bytes,
+      filename,
+    );
+    _events[index] = _events[index].copyWith(
+      payments: _events[index].payments
+          .map((item) => item.id == paymentId ? saved : item)
+          .toList(),
+    );
+    notifyListeners();
+  }
+
+  Future<void> toggleDeliverable(String eventId, String taskId) async {
     final index = _events.indexWhere((e) => e.id == eventId);
     if (index != -1) {
       final current = _events[index];
+      final previous = current;
       final updatedDeliverables = current.deliverables.map((task) {
         if (task.id == taskId) {
           return task.copyWith(isCompleted: !task.isCompleted);
@@ -203,11 +358,51 @@ class EventsProvider extends ChangeNotifier {
         return task;
       }).toList();
       _events[index] = current.copyWith(deliverables: updatedDeliverables);
+      try {
+        if (_token != null) {
+          final saved = await _service.updateDeliverable(
+            _token!,
+            taskId,
+            updatedDeliverables
+                .firstWhere((item) => item.id == taskId)
+                .isCompleted,
+          );
+          _events[index] = _events[index].copyWith(
+            deliverables: _events[index].deliverables
+                .map((item) => item.id == taskId ? saved : item)
+                .toList(),
+          );
+        }
+      } catch (_) {
+        _events[index] = previous;
+        notifyListeners();
+        rethrow;
+      }
       notifyListeners();
     }
   }
 
-  // ================= Seed Data =================
+  Future<void> _loadFromServer(String token) async {
+    try {
+      final clients = await _service.listClients(token);
+      final events = await _service.listEvents(token);
+      if (token != _token) return;
+      _clients.addAll(clients);
+      _events.addAll(events);
+    } catch (_) {
+      _clients.clear();
+      _events.clear();
+    } finally {
+      if (token == _token) {
+        _loading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /* Legacy seed data is intentionally disabled. Records must come from the
+      authenticated user's user-scoped local store or backend. */
+  /*
 
   void _initDefaultClients() {
     _clients.addAll([
@@ -217,7 +412,8 @@ class EventsProvider extends ChangeNotifier {
         phone: '+91 98765 43210',
         email: 'aanya.sharma@example.com',
         address: 'Flat 402, Lotus Residency, Mumbai',
-        notes: 'Bride requested golden hour lawn portrait session. Drone clearance obtained.',
+        notes:
+            'Bride requested golden hour lawn portrait session. Drone clearance obtained.',
       ),
       const Client(
         id: 'cli-2',
@@ -225,7 +421,8 @@ class EventsProvider extends ChangeNotifier {
         phone: '+91 98234 56789',
         email: 'meera.kapoor@example.com',
         address: 'Villa 12, Green Meadows, Bengaluru',
-        notes: 'Maternity and lifestyle portrait client. Husband joins for studio sessions.',
+        notes:
+            'Maternity and lifestyle portrait client. Husband joins for studio sessions.',
       ),
       const Client(
         id: 'cli-3',
@@ -233,7 +430,8 @@ class EventsProvider extends ChangeNotifier {
         phone: '+91 91234 56780',
         email: 'campaigns@northwindatelier.com',
         address: '5th Floor, Trade Tower, Indiranagar, Bengaluru',
-        notes: 'Commercial luxury collection brand shoot. High-res TIFFs & color profiles required.',
+        notes:
+            'Commercial luxury collection brand shoot. High-res TIFFs & color profiles required.',
       ),
       const Client(
         id: 'cli-4',
@@ -241,7 +439,8 @@ class EventsProvider extends ChangeNotifier {
         phone: '+91 99887 76655',
         email: 'arjun.iyer@example.com',
         address: '18, Orchid Gardens, Pune',
-        notes: 'Family portraits and newborn photography. Requested handcrafted wooden album box.',
+        notes:
+            'Family portraits and newborn photography. Requested handcrafted wooden album box.',
       ),
       const Client(
         id: 'cli-5',
@@ -249,7 +448,8 @@ class EventsProvider extends ChangeNotifier {
         phone: '+91 98111 22334',
         email: 'aarav.priya@example.com',
         address: '24 Palm Avenue, New Delhi',
-        notes: 'Wedding coverage delivered with 500 edited shots and Italian leather album.',
+        notes:
+            'Wedding coverage delivered with 500 edited shots and Italian leather album.',
       ),
     ]);
   }
@@ -265,7 +465,11 @@ class EventsProvider extends ChangeNotifier {
         title: 'Wedding — Aanya & Rohan',
         clientName: 'Aanya Sharma',
         eventType: 'Wedding',
-        startsAt: DateTime(now.year, now.month, now.day).add(const Duration(days: 2)),
+        startsAt: DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).add(const Duration(days: 2)),
         startTime: '09:00 AM',
         endTime: '10:00 PM',
         location: 'Lotus Pavilion',
@@ -308,16 +512,49 @@ class EventsProvider extends ChangeNotifier {
           ),
         ],
         deliverables: const [
-          DeliverableTask(id: 't-1', title: 'Pre-event Consultation', isCompleted: true),
-          DeliverableTask(id: 't-2', title: 'Gear Checklist & Crew Briefing', isCompleted: true),
-          DeliverableTask(id: 't-3', title: 'Main Wedding Coverage', isCompleted: false),
-          DeliverableTask(id: 't-4', title: 'Raw Files Dual Backup', isCompleted: false),
-          DeliverableTask(id: 't-5', title: 'Client Selection Gallery', isCompleted: false),
-          DeliverableTask(id: 't-6', title: 'High-Res Retouching', isCompleted: false),
-          DeliverableTask(id: 't-7', title: 'Cinematic Highlights Reel', isCompleted: false),
-          DeliverableTask(id: 't-8', title: 'Hardcover Album Delivery', isCompleted: false),
+          DeliverableTask(
+            id: 't-1',
+            title: 'Pre-event Consultation',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-2',
+            title: 'Gear Checklist & Crew Briefing',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-3',
+            title: 'Main Wedding Coverage',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-4',
+            title: 'Raw Files Dual Backup',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-5',
+            title: 'Client Selection Gallery',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-6',
+            title: 'High-Res Retouching',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-7',
+            title: 'Cinematic Highlights Reel',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-8',
+            title: 'Hardcover Album Delivery',
+            isCompleted: false,
+          ),
         ],
-        notes: 'Bride requested golden hour lawn portrait session. Drone clearance obtained for venue.',
+        notes:
+            'Bride requested golden hour lawn portrait session. Drone clearance obtained for venue.',
       ),
 
       // 2. Upcoming Maternity Session (Client: Meera Kapoor)
@@ -327,7 +564,11 @@ class EventsProvider extends ChangeNotifier {
         title: 'Maternity Session — Meera',
         clientName: 'Meera Kapoor',
         eventType: 'Maternity',
-        startsAt: DateTime(now.year, now.month, now.day).add(const Duration(days: 5)),
+        startsAt: DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).add(const Duration(days: 5)),
         startTime: '02:00 PM',
         endTime: '05:30 PM',
         location: 'Studio Floor B',
@@ -354,12 +595,29 @@ class EventsProvider extends ChangeNotifier {
           ),
         ],
         deliverables: const [
-          DeliverableTask(id: 't-201', title: 'Moodboard & Wardrobe Check', isCompleted: true),
-          DeliverableTask(id: 't-202', title: 'Studio Session Execution', isCompleted: false),
-          DeliverableTask(id: 't-203', title: 'Color Grading & Retouching', isCompleted: false),
-          DeliverableTask(id: 't-204', title: 'Fine Art Prints Packaging', isCompleted: false),
+          DeliverableTask(
+            id: 't-201',
+            title: 'Moodboard & Wardrobe Check',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-202',
+            title: 'Studio Session Execution',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-203',
+            title: 'Color Grading & Retouching',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-204',
+            title: 'Fine Art Prints Packaging',
+            isCompleted: false,
+          ),
         ],
-        notes: 'Requested neutral tones and soft fabric drapes. Husband will join for second half.',
+        notes:
+            'Requested neutral tones and soft fabric drapes. Husband will join for second half.',
       ),
 
       // 3. Upcoming Commercial Brand Campaign (Client: Northwind Atelier)
@@ -369,7 +627,11 @@ class EventsProvider extends ChangeNotifier {
         title: 'Brand Campaign — Northwind',
         clientName: 'Northwind Atelier',
         eventType: 'Commercial',
-        startsAt: DateTime(now.year, now.month, now.day).add(const Duration(days: 8)),
+        startsAt: DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).add(const Duration(days: 8)),
         startTime: '11:00 AM',
         endTime: '07:00 PM',
         location: 'City Terrace & Studio',
@@ -403,12 +665,29 @@ class EventsProvider extends ChangeNotifier {
           ),
         ],
         deliverables: const [
-          DeliverableTask(id: 't-301', title: 'Lookbook Planning', isCompleted: true),
-          DeliverableTask(id: 't-302', title: 'Model Casting & Fitting', isCompleted: true),
-          DeliverableTask(id: 't-303', title: 'Lookbook Shoot', isCompleted: false),
-          DeliverableTask(id: 't-304', title: 'Commercial Retouching & Delivery', isCompleted: false),
+          DeliverableTask(
+            id: 't-301',
+            title: 'Lookbook Planning',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-302',
+            title: 'Model Casting & Fitting',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-303',
+            title: 'Lookbook Shoot',
+            isCompleted: false,
+          ),
+          DeliverableTask(
+            id: 't-304',
+            title: 'Commercial Retouching & Delivery',
+            isCompleted: false,
+          ),
         ],
-        notes: 'Autumn luxury collection. Deliver deliverables on flash drive & private cloud.',
+        notes:
+            'Autumn luxury collection. Deliver deliverables on flash drive & private cloud.',
       ),
 
       // 4. Past Wedding (Client: Aarav & Priya)
@@ -483,16 +762,49 @@ class EventsProvider extends ChangeNotifier {
           ),
         ],
         deliverables: const [
-          DeliverableTask(id: 't-401', title: 'Event Photography', isCompleted: true),
-          DeliverableTask(id: 't-402', title: 'Raw Files Backup', isCompleted: true),
-          DeliverableTask(id: 't-403', title: 'Client Selection', isCompleted: true),
-          DeliverableTask(id: 't-404', title: 'Photo Editing', isCompleted: true),
-          DeliverableTask(id: 't-405', title: 'Video Editing', isCompleted: true),
-          DeliverableTask(id: 't-406', title: 'Album Design', isCompleted: true),
-          DeliverableTask(id: 't-407', title: 'Album Printing', isCompleted: true),
-          DeliverableTask(id: 't-408', title: 'Final Delivery', isCompleted: true),
+          DeliverableTask(
+            id: 't-401',
+            title: 'Event Photography',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-402',
+            title: 'Raw Files Backup',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-403',
+            title: 'Client Selection',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-404',
+            title: 'Photo Editing',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-405',
+            title: 'Video Editing',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-406',
+            title: 'Album Design',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-407',
+            title: 'Album Printing',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-408',
+            title: 'Final Delivery',
+            isCompleted: true,
+          ),
         ],
-        notes: 'Complete wedding coverage completed with 500 edited shots and a premium Italian leather album.',
+        notes:
+            'Complete wedding coverage completed with 500 edited shots and a premium Italian leather album.',
       ),
 
       // 5. Past Maternity (Client: Meera Kapoor -> Second event for Meera Kapoor!)
@@ -538,10 +850,26 @@ class EventsProvider extends ChangeNotifier {
           ),
         ],
         deliverables: const [
-          DeliverableTask(id: 't-501', title: 'Studio Setup', isCompleted: true),
-          DeliverableTask(id: 't-502', title: 'Portrait Session', isCompleted: true),
-          DeliverableTask(id: 't-503', title: 'Editing & Retouching', isCompleted: true),
-          DeliverableTask(id: 't-504', title: 'High-Res Digital Album Delivered', isCompleted: true),
+          DeliverableTask(
+            id: 't-501',
+            title: 'Studio Setup',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-502',
+            title: 'Portrait Session',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-503',
+            title: 'Editing & Retouching',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-504',
+            title: 'High-Res Digital Album Delivered',
+            isCompleted: true,
+          ),
         ],
         notes: 'Delivered 35 hand-retouched photos. Client gave 5-star review.',
       ),
@@ -595,13 +923,30 @@ class EventsProvider extends ChangeNotifier {
           ),
         ],
         deliverables: const [
-          DeliverableTask(id: 't-601', title: 'Baby-safe Studio Setup', isCompleted: true),
-          DeliverableTask(id: 't-602', title: 'Newborn Shoot Execution', isCompleted: true),
-          DeliverableTask(id: 't-603', title: 'Photo Retouching', isCompleted: true),
-          DeliverableTask(id: 't-604', title: 'Keepsake Box Handed Over', isCompleted: true),
+          DeliverableTask(
+            id: 't-601',
+            title: 'Baby-safe Studio Setup',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-602',
+            title: 'Newborn Shoot Execution',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-603',
+            title: 'Photo Retouching',
+            isCompleted: true,
+          ),
+          DeliverableTask(
+            id: 't-604',
+            title: 'Keepsake Box Handed Over',
+            isCompleted: true,
+          ),
         ],
         notes: 'Smooth shoot with 2-week-old baby. Client loved wooden prints.',
       ),
     ]);
   }
+  */
 }

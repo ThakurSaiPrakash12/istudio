@@ -1,5 +1,6 @@
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
+const path = require('path');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,6 +17,11 @@ cloudinary.config({
  */
 async function uploadToCloudinary(filePath, options = {}) {
   try {
+    if (process.env.NODE_ENV === 'test' && process.env.CLOUDINARY_TEST_MODE === 'true') {
+      return {
+        secure_url: `https://res.cloudinary.com/test/image/upload/${path.basename(filePath)}`,
+      };
+    }
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
       throw new Error('Cloudinary environment variables are missing. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
     }
@@ -51,4 +57,19 @@ async function uploadToCloudinary(filePath, options = {}) {
 module.exports = {
   cloudinary,
   uploadToCloudinary,
+  async checkCloudinaryReadiness({ ping = false } = {}) {
+    const configured = Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET,
+    );
+    if (!configured) return { configured: false, reachable: false };
+    if (!ping) return { configured: true, reachable: true };
+    try {
+      await cloudinary.api.ping();
+      return { configured: true, reachable: true };
+    } catch (_) {
+      return { configured: true, reachable: false };
+    }
+  },
 };

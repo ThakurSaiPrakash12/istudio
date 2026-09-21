@@ -13,6 +13,9 @@ function hasRealMongoUri() {
 
 async function connectDb() {
   if (!hasRealMongoUri()) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('MONGODB_URI is required in production.');
+    }
     memoryUsers.enabled = true;
     console.warn(
       '⚠️  [DB] MongoDB URI is not set. Using IN-MEMORY store — data will NOT persist between restarts.',

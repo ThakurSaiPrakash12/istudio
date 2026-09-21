@@ -3,6 +3,8 @@
 .env.*
 *.env
 server/.env
+!.env.example
+!server/.env.example
 
 # Node backend
 node_modules/
@@ -12,6 +14,7 @@ yarn-debug.log*
 yarn-error.log*
 server/uploads/*
 !server/uploads/.gitkeep
+server/data/
 
 # Flutter / Mobile
 .dart_tool/

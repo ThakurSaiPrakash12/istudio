@@ -12,13 +12,14 @@ class InvoicesProvider extends ChangeNotifier {
   InvoicesProvider({InvoiceService? invoiceService})
     : _invoiceService = invoiceService ?? InvoiceService();
 
-  static const _storageKey = 'lumen_invoices_v1';
-  static const _upiKey = 'lumen_last_upi';
+  static const _storageKeyPrefix = 'lumen_invoices_v1_';
+  static const _upiKeyPrefix = 'lumen_last_upi_';
 
   final InvoiceService _invoiceService;
   final List<Invoice> _invoices = [];
   String _lastUpiId = '';
   String? _token;
+  String? _userId;
   String? _errorMessage;
   bool _ready = false;
   bool _loading = false;
@@ -84,10 +85,13 @@ class InvoicesProvider extends ChangeNotifier {
   void syncAuth(AuthProvider auth) {
     if (auth.isBootstrapping) return;
     final token = auth.token;
-    if (token == _token && (_ready || _loading)) return;
+    final userId = auth.user?.id;
+    if (token == _token && userId == _userId && (_ready || _loading)) return;
     _token = token;
+    _userId = userId;
+    _invoices.clear();
+    _lastUpiId = '';
     if (!_useApi) {
-      _invoices.clear();
       _loading = false;
       _ready = true;
       notifyListeners();
@@ -101,12 +105,14 @@ class InvoicesProvider extends ChangeNotifier {
   Future<void> bootstrap() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _lastUpiId = prefs.getString(_upiKey) ?? '';
+      final userId = _userId;
+      if (userId == null) return;
+      _lastUpiId = prefs.getString('$_upiKeyPrefix$userId') ?? '';
       if (_useApi) {
         await loadRemote();
         return;
       }
-      final raw = prefs.getString(_storageKey);
+      final raw = prefs.getString('$_storageKeyPrefix$userId');
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
@@ -129,12 +135,17 @@ class InvoicesProvider extends ChangeNotifier {
 
   Future<void> loadRemote() async {
     if (!_useApi) return;
+    final token = _token!;
+    final userId = _userId;
     _loading = true;
     _errorMessage = null;
     try {
       final prefs = await SharedPreferences.getInstance();
-      _lastUpiId = prefs.getString(_upiKey) ?? _lastUpiId;
-      final invoices = await _invoiceService.list(token: _token!);
+      if (_userId != null) {
+        _lastUpiId = prefs.getString('$_upiKeyPrefix$_userId') ?? _lastUpiId;
+      }
+      final invoices = await _invoiceService.list(token: token);
+      if (token != _token || userId != _userId) return;
       _invoices
         ..clear()
         ..addAll(invoices);
@@ -144,9 +155,11 @@ class InvoicesProvider extends ChangeNotifier {
     } catch (_) {
       _errorMessage = 'Unable to load invoices.';
     } finally {
-      _loading = false;
-      _ready = true;
-      notifyListeners();
+      if (token == _token && userId == _userId) {
+        _loading = false;
+        _ready = true;
+        notifyListeners();
+      }
     }
   }
 
@@ -174,8 +187,17 @@ class InvoicesProvider extends ChangeNotifier {
   }
 
   Future<void> updateInvoice(Invoice invoice) async {
+    if (_useApi) {
+      final updated = await _invoiceService.update(
+        token: _token!,
+        invoice: invoice,
+      );
+      _replace(updated);
+      notifyListeners();
+      return;
+    }
     _replace(invoice);
-    if (!_useApi) await _persist();
+    await _persist();
     notifyListeners();
   }
 
@@ -238,7 +260,9 @@ class InvoicesProvider extends ChangeNotifier {
     if (trimmed.isEmpty || trimmed == _lastUpiId) return;
     _lastUpiId = trimmed;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_upiKey, trimmed);
+    if (_userId != null) {
+      await prefs.setString('$_upiKeyPrefix$_userId', trimmed);
+    }
   }
 
   void _replace(Invoice invoice) {
@@ -265,13 +289,14 @@ class InvoicesProvider extends ChangeNotifier {
   }
 
   Future<void> _persist() async {
+    if (_userId == null) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-      _storageKey,
+      '$_storageKeyPrefix$_userId',
       jsonEncode(_invoices.map((item) => item.toJson()).toList()),
     );
-    if (_lastUpiId.isNotEmpty) {
-      await prefs.setString(_upiKey, _lastUpiId);
+    if (_lastUpiId.isNotEmpty && _userId != null) {
+      await prefs.setString('$_upiKeyPrefix$_userId', _lastUpiId);
     }
   }
 }

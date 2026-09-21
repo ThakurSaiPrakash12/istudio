@@ -20,22 +20,34 @@ class InvoiceService {
     required String token,
     required Invoice invoice,
   }) async {
-    final payload = await _api.post('/invoices', {
-      'eventName': invoice.eventName,
-      'contactName': invoice.contactName,
-      'phone': invoice.phone,
-      'address': invoice.address,
-      'issuedOn': invoice.issuedOn.toIso8601String(),
-      'dueDate': invoice.dueDate.toIso8601String(),
-      'deliverables': invoice.deliverables.map((item) => item.toJson()).toList(),
-      'upiId': invoice.upiId,
-      'amountReceived': invoice.amountReceived,
-    }, token: token);
+    final payload = await _api.post(
+      '/invoices',
+      {
+        'eventName': invoice.eventName,
+        'contactName': invoice.contactName,
+        'phone': invoice.phone,
+        'address': invoice.address,
+        'issuedOn': invoice.issuedOn.toIso8601String(),
+        'dueDate': invoice.dueDate.toIso8601String(),
+        'deliverables': invoice.deliverables
+            .map((item) => item.toJson())
+            .toList(),
+        'upiId': invoice.upiId,
+        'amountReceived': invoice.amountReceived,
+      },
+      token: token,
+      idempotencyKey: invoice.id,
+    );
     return _readInvoice(payload);
   }
 
   Future<Invoice> markPaid({required String token, required String id}) async {
-    final payload = await _api.post('/invoices/$id/paid', const {}, token: token);
+    final payload = await _api.post(
+      '/invoices/$id/paid',
+      const {},
+      token: token,
+      idempotencyKey: 'invoice:$id:paid',
+    );
     return _readInvoice(payload);
   }
 
@@ -44,9 +56,12 @@ class InvoiceService {
     required String id,
     required double amount,
   }) async {
-    final payload = await _api.post('/invoices/$id/partial', {
-      'amount': amount,
-    }, token: token);
+    final payload = await _api.post(
+      '/invoices/$id/partial',
+      {'amount': amount},
+      token: token,
+      idempotencyKey: 'invoice:$id:partial:$amount',
+    );
     return _readInvoice(payload);
   }
 
@@ -63,6 +78,26 @@ class InvoiceService {
 
   Future<void> delete({required String token, required String id}) async {
     await _api.delete('/invoices/$id', token: token);
+  }
+
+  Future<Invoice> update({
+    required String token,
+    required Invoice invoice,
+  }) async {
+    final payload = await _api.patch('/invoices/${invoice.id}', {
+      'eventName': invoice.eventName,
+      'contactName': invoice.contactName,
+      'phone': invoice.phone,
+      'address': invoice.address,
+      'issuedOn': invoice.issuedOn.toIso8601String(),
+      'dueDate': invoice.dueDate.toIso8601String(),
+      'deliverables': invoice.deliverables
+          .map((item) => item.toJson())
+          .toList(),
+      'upiId': invoice.upiId,
+      'amountReceived': invoice.amountReceived,
+    }, token: token);
+    return _readInvoice(payload);
   }
 
   Invoice _readInvoice(Map<String, dynamic> payload) {
