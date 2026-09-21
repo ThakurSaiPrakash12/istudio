@@ -8,6 +8,7 @@ import '../../providers/events_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
+import '../../widgets/payment_proof_preview.dart';
 import 'event_details_screen.dart';
 import '../../routes/smooth_page_route.dart';
 
@@ -359,6 +360,13 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
               ],
             ),
           ),
+          if (event.payments.any((payment) => payment.hasProof)) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: PaymentProofPreviewButton(payments: event.payments),
+            ),
+          ],
         ],
       ),
     );

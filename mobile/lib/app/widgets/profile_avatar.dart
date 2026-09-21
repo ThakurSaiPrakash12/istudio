@@ -30,7 +30,7 @@ class ProfileAvatar extends StatelessWidget {
         color: iconColor,
         size: size * 0.42,
       );
-    } else if (resolved.startsWith('data:image/')) {
+    } else if (resolved.startsWith('data:')) {
       try {
         final base64Str = resolved.split(',').last;
         final bytes = base64Decode(base64Str);

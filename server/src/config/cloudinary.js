@@ -16,6 +16,10 @@ cloudinary.config({
  */
 async function uploadToCloudinary(filePath, options = {}) {
   try {
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      throw new Error('Cloudinary environment variables are missing. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
+    }
+
     const uploadOptions = {
       folder: 'lumen_studio/profiles',
       resource_type: 'auto',
@@ -27,7 +31,13 @@ async function uploadToCloudinary(filePath, options = {}) {
 
     const result = await cloudinary.uploader.upload(filePath, uploadOptions);
 
-    // Clean up local temp file after successful upload
+    if (!result || (!result.secure_url && !result.url)) {
+      throw new Error('Cloudinary upload returned no secure_url.');
+    }
+
+    return result;
+  } finally {
+    // Always clean up local temp file
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
@@ -35,11 +45,6 @@ async function uploadToCloudinary(filePath, options = {}) {
         console.warn('Failed to delete temp file:', err.message);
       }
     }
-
-    return result;
-  } catch (error) {
-    // Leave local file in uploads folder if Cloudinary upload fails so fallback URL works
-    throw error;
   }
 }
 

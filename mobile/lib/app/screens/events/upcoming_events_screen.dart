@@ -7,6 +7,7 @@ import '../../models/studio_event.dart';
 import '../../providers/events_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/countdown_chip.dart';
+import '../../widgets/payment_proof_preview.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import 'create_event_sheet.dart';
@@ -368,6 +369,13 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
               ),
             ],
           ),
+          if (event.payments.any((payment) => payment.hasProof)) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: PaymentProofPreviewButton(payments: event.payments),
+            ),
+          ],
         ],
       ),
     );

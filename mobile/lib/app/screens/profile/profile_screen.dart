@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -189,20 +188,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final auth = context.read<AuthProvider>();
       final bytes = await picked.readAsBytes();
       if (!mounted) return;
-
-      final base64Image = base64Encode(bytes);
-      final ext = picked.name.toLowerCase();
-      final mimeType = ext.endsWith('.png')
-          ? 'image/png'
-          : ext.endsWith('.webp')
-              ? 'image/webp'
-              : ext.endsWith('.gif')
-                  ? 'image/gif'
-                  : 'image/jpeg';
-      final dataUri = 'data:$mimeType;base64,$base64Image';
-
-      // Instantly update UI avatar visuals
-      auth.setTemporaryLogoUrl(dataUri);
 
       final success = await auth.uploadLogo(bytes, picked.name);
       if (!mounted) return;
