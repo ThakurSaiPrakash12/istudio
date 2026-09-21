@@ -1906,6 +1906,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                       onPressed: () {
                                         setModalState(() {
                                           proofController.clear();
+                                          proofBytes = null;
+                                          proofFilename = null;
                                         });
                                       },
                                       child: const Text(
@@ -2088,26 +2090,40 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                   eventId,
                                   payment,
                                 );
+                                String? proofError;
                                 if (saved != null &&
                                     proofBytes != null &&
                                     proofFilename != null) {
-                                  await provider.uploadPaymentProof(
-                                    eventId,
-                                    saved.id,
-                                    proofBytes!,
-                                    proofFilename!,
-                                  );
+                                  proofError =
+                                      await provider.uploadPaymentProof(
+                                        eventId,
+                                        saved.id,
+                                        proofBytes!,
+                                        proofFilename!,
+                                      );
                                 }
                                 if (!modalContext.mounted) return;
                                 Navigator.of(sheetContext).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Payment of ₹${amount.toInt()} recorded!',
+                                if (proofError != null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Payment recorded, but proof upload failed: $proofError',
+                                      ),
+                                      duration: const Duration(seconds: 4),
+                                      backgroundColor: Colors.orange.shade800,
                                     ),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Payment of ₹${amount.toInt()} recorded!',
+                                      ),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
                               } finally {
                                 if (modalContext.mounted) {
                                   setModalState(() => isSavingPayment = false);

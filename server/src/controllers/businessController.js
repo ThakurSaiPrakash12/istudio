@@ -1,3 +1,4 @@
+const fs = require('fs');
 const repository = require('../repositories/businessRepository');
 const { uploadToCloudinary } = require('../config/cloudinary');
 

@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'package:http_parser/http_parser.dart';
+
 import 'api_config.dart';
 
 class ApiException implements Exception {
@@ -13,6 +15,72 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+MediaType _resolveImageMediaType(String filename, List<int> bytes) {
+  // Check magic bytes first
+  if (bytes.length >= 3 &&
+      bytes[0] == 0xFF &&
+      bytes[1] == 0xD8 &&
+      bytes[2] == 0xFF) {
+    return MediaType('image', 'jpeg');
+  }
+  if (bytes.length >= 8 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47 &&
+      bytes[4] == 0x0D &&
+      bytes[5] == 0x0A &&
+      bytes[6] == 0x1A &&
+      bytes[7] == 0x0A) {
+    return MediaType('image', 'png');
+  }
+  if (bytes.length >= 6 &&
+      bytes[0] == 0x47 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x38) {
+    return MediaType('image', 'gif');
+  }
+  if (bytes.length >= 12 &&
+      bytes[0] == 0x52 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x46 &&
+      bytes[8] == 0x57 &&
+      bytes[9] == 0x45 &&
+      bytes[10] == 0x42 &&
+      bytes[11] == 0x50) {
+    return MediaType('image', 'webp');
+  }
+
+  // Fall back to filename extension
+  final lower = filename.toLowerCase();
+  if (lower.endsWith('.png')) {
+    return MediaType('image', 'png');
+  }
+  if (lower.endsWith('.webp')) {
+    return MediaType('image', 'webp');
+  }
+  if (lower.endsWith('.gif')) {
+    return MediaType('image', 'gif');
+  }
+  return MediaType('image', 'jpeg');
+}
+
+String _sanitizeFilename(String filename, MediaType mediaType) {
+  final cleanName = filename.trim().isEmpty ? 'proof' : filename.trim();
+  final lower = cleanName.toLowerCase();
+  if (lower.endsWith('.jpg') ||
+      lower.endsWith('.jpeg') ||
+      lower.endsWith('.png') ||
+      lower.endsWith('.webp') ||
+      lower.endsWith('.gif')) {
+    return cleanName;
+  }
+  final ext = mediaType.subtype == 'jpeg' ? 'jpg' : mediaType.subtype;
+  return '$cleanName.$ext';
 }
 
 class ApiService {
@@ -117,6 +185,7 @@ class ApiService {
     required List<int> bytes,
     required String filename,
     String? token,
+    MediaType? contentType,
   }) async {
     try {
       final request = http.MultipartRequest(
@@ -126,8 +195,18 @@ class ApiService {
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $token';
       }
+      final resolvedContentType =
+          contentType ?? _resolveImageMediaType(filename, bytes);
+      final resolvedFilename =
+          _sanitizeFilename(filename, resolvedContentType);
+
       request.files.add(
-        http.MultipartFile.fromBytes(fieldName, bytes, filename: filename),
+        http.MultipartFile.fromBytes(
+          fieldName,
+          bytes,
+          filename: resolvedFilename,
+          contentType: resolvedContentType,
+        ),
       );
       final streamed = await _client.send(request).timeout(_timeout);
       final response = await http.Response.fromStream(streamed);

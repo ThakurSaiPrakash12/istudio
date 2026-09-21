@@ -324,26 +324,32 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> uploadPaymentProof(
+  Future<String?> uploadPaymentProof(
     String eventId,
     String paymentId,
     List<int> bytes,
     String filename,
   ) async {
     final index = _events.indexWhere((item) => item.id == eventId);
-    if (index == -1 || _token == null) return;
-    final saved = await _service.uploadPaymentProof(
-      _token!,
-      paymentId,
-      bytes,
-      filename,
-    );
-    _events[index] = _events[index].copyWith(
-      payments: _events[index].payments
-          .map((item) => item.id == paymentId ? saved : item)
-          .toList(),
-    );
-    notifyListeners();
+    if (index == -1 || _token == null) return null;
+    try {
+      final saved = await _service.uploadPaymentProof(
+        _token!,
+        paymentId,
+        bytes,
+        filename,
+      );
+      _events[index] = _events[index].copyWith(
+        payments: _events[index].payments
+            .map((item) => item.id == paymentId ? saved : item)
+            .toList(),
+      );
+      notifyListeners();
+      return null; // success
+    } catch (e) {
+      // Return error message; do NOT rethrow — caller shows snackbar
+      return e.toString();
+    }
   }
 
   Future<void> toggleDeliverable(String eventId, String taskId) async {

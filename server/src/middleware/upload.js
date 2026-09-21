@@ -17,6 +17,8 @@ const storage = multer.diskStorage({
 const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 const allowedMimeTypes = new Set([
   'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
   'image/png',
   'image/gif',
   'image/webp',
@@ -24,7 +26,9 @@ const allowedMimeTypes = new Set([
 
 const fileFilter = (_req, file, cb) => {
   const ext = path.extname(file.originalname || '').toLowerCase();
-  const isImageMime = allowedMimeTypes.has(file.mimetype);
+  const isImageMime = allowedMimeTypes.has(file.mimetype) ||
+    file.mimetype === 'application/octet-stream' ||
+    !file.mimetype;
   const isAllowedExt = allowedExtensions.includes(ext);
 
   if (isImageMime && isAllowedExt) {
