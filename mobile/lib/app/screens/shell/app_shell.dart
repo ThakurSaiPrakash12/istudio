@@ -48,8 +48,10 @@ class _AppShellState extends State<AppShell> {
     final isDark = context.isDark;
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    return AuthBackground(
-      child: Scaffold(
+    return AppShellScope(
+      switchTab: _switchTab,
+      child: AuthBackground(
+        child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
@@ -92,8 +94,9 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _LiquidGlassDock extends StatelessWidget {
@@ -166,7 +169,7 @@ class _LiquidGlassDock extends StatelessWidget {
                 _DockItem(
                   icon: Icons.receipt_long_outlined,
                   activeIcon: Icons.receipt_long_rounded,
-                  label: 'Invoices',
+                  label: 'Receipt',
                   isSelected: currentIndex == 2,
                   onTap: () => onTabSelected(2),
                   isDark: isDark,
@@ -364,4 +367,20 @@ class _DockItemState extends State<_DockItem>
       ),
     );
   }
+}
+
+class AppShellScope extends InheritedWidget {
+  const AppShellScope({
+    super.key,
+    required this.switchTab,
+    required super.child,
+  });
+
+  final ValueChanged<int> switchTab;
+
+  static AppShellScope? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppShellScope>();
+
+  @override
+  bool updateShouldNotify(AppShellScope oldWidget) => false;
 }

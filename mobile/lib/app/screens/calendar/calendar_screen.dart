@@ -112,10 +112,10 @@ class _CalendarScreenState extends State<CalendarScreen>
             children: [
               StudioAppBar(
                 title: 'Calendar',
-                subtitle: 'Booked sessions & shoot schedule',
+                subtitle: 'Shoot schedule',
                 actions: [
                   IconButton(
-                    tooltip: 'Monthly Financial Summary',
+                    tooltip: 'Monthly earnings',
                     icon: Icon(Icons.analytics_outlined,
                         color: accent, size: 22),
                     onPressed: () => MonthlyFinancialSummarySheet.show(
@@ -164,7 +164,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                           end: Offset.zero,
                         ).animate(_staggered(0.0, 0.35)),
                         child: StudioCard(
-                          borderRadius: 28,
+                          borderRadius: 20,
                           padding: const EdgeInsets.all(16),
                           child: MonthCalendar(
                             visibleMonth: _month,
@@ -210,7 +210,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Monthly Financial Summary',
+                                      'Monthly Earnings',
                                       style: TextStyle(
                                         color: textMain,
                                         fontSize: 13.5,
@@ -219,7 +219,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'View income, expenses & net left for ${DateFormat('MMMM yyyy').format(_month)}',
+                                      'Income, expenses & profit for ${DateFormat('MMMM yyyy').format(_month)}',
                                       style: TextStyle(
                                         color: textMuted,
                                         fontSize: 11.5,

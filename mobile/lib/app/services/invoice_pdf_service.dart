@@ -632,7 +632,7 @@ class InvoicePdfService {
   static PdfColor _statusColor(InvoiceStatus status) {
     return switch (status) {
       InvoiceStatus.paid => const PdfColor.fromInt(0xFF0D9488),
-      InvoiceStatus.pending => const PdfColor.fromInt(0xFF0284C7),
+      InvoiceStatus.pending => const PdfColor.fromInt(0xFF5F259F),
       InvoiceStatus.partial => const PdfColor.fromInt(0xFFD97706),
       InvoiceStatus.overdue => const PdfColor.fromInt(0xFFDC2626),
     };

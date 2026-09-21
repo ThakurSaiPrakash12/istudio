@@ -10,7 +10,7 @@ class StudioCard extends StatefulWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.onTap,
-    this.borderRadius = 18.0,
+    this.borderRadius = 22.0,
     this.customBorder,
     this.gradient,
     this.blurSigma = 0.0,

@@ -64,12 +64,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invoice saved to $path')),
+        SnackBar(content: Text('Receipt saved to $path')),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not download the invoice.')),
+        const SnackBar(content: Text('Could not download receipt.')),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -84,7 +84,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not share the invoice.')),
+        const SnackBar(content: Text('Could not share receipt.')),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -99,7 +99,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       await provider.rememberUpi(saved.upiId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${saved.number} saved to history.')),
+        SnackBar(content: Text('${saved.number} saved.')),
       );
       Navigator.of(context).pop(saved);
     } on ApiException catch (error) {
@@ -110,7 +110,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save the invoice.')),
+        const SnackBar(content: Text('Could not save receipt.')),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -127,7 +127,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       backgroundColor: context.scaffoldBg,
       appBar: AppBar(
         title: Text(
-          widget.isDraft ? 'Preview invoice' : _invoice.number,
+          widget.isDraft ? 'Preview receipt' : _invoice.number,
           style: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w700,
             fontSize: 19,
@@ -141,7 +141,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             icon: const Icon(Icons.download_rounded),
           ),
           IconButton(
-            tooltip: 'Share invoice',
+            tooltip: 'Share receipt',
             onPressed: _busy ? null : _share,
             icon: const Icon(Icons.ios_share_rounded),
           ),
@@ -208,9 +208,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                         onPressed: _busy ? null : _saveDraft,
                         style: FilledButton.styleFrom(
                           backgroundColor: accent,
-                          foregroundColor: context.isDark
-                              ? AppColors.ink
-                              : Colors.white,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),

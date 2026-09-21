@@ -21,7 +21,7 @@ class ProfileAvatar extends StatelessWidget {
     final isDark = context.isDark;
     final resolved = ApiConfig.resolveMedia(logoUrl);
     final accent = context.accentColor;
-    final iconColor = isDark ? AppColors.ink : Colors.white;
+    final iconColor = isDark ? Colors.white : AppColors.lightPrimary;
 
     Widget avatarContent;
     if (resolved.isEmpty) {

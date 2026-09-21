@@ -101,7 +101,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
     if (_deliverables.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Add at least one deliverable before continuing.'),
+          content: Text('Add at least one item before continuing.'),
         ),
       );
       return false;
@@ -142,7 +142,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save the invoice.')),
+        const SnackBar(content: Text('Could not save receipt.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -217,11 +217,11 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          _sectionTitle(context, 'Bill to'),
+          _sectionTitle(context, 'Client Details'),
           const SizedBox(height: 12),
           if (events.isNotEmpty) ...[
             Text(
-              'Fill from an event',
+              'From shoot',
               style: TextStyle(color: textMuted, fontSize: 13),
             ),
             const SizedBox(height: 8),
@@ -250,27 +250,27 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
             const SizedBox(height: 14),
           ],
           StudioTextField(
-            label: 'Event name',
+            label: 'Shoot name',
             hint: 'e.g. Wedding — Aanya & Rohan',
             controller: _eventController,
             validator: (value) =>
                 (value == null || value.trim().isEmpty)
-                    ? 'Enter the event name'
+                    ? 'Enter the shoot name'
                     : null,
           ),
           const SizedBox(height: 14),
           StudioTextField(
-            label: 'Contact person name',
+            label: 'Client name',
             hint: 'e.g. Aanya Sharma',
             controller: _contactController,
             validator: (value) =>
                 (value == null || value.trim().isEmpty)
-                    ? 'Enter the contact person name'
+                    ? 'Enter the client name'
                     : null,
           ),
           const SizedBox(height: 14),
           StudioTextField(
-            label: 'Client phone number',
+            label: 'Phone number',
             hint: 'e.g. 9876543210',
             controller: _phoneController,
             keyboardType: TextInputType.phone,
@@ -334,16 +334,16 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: _sectionTitle(context, 'Deliverables')),
+              Expanded(child: _sectionTitle(context, 'Items / Work')),
               Semantics(
                 button: true,
-                label: 'Add deliverable',
+                label: 'Add item',
                 child: IconButton.filled(
-                  tooltip: 'Add deliverable',
+                  tooltip: 'Add item',
                   onPressed: _addOrEditDeliverable,
                   style: IconButton.styleFrom(
                     backgroundColor: accent,
-                    foregroundColor: context.isDark ? AppColors.ink : Colors.white,
+                    foregroundColor: Colors.white,
                   ),
                   icon: const Icon(Icons.add_rounded),
                 ),
@@ -362,7 +362,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'No deliverables yet',
+                    'No items added',
                     style: TextStyle(
                       color: textMain,
                       fontWeight: FontWeight.w600,
@@ -370,7 +370,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Tap + to add coverage, albums, prints, or extras.',
+                    'Tap + to add photo items or packages.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: textMuted, fontSize: 13),
                   ),
@@ -426,16 +426,16 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
               );
             }),
           const SizedBox(height: 16),
-          _sectionTitle(context, 'Invoice summary'),
+          _sectionTitle(context, 'Bill Summary'),
           const SizedBox(height: 12),
           StudioCard(
             child: Column(
               children: [
-                _summaryRow(context, 'Deliverables', '${_deliverables.length}'),
+                _summaryRow(context, 'Items', '${_deliverables.length}'),
                 const SizedBox(height: 10),
                 _summaryRow(
                   context,
-                  'Subtotal',
+                  'Total Amount',
                   _money.format(_total),
                   emphasize: true,
                 ),
@@ -443,7 +443,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
             ),
           ),
           const SizedBox(height: 24),
-          _sectionTitle(context, 'Payment method'),
+          _sectionTitle(context, 'Payment (UPI)'),
           const SizedBox(height: 12),
           StudioTextField(
             label: 'UPI ID',
@@ -464,7 +464,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
           OutlinedButton.icon(
             onPressed: _saving ? null : _preview,
             icon: const Icon(Icons.visibility_outlined),
-            label: const Text('Preview invoice'),
+            label: const Text('Check Receipt'),
             style: OutlinedButton.styleFrom(
               foregroundColor: textMain,
               side: BorderSide(color: context.cardBorder),
@@ -476,7 +476,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
           ),
           const SizedBox(height: 12),
           StudioButton(
-            label: 'Save & generate PDF',
+            label: 'Save & Share Receipt',
             isLoading: _saving,
             onPressed: _save,
           ),

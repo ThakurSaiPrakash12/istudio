@@ -87,8 +87,8 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
             child: Column(
               children: [
                 StudioAppBar(
-                  title: 'Upcoming Events',
-                  subtitle: 'Scheduled shoots & bookings',
+                  title: 'Coming Up',
+                  subtitle: 'Your shoots',
                   leading: IconButton(
                     tooltip: 'Back',
                     icon: Icon(Icons.arrow_back_ios_new_rounded,
@@ -97,7 +97,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                   ),
                   actions: [
                     IconButton(
-                      tooltip: 'Add Event',
+                      tooltip: 'Add',
                       icon: Icon(Icons.add_circle_outline_rounded,
                           color: accent, size: 24),
                       onPressed: () => CreateEventSheet.show(context),
@@ -113,7 +113,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                         onChanged: (_) => setState(() {}),
                         style: TextStyle(color: textMain, fontSize: 14),
                         decoration: InputDecoration(
-                          hintText: 'Search upcoming shoots, clients, venues...',
+                          hintText: 'Search shoots, clients...',
                           prefixIcon: Icon(Icons.search, color: textMuted, size: 20),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
@@ -178,8 +178,8 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                                   size: 48,
                                   color: textMuted.withValues(alpha: 0.5)),
                               const SizedBox(height: 12),
-                              Text(
-                                'No upcoming events found',
+                               Text(
+                                'No shoots found',
                                 style: TextStyle(
                                   color: textMain,
                                   fontSize: 15,
@@ -190,11 +190,11 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: accent,
-                                  foregroundColor: context.isDark ? AppColors.ink : Colors.white,
+                                  foregroundColor: Colors.white,
                                 ),
                                 onPressed: () => CreateEventSheet.show(context),
                                 icon: const Icon(Icons.add, size: 18),
-                                label: const Text('+ Add Event'),
+                                label: const Text('+ New Shoot'),
                               ),
                             ],
                           ),

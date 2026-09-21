@@ -26,13 +26,13 @@ enum ClientFilter {
       case ClientFilter.all:
         return 'All';
       case ClientFilter.upcoming:
-        return 'Upcoming';
+        return 'Coming Up';
       case ClientFilter.active:
         return 'Active';
       case ClientFilter.past:
-        return 'Past';
+        return 'Done';
       case ClientFilter.paymentDue:
-        return 'Payment Due';
+        return 'Due';
     }
   }
 }
@@ -130,7 +130,7 @@ class _ClientsScreenState extends State<ClientsScreen>
             children: [
               StudioAppBar(
                 title: 'Clients',
-                subtitle: '${allClients.length} registered profiles',
+                subtitle: '${allClients.length} clients',
                 actions: [
                   IconButton(
                     tooltip: 'Add Client',
@@ -159,7 +159,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                       style: TextStyle(color: textMain, fontSize: 14),
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
-                        hintText: 'Search by client, phone, email, or event...',
+                        hintText: 'Search by name or phone...',
                         hintStyle: TextStyle(
                           color: textMuted.withValues(alpha: 0.7),
                           fontSize: 13,
@@ -206,9 +206,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                           shape: const StadiumBorder(),
                           labelStyle: TextStyle(
                             color: isSelected
-                                ? (context.isDark
-                                    ? AppColors.ink
-                                    : Colors.white)
+                                ? Colors.white
                                 : textMain,
                             fontSize: 12,
                             fontWeight: isSelected

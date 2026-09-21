@@ -34,7 +34,7 @@ class StudioLogo extends StatelessWidget {
                     : const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                        colors: [Color(0xFF7B3FE4), Color(0xFF5F259F)],
                       ),
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.5),
@@ -56,7 +56,7 @@ class StudioLogo extends StatelessWidget {
                   height: size * 0.76,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDark ? const Color(0xFF080C14) : Colors.white,
+                    color: isDark ? AppColors.ink : Colors.white,
                     border: Border.all(
                       color: isDark ? AppColors.sky.withValues(alpha: 0.5) : AppColors.lightBorder,
                       width: 1,

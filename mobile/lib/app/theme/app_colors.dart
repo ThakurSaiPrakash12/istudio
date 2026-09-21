@@ -2,54 +2,55 @@ import 'package:flutter/material.dart';
 
 import '../models/studio_event.dart';
 
-/// Universal studio palette supporting Liquid Glass Dark & Light themes
+/// Universal studio palette — PhonePe Deep Indigo & Warm Purple
 @immutable
 class AppColors {
   const AppColors._();
 
-  // ================= LUMEN Studio Palette (Electric Sky & Tactile Slate) =================
-  // Radiant Sky Blue & Modern Tech Accents (Swiggy / Blinkit precision)
-  static const Color sky = Color(0xFF0EA5E9);       // Sky Blue 500 (Primary Brand)
-  static const Color skyLight = Color(0xFFE0F2FE);  // Sky 100 (Tint surfaces)
-  static const Color skyDeep = Color(0xFF0284C7);   // Sky 600 (High contrast interactive)
-  static const Color skyGlow = Color(0x260EA5E9);   // 15% Subtle Focus Ring
-  static const Color skyCyan = Color(0xFF06B6D4);   // Cyan 500
+  // ================= PhonePe Signature Palette =================
+  // Deep Indigo & Vibrant Purple (PhonePe signature)
+  static const Color sky = Color(0xFF5F259F);       // Deep Indigo / PhonePe Brand Purple
+  static const Color skyLight = Color(0xFFF0EBF8);  // Subtle lavender tint (chips/badges only)
+  static const Color skyDeep = Color(0xFF4A148C);   // Rich Purple (High contrast interactive)
+  static const Color skyGlow = Color(0x265F259F);   // 15% Subtle Focus Ring
+  static const Color skyCyan = Color(0xFF6739B7);   // Vibrant Purple Accent
+  static const Color receivedGreen = Color(0xFF10B981); // Emerald Green for Payments Received
 
-  // Legacy aliases redirected to Sky Blue
+  // Legacy aliases redirected to PhonePe
   static const Color gold = sky;
   static const Color goldLight = skyLight;
   static const Color goldDeep = skyDeep;
   static const Color goldGlow = skyGlow;
 
-  // Dark Mode Surfaces (Deep Obsidian Slate)
-  static const Color ink = Color(0xFF0B0F19);        // Deep Slate Canvas
-  static const Color navy = Color(0xFF131A2A);       // Dark Elevated Surface
-  static const Color slate = Color(0xFF1E293B);      // Dark Card Surface
-  static const Color paper = Color(0xFFF8FAFC);      // High Contrast Text
-  static const Color muted = Color(0xFF94A3B8);      // Secondary Text
-  static const Color mist = Color(0x6694A3B8);
+  // Dark Mode Surfaces (Clean Neutral Dark, NOT purple!)
+  static const Color ink = Color(0xFF0F1015);        // Clean deep neutral canvas
+  static const Color navy = Color(0xFF181A22);       // Dark Elevated Surface
+  static const Color slate = Color(0xFF222430);      // Dark Card Surface
+  static const Color paper = Color(0xFFF9FAFB);      // High Contrast Text
+  static const Color muted = Color(0xFF9CA3AF);      // Neutral Secondary Text
+  static const Color mist = Color(0x409CA3AF);
 
   // Modern Tactile Surfaces (Dark Mode)
-  static const Color glassSurfaceDark = Color(0xF2131A2A); 
-  static const Color glassCardDark = Color(0xFF162032);    
-  static const Color glassBorderDark = Color(0xFF24324D);  // Clean hairline border
-  static const Color glassInnerDark = Color(0xFF0F1523);   // Inset container fill
-  static const Color glassSpecular = Color(0x1F38BDF8);
+  static const Color glassSurfaceDark = Color(0xF2181A22);
+  static const Color glassCardDark = Color(0xFF181A22);
+  static const Color glassBorderDark = Color(0xFF282A36);  // Clean hairline dark border
+  static const Color glassInnerDark = Color(0xFF12131A);   // Inset container fill
+  static const Color glassSpecular = Color(0x1F6739B7);
 
-  // Light Mode Surfaces (Clean, crisp Swiggy/Blinkit standard)
-  static const Color lightScaffold = Color(0xFFF8FAFC);    // Ultra clean slate canvas
-  static const Color lightCard = Color(0xFFFFFFFF);        // Pure white card
-  static const Color lightTextMain = Color(0xFF0F172A);    // Crisp dark slate text
-  static const Color lightTextMuted = Color(0xFF64748B);   // Balanced secondary text
-  static const Color lightBorder = Color(0xFFE2E8F0);      // Hairline 0.8px border
-  static const Color lightInputFill = Color(0xFFF1F5F9);   // Soft input container
-  static const Color lightPrimary = Color(0xFF0284C7);     // Rich Sky Blue 600
+  // Light Mode Surfaces (Authentic PhonePe: Clean grey scaffold + Pure white cards)
+  static const Color lightScaffold = Color(0xFFF4F5F8);    // Clean PhonePe grey canvas (NOT purple!)
+  static const Color lightCard = Color(0xFFFFFFFF);        // Pure crisp white card
+  static const Color lightTextMain = Color(0xFF111827);    // Deep neutral slate text
+  static const Color lightTextMuted = Color(0xFF6B7280);   // Neutral grey secondary
+  static const Color lightBorder = Color(0xFFE5E7EB);      // Hairline neutral grey border
+  static const Color lightInputFill = Color(0xFFFFFFFF);   // Clean white input container
+  static const Color lightPrimary = Color(0xFF5F259F);     // PhonePe Deep Purple
 
   // Modern Tactile Surfaces (Light Mode)
   static const Color glassSurfaceLight = Color(0xF7FFFFFF);
   static const Color glassCardLight = Color(0xFFFFFFFF);
-  static const Color glassBorderLight = Color(0xFFE2E8F0);
-  static const Color glassInnerLight = Color(0xFFF1F5F9);
+  static const Color glassBorderLight = Color(0xFFE5E7EB);
+  static const Color glassInnerLight = Color(0xFFF9FAFB);
 
   // Aliases for backwards compatibility
   static const Color aqua = sky;
@@ -61,10 +62,16 @@ class AppColors {
   static const Color blush = muted;
 
   // Gradients
+  static const LinearGradient phonePeHeaderGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF5F259F), Color(0xFF6739B7)],
+  );
+
   static const LinearGradient skyGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+    colors: [Color(0xFF6739B7), Color(0xFF5F259F)],
   );
 
   static const LinearGradient goldGradient = skyGradient;
@@ -73,8 +80,8 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF182236),
-      Color(0xFF131A2A),
+      Color(0xFF1E202B),
+      Color(0xFF181A22),
     ],
   );
 
@@ -83,7 +90,7 @@ class AppColors {
     end: Alignment.bottomRight,
     colors: [
       Color(0xFFFFFFFF),
-      Color(0xFFFBFDFF),
+      Color(0xFFFFFFFF),
     ],
   );
 
@@ -116,7 +123,7 @@ class AppColors {
       isDark(context) ? sky : lightPrimary;
 
   static Color expense(BuildContext context) =>
-      isDark(context) ? const Color(0xFFF43F5E) : const Color(0xFFE11D48);
+      isDark(context) ? const Color(0xFFFF6B6B) : const Color(0xFFE11D48);
 
   static Color profit(BuildContext context) =>
       isDark(context) ? const Color(0xFF10B981) : const Color(0xFF059669);
@@ -127,21 +134,21 @@ class AppColors {
       case EventStatus.completed:
         return dark ? const Color(0xFF10B981) : const Color(0xFF059669);
       case EventStatus.inProgress:
-        return dark ? sky : const Color(0xFF0284C7);
+        return dark ? sky : const Color(0xFF5F259F);
       case EventStatus.paymentDue:
-        return dark ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
+        return dark ? const Color(0xFFFF9F43) : const Color(0xFFD97706);
       case EventStatus.upcoming:
         return dark ? sky : lightPrimary;
       case EventStatus.cancelled:
-        return dark ? const Color(0xFFF43F5E) : const Color(0xFFDC2626);
+        return dark ? const Color(0xFFFF6B6B) : const Color(0xFFDC2626);
     }
   }
 
   static Color urgencyCritical(BuildContext context) =>
-      isDark(context) ? const Color(0xFFF43F5E) : const Color(0xFFE11D48);
+      isDark(context) ? const Color(0xFFFF6B6B) : const Color(0xFFE11D48);
 
   static Color urgencyWarning(BuildContext context) =>
-      isDark(context) ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
+      isDark(context) ? const Color(0xFFFF9F43) : const Color(0xFFD97706);
 
   static Color urgencyNotice(BuildContext context) =>
       isDark(context) ? sky : lightPrimary;
@@ -208,7 +215,7 @@ class StudioColors extends ThemeExtension<StudioColors> {
     midnight: AppColors.lightTextMain,
     ivory: AppColors.lightTextMain,
     blush: AppColors.lightTextMuted,
-    mist: Color(0x6664748B),
+    mist: Color(0x666B5B7B),
     cardBg: AppColors.glassCardLight,
     cardBorder: AppColors.glassBorderLight,
     textMain: AppColors.lightTextMain,

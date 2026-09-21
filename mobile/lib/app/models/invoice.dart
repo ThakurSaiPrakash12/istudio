@@ -13,8 +13,8 @@ enum InvoiceFilter {
     InvoiceFilter.all => 'All',
     InvoiceFilter.paid => 'Paid',
     InvoiceFilter.pending => 'Pending',
-    InvoiceFilter.partial => 'Partial',
-    InvoiceFilter.overdue => 'Overdue',
+    InvoiceFilter.partial => 'Part Paid',
+    InvoiceFilter.overdue => 'Late',
   };
 }
 
@@ -110,10 +110,10 @@ class Invoice {
   }
 
   String get statusLabel => switch (status) {
-    InvoiceStatus.paid => 'Paid',
+    InvoiceStatus.paid => 'Paid ✓',
     InvoiceStatus.pending => 'Pending',
-    InvoiceStatus.partial => 'Partial',
-    InvoiceStatus.overdue => 'Overdue',
+    InvoiceStatus.partial => 'Part Paid',
+    InvoiceStatus.overdue => 'Late',
   };
 
   Invoice copyWith({
