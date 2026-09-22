@@ -112,7 +112,7 @@ class _CalendarScreenState extends State<CalendarScreen>
             children: [
               StudioAppBar(
                 title: 'Calendar',
-                subtitle: 'Shoot schedule',
+                subtitle: 'Booked sessions',
                 actions: [
                   IconButton(
                     tooltip: 'Monthly earnings',

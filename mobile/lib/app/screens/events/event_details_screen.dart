@@ -2347,15 +2347,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                               ? payment.reference!.trim()
                               : 'None provided',
                         ),
-                        const SizedBox(height: 8),
-                        _buildProofDetailRow(
-                          context,
-                          'Attachment File',
-                          (payment.proof != null &&
-                                  payment.proof!.trim().isNotEmpty)
-                              ? payment.proof!.trim()
-                              : 'No attachment',
-                        ),
                       ],
                     ),
                   ),

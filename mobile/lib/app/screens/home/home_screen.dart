@@ -341,17 +341,32 @@ class _HomeScreenState extends State<HomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      user?.displayStudioName ?? 'Studio',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: isDark
-                            ? AppColors.paper
-                            : AppColors.lightTextMain,
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
+                    ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (bounds) => LinearGradient(
+                        colors: isDark
+                            ? const [
+                                Color(0xFFFFFFFF),
+                                Color(0xFFBAE6FD),
+                                Color(0xFF38BDF8),
+                              ]
+                            : const [
+                                Color(0xFF0F172A),
+                                Color(0xFF0284C7),
+                              ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ).createShader(bounds),
+                      child: Text(
+                        user?.displayStudioName ?? 'Studio',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -569,6 +584,8 @@ class _HomeScreenState extends State<HomeScreen>
               children: [
                 Text(
                   'Studio Earnings',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
@@ -576,51 +593,64 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      _currency.format(overview.received),
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.pastelMint,
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: _currency.format(overview.received),
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.pastelMint,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' recvd',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? AppColors.muted : AppColors.lightTextMuted,
+                            ),
+                          ),
+                          if (overview.pending > 0) ...[
+                            TextSpan(
+                              text: ' · ',
+                              style: TextStyle(
+                                color: isDark ? AppColors.muted : AppColors.lightTextMuted,
+                              ),
+                            ),
+                            TextSpan(
+                              text: _currency.format(overview.pending),
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.sky,
+                              ),
+                            ),
+                            TextSpan(
+                              text: ' due',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? AppColors.muted : AppColors.lightTextMuted,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
+                      maxLines: 1,
                     ),
-                    Text(
-                      ' recvd',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? AppColors.muted : AppColors.lightTextMuted,
-                      ),
-                    ),
-                    if (overview.pending > 0) ...[
-                      Text(
-                        ' · ',
-                        style: TextStyle(
-                          color: isDark ? AppColors.muted : AppColors.lightTextMuted,
-                        ),
-                      ),
-                      Text(
-                        _currency.format(overview.pending),
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.sky,
-                        ),
-                      ),
-                      Text(
-                        ' due',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? AppColors.muted : AppColors.lightTextMuted,
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           InkWell(
             borderRadius: BorderRadius.circular(999),
             onTap: () => MonthlyFinancialSummarySheet.show(context),
