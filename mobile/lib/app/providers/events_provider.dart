@@ -387,6 +387,44 @@ class EventsProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+  Future<void> addDeliverables(
+    String eventId,
+    List<DeliverableTask> tasks,
+  ) async {
+    final index = _events.indexWhere((e) => e.id == eventId);
+    if (index == -1) return;
+    final current = _events[index];
+    // Optimistically update local state
+    _events[index] = current.copyWith(
+      deliverables: [...current.deliverables, ...tasks],
+    );
+    notifyListeners();
+    if (_token != null) {
+      try {
+        final saved = <DeliverableTask>[];
+        for (final task in tasks) {
+          final s = await _service.createDeliverable(_token!, eventId, task);
+          saved.add(s);
+        }
+        // Replace optimistic tasks with server-assigned IDs
+        final optimisticIds = tasks.map((t) => t.id).toSet();
+        _events[index] = _events[index].copyWith(
+          deliverables: [
+            ..._events[index].deliverables
+                .where((t) => !optimisticIds.contains(t.id)),
+            ...saved,
+          ],
+        );
+        notifyListeners();
+      } catch (_) {
+        // Rollback optimistic addition
+        _events[index] = current;
+        notifyListeners();
+        rethrow;
+      }
+    }
+  }
+
 
   Future<void> _loadFromServer(String token) async {
     try {

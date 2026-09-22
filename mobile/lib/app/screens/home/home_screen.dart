@@ -954,7 +954,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       children: [
         SizedBox(
-          height: 230,
+          height: 266,
           child: PageView.builder(
             controller: _pageController,
             physics: const BouncingScrollPhysics(),
@@ -1137,6 +1137,41 @@ class _HomeScreenState extends State<HomeScreen>
               ],
             ),
           ),
+
+          // Progress bar (if workflow is set up)
+          if (event.totalTasksCount > 0) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(
+                          begin: 0, end: event.progressRatio),
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, val, _) => LinearProgressIndicator(
+                        value: val,
+                        minHeight: 5,
+                        backgroundColor:
+                            context.cardBorder.withValues(alpha: 0.35),
+                        valueColor: AlwaysStoppedAnimation<Color>(accent),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${event.completedTasksCount} / ${event.totalTasksCount} · ${(event.progressRatio * 100).round()}%',
+                  style: TextStyle(
+                    color: textMuted,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
 
           // Bottom Row: Financial status & CTA
           Row(
@@ -1549,3 +1584,4 @@ class _PressableButtonState extends State<_PressableButton> {
     );
   }
 }
+

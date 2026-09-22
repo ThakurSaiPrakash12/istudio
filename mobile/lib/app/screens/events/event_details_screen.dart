@@ -92,14 +92,68 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
               actions: [
-                IconButton(
-                  tooltip: 'Edit Event',
+                PopupMenuButton<String>(
                   icon: Icon(
-                    Icons.edit_outlined,
-                    color: context.accentColor,
-                    size: 20,
+                    Icons.more_vert_rounded,
+                    color: context.textMain,
+                    size: 22,
                   ),
-                  onPressed: () => _showEditEventDialog(context, event),
+                  tooltip: 'More options',
+                  color: context.cardBg,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _showEditEventDialog(context, event);
+                    } else if (value == 'delete') {
+                      _confirmDeleteEvent(context, event);
+                    } else if (value == 'duplicate') {
+                      _duplicateEvent(context, event);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined,
+                              color: context.accentColor, size: 18),
+                          const SizedBox(width: 10),
+                          Text('Edit Event',
+                              style: TextStyle(color: context.textMain)),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'duplicate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy_outlined,
+                              color: context.textMuted, size: 18),
+                          const SizedBox(width: 10),
+                          Text('Duplicate',
+                              style: TextStyle(color: context.textMain)),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: const [
+                          Icon(Icons.delete_outline_rounded,
+                              color: Color(0xFFEF4444), size: 18),
+                          SizedBox(width: 10),
+                          Text('Delete',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontWeight: FontWeight.w600,
+                              )),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1197,9 +1251,30 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
           const SizedBox(height: 16),
           if (event.deliverables.isEmpty)
-            Text(
-              'No deliverables listed for this shoot.',
-              style: TextStyle(color: context.textMuted, fontSize: 13),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'No workflow set up yet.',
+                  style: TextStyle(color: context.textMuted, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => _seedWorkflow(context, event),
+                  icon: Icon(Icons.playlist_add_rounded,
+                      color: context.accentColor, size: 18),
+                  label: Text(
+                    'Start ${event.eventType} Workflow',
+                    style: TextStyle(color: context.accentColor),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                        color: context.accentColor.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
             )
           else ...[
             if (nextTask == null)
@@ -1217,46 +1292,135 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   List<_WorkflowStage> _workflowStages(List<DeliverableTask> tasks) {
-    final grouped = <String, List<DeliverableTask>>{
-      'Shoot': [],
-      'Post Production': [],
-      'Delivery': [],
-    };
-
+    // Group by stage label embedded in task title prefix (format: "STAGE: Task")
+    final grouped = <String, List<DeliverableTask>>{};
     for (final task in tasks) {
-      grouped[_stageForTask(task.title)]!.add(task);
+      final stage = _stageForTask(task.title);
+      grouped.putIfAbsent(stage, () => []).add(task);
     }
+    // Preserve the canonical stage order for current event type
+    final stageOrder = _canonicalStageOrder();
+    final result = <_WorkflowStage>[];
+    for (final stageName in stageOrder) {
+      if (grouped.containsKey(stageName)) {
+        result.add(_WorkflowStage(stageName, grouped[stageName]!));
+      }
+    }
+    // Append any tasks in stages not in canonical order
+    for (final entry in grouped.entries) {
+      if (!stageOrder.contains(entry.key)) {
+        result.add(_WorkflowStage(entry.key, entry.value));
+      }
+    }
+    return result;
+  }
 
-    return grouped.entries
-        .where((entry) => entry.value.isNotEmpty)
-        .map((entry) => _WorkflowStage(entry.key, entry.value))
-        .toList();
+  List<String> _canonicalStageOrder() {
+    return const [
+      'PRE-SHOOT',
+      'SHOOT DAY',
+      'BACKUP & SELECTION',
+      'PHOTO EDITING',
+      'VIDEO EDITING',
+      'ALBUM',
+      'FINAL DELIVERY',
+    ];
   }
 
   String _stageForTask(String title) {
-    final value = title.toLowerCase();
-    if (value.contains('selection') ||
-        value.contains('edit') ||
-        value.contains('retouch') ||
-        value.contains('color') ||
-        value.contains('grade') ||
-        value.contains('cinematic') ||
-        value.contains('highlight')) {
-      return 'Post Production';
+    final v = title.toLowerCase();
+    // PRE-SHOOT keywords
+    if (v.contains('requirement') ||
+        v.contains('confirmed') ||
+        v.contains('team assigned') ||
+        v.contains('equipment') ||
+        v.contains('gear') ||
+        v.contains('shot list') ||
+        v.contains('moodboard') ||
+        v.contains('wardrobe') ||
+        v.contains('consultation') ||
+        v.contains('consult') ||
+        v.contains('brief') ||
+        v.contains('advance payment') ||
+        v.contains('lookbook planning') ||
+        v.contains('model casting') ||
+        v.contains('crew briefing') ||
+        v.contains('checklist') ||
+        v.contains('studio setup') ||
+        v.contains('baby-safe')) {
+      return 'PRE-SHOOT';
     }
-    if (value.contains('album') ||
-        value.contains('print') ||
-        value.contains('delivery') ||
-        value.contains('deliver') ||
-        value.contains('gallery') ||
-        value.contains('cloud') ||
-        value.contains('keepsake')) {
-      return 'Delivery';
+    // SHOOT DAY keywords
+    if (v.contains('photography completed') ||
+        v.contains('videography') ||
+        v.contains('important moments') ||
+        v.contains('shoot completed') ||
+        v.contains('main wedding') ||
+        v.contains('portrait session') ||
+        v.contains('studio session') ||
+        v.contains('shoot execution') ||
+        v.contains('newborn shoot') ||
+        v.contains('lookbook shoot') ||
+        v.contains('coverage')) {
+      return 'SHOOT DAY';
     }
-    return 'Shoot';
+    // BACKUP & SELECTION keywords
+    if (v.contains('backup') ||
+        v.contains('transferred') ||
+        v.contains('transfer') ||
+        v.contains('raw files') ||
+        v.contains('client selection') ||
+        v.contains('selection gallery') ||
+        v.contains('selected photos') ||
+        v.contains('finalized')) {
+      return 'BACKUP & SELECTION';
+    }
+    // VIDEO EDITING keywords (before photo editing to prioritize video)
+    if (v.contains('footage') ||
+        v.contains('video editing') ||
+        v.contains('color grading') ||
+        v.contains('audio') ||
+        v.contains('music') ||
+        v.contains('final video') ||
+        v.contains('cinematic') ||
+        v.contains('highlight')) {
+      return 'VIDEO EDITING';
+    }
+    // PHOTO EDITING keywords
+    if (v.contains('culling') ||
+        v.contains('basic editing') ||
+        v.contains('color correction') ||
+        v.contains('retouching') ||
+        v.contains('retouch') ||
+        v.contains('final review') ||
+        v.contains('edit') ||
+        v.contains('high-res')) {
+      return 'PHOTO EDITING';
+    }
+    // ALBUM keywords
+    if (v.contains('album') ||
+        v.contains('print') ||
+        v.contains('client approval') ||
+        v.contains('album design')) {
+      return 'ALBUM';
+    }
+    // FINAL DELIVERY keywords
+    if (v.contains('exported') ||
+        v.contains('delivered') ||
+        v.contains('delivery') ||
+        v.contains('deliver') ||
+        v.contains('gallery') ||
+        v.contains('cloud') ||
+        v.contains('keepsake') ||
+        v.contains('final payment') ||
+        v.contains('packaging') ||
+        v.contains('handed over')) {
+      return 'FINAL DELIVERY';
+    }
+    return 'SHOOT DAY';
   }
 
-  String _stageLabel(String stage) => stage.toUpperCase();
+  String _stageLabel(String stage) => stage;
 
   String _taskSubtitle(DeliverableTask task) => _stageForTask(task.title);
 
@@ -1296,6 +1460,135 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   void _toggleTask(BuildContext context, String eventId, String taskId) {
     context.read<EventsProvider>().toggleDeliverable(eventId, taskId);
+  }
+
+  void _seedWorkflow(BuildContext context, StudioEvent event) {
+    final type = event.eventType.toLowerCase();
+    final List<String> titles;
+
+    if (type.contains('wedding')) {
+      titles = [
+        // PRE-SHOOT
+        'Client requirements confirmed',
+        'Date/time confirmed',
+        'Location confirmed',
+        'Team assigned',
+        'Equipment checked',
+        'Shot list prepared',
+        'Advance payment received',
+        // SHOOT DAY
+        'Photography completed',
+        'Videography completed',
+        'Important moments captured',
+        'Shoot completed',
+        // BACKUP & SELECTION
+        'Photos transferred',
+        'Raw files backup done',
+        'Client selection gallery shared',
+        // PHOTO EDITING
+        'Culling done',
+        'Basic editing done',
+        'Retouching done',
+        'Final review done',
+        // VIDEO EDITING
+        'Footage organized',
+        'Video editing done',
+        'Color grading done',
+        'Final video exported',
+        // ALBUM
+        'Album design approved',
+        'Album sent for printing',
+        // FINAL DELIVERY
+        'Photos delivered to gallery',
+        'Album handed over',
+        'Final payment received',
+      ];
+    } else if (type.contains('maternity') || type.contains('newborn')) {
+      titles = [
+        // PRE-SHOOT
+        'Client requirements confirmed',
+        'Moodboard & wardrobe check',
+        'Studio setup done',
+        'Equipment checked',
+        'Advance payment received',
+        // SHOOT DAY
+        'Portrait session completed',
+        'Shoot completed',
+        // BACKUP & SELECTION
+        'Photos transferred',
+        'Client selection gallery shared',
+        // PHOTO EDITING
+        'Culling done',
+        'Retouching done',
+        'High-res exports ready',
+        // FINAL DELIVERY
+        'Photos delivered to gallery',
+        'Prints packaging done',
+        'Final payment received',
+      ];
+    } else if (type.contains('commercial') || type.contains('brand')) {
+      titles = [
+        // PRE-SHOOT
+        'Client requirements confirmed',
+        'Lookbook planning done',
+        'Model casting & fitting done',
+        'Location confirmed',
+        'Equipment checked',
+        'Advance payment received',
+        // SHOOT DAY
+        'Photography completed',
+        'Videography completed',
+        'Lookbook shoot done',
+        'Shoot completed',
+        // BACKUP & SELECTION
+        'Photos transferred',
+        'Client selection finalized',
+        // PHOTO EDITING
+        'Culling done',
+        'Retouching done',
+        'Final review done',
+        // VIDEO EDITING
+        'Footage organized',
+        'Video editing done',
+        'Color grading done',
+        'Final video exported',
+        // FINAL DELIVERY
+        'Files delivered to client',
+        'Final payment received',
+      ];
+    } else {
+      // Generic portrait/other
+      titles = [
+        // PRE-SHOOT
+        'Client requirements confirmed',
+        'Date/time confirmed',
+        'Location confirmed',
+        'Equipment checked',
+        'Advance payment received',
+        // SHOOT DAY
+        'Photography completed',
+        'Shoot completed',
+        // BACKUP & SELECTION
+        'Photos transferred',
+        'Client selection gallery shared',
+        // PHOTO EDITING
+        'Culling done',
+        'Retouching done',
+        // FINAL DELIVERY
+        'Photos delivered to gallery',
+        'Final payment received',
+      ];
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final tasks = titles.asMap().entries.map((e) {
+      return DeliverableTask(
+        id: 'wf-${event.id}-${now + e.key}',
+        title: e.value,
+      );
+    }).toList();
+
+    context.read<EventsProvider>().addDeliverables(event.id, tasks);
   }
 
   Widget _buildNextTaskCard(
@@ -2534,6 +2827,87 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         );
       },
     );
+  }
+
+  void _confirmDeleteEvent(BuildContext context, StudioEvent event) {
+    final provider = context.read<EventsProvider>();
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete this event?',
+          style: TextStyle(
+            color: context.textMain,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          'This action cannot be undone.',
+          style: TextStyle(color: context.textMuted, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: context.textMuted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: Color(0xFFEF4444),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).then((confirmed) async {
+      if (confirmed != true) return;
+      try {
+        await provider.deleteEvent(event.id);
+        if (context.mounted) Navigator.of(context).pop();
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete event: $e')),
+          );
+        }
+      }
+    });
+  }
+
+  void _duplicateEvent(BuildContext context, StudioEvent event) {
+    final now = DateTime.now();
+    final newEvent = event.copyWith(
+      id: 'dup-${now.millisecondsSinceEpoch}',
+      title: '${event.title} (Copy)',
+      status: EventStatus.upcoming,
+      startsAt: event.startsAt.add(const Duration(days: 7)),
+      payments: [],
+      deliverables: event.deliverables
+          .map((t) => DeliverableTask(id: 'dup-${t.id}', title: t.title))
+          .toList(),
+    );
+    context.read<EventsProvider>().addEvent(newEvent).then((_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Event duplicated')),
+        );
+      }
+    }).catchError((e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to duplicate: $e')),
+        );
+      }
+    });
   }
 
   void _showEditEventDialog(BuildContext context, StudioEvent event) {
