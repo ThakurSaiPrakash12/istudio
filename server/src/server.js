@@ -1,5 +1,6 @@
 const path = require('path');
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
@@ -17,6 +18,7 @@ const eventRoutes = require('./routes/events');
 const eventChildRoutes = require('./routes/eventChildren');
 
 const app = express();
+const openApiPath = path.join(__dirname, '..', '..', 'openapi.yaml');
 validateRuntimeConfig();
 const port = Number(process.env.PORT) || 5000;
 const allowedOrigins = parseCorsOrigins();
@@ -39,6 +41,14 @@ app.use(cors({
   },
 }));
 app.use(express.json({ limit: '6mb' }));
+
+app.get('/openapi.yaml', (_req, res) => {
+  res.type('yaml').sendFile(openApiPath);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(null, {
+  swaggerOptions: { url: '/openapi.yaml' },
+  customSiteTitle: 'Lumen Studio API Docs',
+}));
 
 app.get('/', (_req, res) => {
   res.json({

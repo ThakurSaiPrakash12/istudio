@@ -20,6 +20,8 @@ npm run dev
 
 The API listens on `http://localhost:5000`.
 
+Open `http://localhost:5000/api-docs/` for the interactive Swagger UI. The raw OpenAPI document is available at `http://localhost:5000/openapi.yaml`.
+
 - `POST /api/auth/signup` — `{ username, phone, password }`
 - `POST /api/auth/login` — `{ phone, password }`
 - `GET /api/auth/me` — `Authorization: Bearer <token>`
