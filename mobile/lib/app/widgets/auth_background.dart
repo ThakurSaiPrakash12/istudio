@@ -42,7 +42,7 @@ class AuthBackground extends StatelessWidget {
           ),
         ),
 
-        // Ambient Pastel Peach Blossom Orb (Mid-Left)
+        // Ambient Pastel Periwinkle Subtle Glow (Mid-Left)
         Positioned(
           top: 240,
           left: -100,
@@ -54,7 +54,7 @@ class AuthBackground extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.pastelPeach.withValues(alpha: isDark ? 0.12 : 0.08),
+                    AppColors.sky.withValues(alpha: isDark ? 0.10 : 0.06),
                     Colors.transparent,
                   ],
                 ),

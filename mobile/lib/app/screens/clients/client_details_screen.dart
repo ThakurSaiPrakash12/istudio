@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -849,170 +850,188 @@ class ClientDetailsScreen extends StatelessWidget {
   void _showProofDialog(BuildContext context, PaymentRecord p) {
     final proof = p.proof ?? '';
     final isNetworkImage = proof.startsWith('http');
+    final isBase64Image = proof.startsWith('data:image');
+    final hasVisualProof = isNetworkImage || isBase64Image;
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        backgroundColor: context.cardBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.receipt_long_rounded,
-                      color: context.accentColor, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Payment Proof',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: context.textMain,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(ctx).height * 0.84,
+            maxWidth: 440,
+          ),
+          child: StudioCard(
+            borderRadius: 24,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.receipt_long_rounded,
+                        color: context.accentColor, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Payment Proof',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: context.textMain,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: context.textMuted, size: 20),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (isNetworkImage)
-                GestureDetector(
-                  onTap: () => _showFullScreenProof(context, proof),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          proof,
-                          fit: BoxFit.contain,
-                          loadingBuilder: (ctx, child, progress) {
-                            if (progress == null) return child;
-                            return const SizedBox(
-                              height: 160,
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          },
-                          errorBuilder: (ctx, error, stackTrace) => Container(
-                            height: 120,
+                    IconButton(
+                      icon: Icon(Icons.close, color: context.textMuted, size: 20),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (hasVisualProof)
+                          GestureDetector(
+                            onTap: () => _showFullScreenProof(context, proof),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: MediaQuery.sizeOf(ctx).height * 0.38,
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: isNetworkImage
+                                        ? Image.network(
+                                            proof,
+                                            fit: BoxFit.contain,
+                                            loadingBuilder: (ctx, child, progress) {
+                                              if (progress == null) return child;
+                                              return const SizedBox(
+                                                height: 160,
+                                                child: Center(child: CircularProgressIndicator()),
+                                              );
+                                            },
+                                            errorBuilder: (ctx, error, stackTrace) =>
+                                                _buildProofPlaceholder(context),
+                                          )
+                                        : _buildBase64Image(context, proof),
+                                  ),
+                                  Positioned(
+                                    right: 8,
+                                    bottom: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.72),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.zoom_in_rounded,
+                                              color: Colors.white, size: 14),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Tap to zoom',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: context.innerBg,
                               borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Could not load image.',
-                                style: TextStyle(color: context.textMuted),
+                              border: Border.all(
+                                color: context.cardBorder.withValues(alpha: 0.4),
                               ),
                             ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 8,
-                        bottom: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.zoom_in_rounded,
-                                  color: Colors.white, size: 14),
-                              SizedBox(width: 4),
-                              Text(
-                                'Tap to zoom',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.insert_drive_file_outlined,
+                                        color: context.accentColor, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        proof,
+                                        style: TextStyle(
+                                          color: context.textMain,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: context.innerBg,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: context.cardBorder.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.insert_drive_file_outlined,
-                              color: context.accentColor, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              proof,
-                              style: TextStyle(
-                                color: context.textMain,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
+                                if (p.reference != null && p.reference!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Ref: ${p.reference}',
+                                    style: TextStyle(
+                                      color: context.textMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                      if (p.reference != null && p.reference!.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Ref: ${p.reference}',
-                          style: TextStyle(
-                            color: context.textMuted,
-                            fontSize: 12,
-                          ),
+                        const SizedBox(height: 16),
+                        _buildFinanceRow(
+                          context,
+                          label: 'Method',
+                          value: p.method.label,
+                          valueColor: context.accentColor,
+                        ),
+                        const SizedBox(height: 6),
+                        _buildFinanceRow(
+                          context,
+                          label: 'Amount',
+                          value: _currency.format(p.amount),
+                          valueColor: context.textMain,
+                        ),
+                        const SizedBox(height: 6),
+                        _buildFinanceRow(
+                          context,
+                          label: 'Date',
+                          value: DateFormat('d MMM yyyy').format(p.paidAt),
+                          valueColor: context.textMain,
                         ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              const SizedBox(height: 16),
-              _buildFinanceRow(
-                context,
-                label: 'Method',
-                value: p.method.label,
-                valueColor: context.accentColor,
-              ),
-              const SizedBox(height: 6),
-              _buildFinanceRow(
-                context,
-                label: 'Amount',
-                value: _currency.format(p.amount),
-                valueColor: context.textMain,
-              ),
-              const SizedBox(height: 6),
-              _buildFinanceRow(
-                context,
-                label: 'Date',
-                value: DateFormat('d MMM yyyy').format(p.paidAt),
-                valueColor: context.textMain,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1126,7 +1145,8 @@ class ClientDetailsScreen extends StatelessWidget {
     );
   }
 
-  void _showFullScreenProof(BuildContext context, String imageUrl) {
+  void _showFullScreenProof(BuildContext context, String proof) {
+    final isBase64 = proof.startsWith('data:image');
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -1142,22 +1162,25 @@ class ClientDetailsScreen extends StatelessWidget {
                 minScale: 0.5,
                 maxScale: 4.0,
                 child: Center(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      );
-                    },
-                    errorBuilder: (_, _, _) => const Center(
-                      child: Text(
-                        'Could not load image proof.',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  ),
+                  child: isBase64
+                      ? _buildBase64Image(context, proof)
+                      : Image.network(
+                          proof,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child:
+                                  CircularProgressIndicator(color: Colors.white),
+                            );
+                          },
+                          errorBuilder: (_, _, _) => const Center(
+                            child: Text(
+                              'Could not load image proof.',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          ),
+                        ),
                 ),
               ),
               Positioned(
@@ -1173,6 +1196,34 @@ class ClientDetailsScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBase64Image(BuildContext context, String proof) {
+    try {
+      final base64String = proof.contains(',') ? proof.split(',').last : proof;
+      return Image.memory(
+        base64Decode(base64String),
+        fit: BoxFit.contain,
+      );
+    } catch (_) {
+      return _buildProofPlaceholder(context);
+    }
+  }
+
+  Widget _buildProofPlaceholder(BuildContext context) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: context.innerBg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Center(
+        child: Text(
+          'Could not load image.',
+          style: TextStyle(color: context.textMuted),
         ),
       ),
     );

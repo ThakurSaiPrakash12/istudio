@@ -138,14 +138,14 @@ class _HomeScreenState extends State<HomeScreen>
                       130 + MediaQuery.paddingOf(context).bottom,
                     ),
                     children: [
-                      // Studio Services (PhonePe 4-Circle Action Card)
+                      // Studio Quick Actions
                       _AnimatedSection(
                         animation: _staggered(0.0, 0.25),
                         child: _buildQuickActionGrid(context),
                       ),
                       const SizedBox(height: 12),
 
-                      // PhonePe Studio Earnings & Dues Strip
+                      // Studio Earnings & Dues Strip
                       _AnimatedSection(
                         animation: _staggered(0.06, 0.32),
                         child: _buildEarningsStrip(context, overview),

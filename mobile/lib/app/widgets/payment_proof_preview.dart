@@ -80,10 +80,21 @@ class PaymentProofPreview {
                 ],
               ),
               const SizedBox(height: 8),
-              ...proofs.map(
-                (payment) => _ProofTile(
-                  payment: payment,
-                  onTap: () => _showFullScreen(sheetContext, payment.proof!),
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: proofs
+                        .map(
+                          (payment) => _ProofTile(
+                            payment: payment,
+                            onTap: () =>
+                                _showFullScreen(sheetContext, payment.proof!),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 ),
               ),
             ],

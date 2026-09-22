@@ -2,30 +2,30 @@ import 'package:flutter/material.dart';
 
 import '../models/studio_event.dart';
 
-/// Universal studio palette — PhonePe Deep Indigo & Warm Purple
+/// Universal studio palette — Unique Pastel Liquid Glass Spectrum
 @immutable
 class AppColors {
   const AppColors._();
 
   // ================= Unique Pastel Studio Palette =================
-  // Ethereal Pastel Periwinkle & Radiant Peach Blossom (No PhonePe, No Cyan, No Gold)
+  // Luminous Pastel Periwinkle (Strictly 0xFF818CF8 maintained as primary brand)
   static const Color sky = Color(0xFF818CF8);       // Luminous Pastel Periwinkle (Primary Brand)
   static const Color skyLight = Color(0xFFEEF2FF);  // Soft Periwinkle Tint (chips/badges)
   static const Color skyDeep = Color(0xFF6366F1);   // Radiant Iris Accent
   static const Color skyGlow = Color(0x33818CF8);   // 20% Pastel Periwinkle Focus/Aura Ring
   static const Color skyCyan = Color(0xFFA5B4FC);   // Soft Periwinkle Mist
   
-  // Studio Pastel Spectrum
-  static const Color pastelPeach = Color(0xFFFF9E79); // Warm Pastel Peach Blossom (Spotlight/Active)
+  // Studio Pastel Spectrum (Strictly 0xFF818CF8 maintained, zero peach/pink gradients)
+  static const Color pastelPeach = Color(0xFF818CF8); // Mapped strictly to 0xFF818CF8
   static const Color pastelMint = Color(0xFF6EE7B7);  // Fresh Pastel Mint (Earnings / Paid / Success)
-  static const Color pastelRose = Color(0xFFFB7185);  // Gentle Pastel Coral Rose (Alert / Dues)
+  static const Color pastelRose = Color(0xFF818CF8);  // Mapped to 0xFF818CF8 per user instruction
   static const Color receivedGreen = pastelMint;      // Pastel Mint for Payments Received
 
   // Aliases for compatibility
-  static const Color gold = pastelPeach;
-  static const Color goldLight = Color(0xFFFFF1EB);
-  static const Color goldDeep = Color(0xFFF97316);
-  static const Color goldGlow = Color(0x33FF9E79);
+  static const Color gold = Color(0xFF818CF8);
+  static const Color goldLight = Color(0xFFEEF2FF);
+  static const Color goldDeep = Color(0xFF6366F1);
+  static const Color goldGlow = Color(0x33818CF8);
 
   // Dark Mode Surfaces (Obsidian Mist with Refractive Depth)
   static const Color ink = Color(0xFF0C0E14);        // Cosmic obsidian canvas
@@ -35,9 +35,10 @@ class AppColors {
   static const Color muted = Color(0xFF94A3B8);      // Secondary Text
   static const Color mist = Color(0x3394A3B8);
 
-  // Liquid Glass Surfaces (Dark Mode - Full Vibrancy & Refraction)
-  static const Color glassSurfaceDark = Color(0x59161B26); // Liquid frosted body
-  static const Color glassCardDark = Color(0x3B1E283C);    // Translucent liquid glass card
+  // Liquid Glass Surfaces (Dark Mode - Full Vibrancy & Refraction with Substantial Background)
+  static const Color glassSurfaceDark = Color(0xF0141824); // Frosted liquid glass body
+  static const Color glassCardDark = Color(0xEB161C2C);    // 92% deep frosted liquid glass card
+  static const Color glassSheetDark = Color(0xF5121622);   // 96% frosted sheet backdrop
   static const Color glassBorderDark = Color(0x33A5B4FC);  // Pastel periwinkle refractive rim
   static const Color glassInnerDark = Color(0x2B101420);   // Inset container fill
   static const Color glassSpecular = Color(0x38FFFFFF);    // Specular highlight on glass edge
@@ -45,6 +46,7 @@ class AppColors {
   // Light Mode Surfaces (Pearlescent Crystal with Soft Pastel Glow)
   static const Color lightScaffold = Color(0xFFF7F8FC);    // Pearlescent canvas
   static const Color lightCard = Color(0xEBFFFFFF);        // Frosted milk glass card
+  static const Color lightSheet = Color(0xF8FFFFFF);       // Frosted milk glass sheet
   static const Color lightTextMain = Color(0xFF0F172A);    // Deep slate text
   static const Color lightTextMuted = Color(0xFF64748B);   // Slate muted text
   static const Color lightBorder = Color(0x29818CF8);      // Soft pastel periwinkle hairline border
@@ -66,7 +68,7 @@ class AppColors {
   static const Color ivory = paper;
   static const Color blush = muted;
 
-  // Gradients
+  // Gradients (Strictly 0xFF818CF8 Periwinkle / Iris spectrum - NO peach, NO pink)
   static const LinearGradient studioHeaderGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -76,26 +78,24 @@ class AppColors {
     ],
   );
 
-  static const LinearGradient phonePeHeaderGradient = studioHeaderGradient;
-
   static const LinearGradient skyGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF818CF8), Color(0xFFFF9E79)],
+    colors: [Color(0xFF818CF8), Color(0xFF6366F1)],
   );
 
   static const LinearGradient goldGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFF9E79), Color(0xFFFB7185)],
+    colors: [Color(0xFF818CF8), Color(0xFF6366F1)],
   );
 
   static const LinearGradient glassCardGradientDark = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0x4D25334D),
-      Color(0x28192233),
+      Color(0xEB222B3D),
+      Color(0xEB161C2C),
     ],
   );
 
@@ -207,7 +207,7 @@ class StudioColors extends ThemeExtension<StudioColors> {
   final Color innerContainerBg;
 
   static const StudioColors brand = StudioColors(
-    blossom: AppColors.gold,
+    blossom: AppColors.sky,
     merlot: AppColors.slate,
     plum: AppColors.navy,
     midnight: AppColors.ink,

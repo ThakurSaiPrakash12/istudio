@@ -25,7 +25,7 @@ class AppTheme {
       brightness: Brightness.dark,
       primary: AppColors.sky,
       onPrimary: Colors.white,
-      secondary: AppColors.pastelPeach,
+      secondary: AppColors.sky,
       onSecondary: Colors.white,
       tertiary: AppColors.pastelMint,
       onTertiary: Color(0xFF0C0E14),
@@ -187,20 +187,20 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.glassCardDark,
-        indicatorColor: AppColors.gold.withValues(alpha: 0.22),
+        indicatorColor: AppColors.sky.withValues(alpha: 0.22),
         elevation: 0,
         height: 72,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return body.labelMedium?.copyWith(
-            color: selected ? AppColors.gold : AppColors.muted,
+            color: selected ? AppColors.sky : AppColors.muted,
             fontWeight: FontWeight.w600,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppColors.gold : AppColors.muted,
+            color: selected ? AppColors.sky : AppColors.muted,
           );
         }),
       ),
@@ -221,7 +221,7 @@ class AppTheme {
       brightness: Brightness.light,
       primary: AppColors.sky,
       onPrimary: Colors.white,
-      secondary: AppColors.pastelPeach,
+      secondary: AppColors.sky,
       onSecondary: Colors.white,
       tertiary: AppColors.pastelMint,
       onTertiary: Color(0xFF0F172A),

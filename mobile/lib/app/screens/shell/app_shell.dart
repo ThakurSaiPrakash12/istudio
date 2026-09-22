@@ -321,9 +321,9 @@ class _DockItemState extends State<_DockItem>
                         end: Alignment.bottomRight,
                         colors: [
                           AppColors.sky.withValues(
-                              alpha: widget.isDark ? 0.32 : 0.22),
-                          AppColors.pastelPeach.withValues(
-                              alpha: widget.isDark ? 0.20 : 0.14),
+                              alpha: widget.isDark ? 0.35 : 0.22),
+                          AppColors.sky.withValues(
+                              alpha: widget.isDark ? 0.16 : 0.10),
                         ],
                       )
                     : null,
@@ -377,16 +377,11 @@ class _DockItemState extends State<_DockItem>
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: widget.isUrgentBadge
-                                      ? AppColors.pastelPeach
-                                      : AppColors.pastelRose,
+                                  color: AppColors.sky,
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (widget.isUrgentBadge
-                                              ? AppColors.pastelPeach
-                                              : AppColors.pastelRose)
-                                          .withValues(alpha: 0.7),
+                                      color: AppColors.sky.withValues(alpha: 0.7),
                                       blurRadius: 6,
                                     ),
                                   ],

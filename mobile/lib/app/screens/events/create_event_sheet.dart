@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -17,7 +18,8 @@ class CreateEventSheet extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.cardBg,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -310,13 +312,48 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
     final textMain = context.textMain;
     final textMuted = context.textMuted;
     final accent = context.accentColor;
+    final isDark = context.isDark;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.88,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xF5121622) : const Color(0xF8FFFFFF),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(
+              top: BorderSide(
+                color: AppColors.sky.withValues(alpha: isDark ? 0.38 : 0.25),
+                width: 1.2,
+              ),
+              left: BorderSide(
+                color: AppColors.sky.withValues(alpha: isDark ? 0.15 : 0.10),
+                width: 0.8,
+              ),
+              right: BorderSide(
+                color: AppColors.sky.withValues(alpha: isDark ? 0.15 : 0.10),
+                width: 0.8,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.65 : 0.18),
+                blurRadius: 36,
+                offset: const Offset(0, -8),
+              ),
+              BoxShadow(
+                color: AppColors.sky.withValues(alpha: isDark ? 0.12 : 0.06),
+                blurRadius: 20,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
         children: [
           // Drag handle
           Center(
@@ -564,10 +601,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _remainingAmount > 0
-                            ? (context.isDark
-                                      ? const Color(0xFFE8B86D)
-                                      : const Color(0xFFD97706))
-                                  .withValues(alpha: 0.4)
+                            ? accent.withValues(alpha: 0.6)
                             : accent.withValues(alpha: 0.4),
                       ),
                     ),
@@ -607,11 +641,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                           child: Text(
                             _currency.format(_remainingAmount),
                             style: TextStyle(
-                              color: _remainingAmount > 0
-                                  ? (context.isDark
-                                        ? const Color(0xFFE8B86D)
-                                        : const Color(0xFFD97706))
-                                  : accent,
+                              color: accent,
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                             ),
@@ -634,7 +664,9 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {

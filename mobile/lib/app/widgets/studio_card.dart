@@ -86,8 +86,7 @@ class _StudioCardState extends State<StudioCard>
         ),
         // Subtle pastel chromatic vibrancy halo
         BoxShadow(
-          color: (isDark ? AppColors.sky : AppColors.pastelPeach)
-              .withValues(alpha: isDark ? 0.07 : 0.05),
+          color: AppColors.sky.withValues(alpha: isDark ? 0.08 : 0.05),
           blurRadius: 20,
           offset: const Offset(0, 2),
         ),
