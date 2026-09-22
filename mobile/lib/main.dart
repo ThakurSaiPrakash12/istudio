@@ -14,8 +14,97 @@ import 'app/widgets/studio_splash.dart';
 import 'app/providers/notifications_provider.dart';
 import 'app/providers/theme_provider.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey =
+    GlobalKey<NavigatorState>();
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Global error recovery: intercepts screen issues and redirects safely to Home
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (rootNavigatorKey.currentState?.canPop() ?? false) {
+        rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+      }
+    });
+  };
+
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: AppColors.ink,
+      child: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.sky.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.sky.withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.refresh_rounded,
+                    color: AppColors.sky,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Screen Issue Detected',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Redirecting you safely back to your Studio Home...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.sky,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    rootNavigatorKey.currentState
+                        ?.popUntil((route) => route.isFirst);
+                  },
+                  icon: const Icon(Icons.home_rounded, size: 16),
+                  label: const Text(
+                    'Return to Home',
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -64,6 +153,7 @@ class IStudioApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
+            navigatorKey: rootNavigatorKey,
             title: 'iStudio',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,

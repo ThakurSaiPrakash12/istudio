@@ -83,12 +83,6 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Hi';
-    if (hour < 17) return 'Hi';
-    return 'Hi';
-  }
 
   Animation<double> _staggered(double begin, double end) =>
       CurvedAnimation(
@@ -269,6 +263,10 @@ class _HomeScreenState extends State<HomeScreen>
   }) {
     final dateStr = DateFormat('EEE, d MMM').format(DateTime.now());
     final isDark = context.isDark;
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : (hour < 17 ? 'Good afternoon' : 'Good evening');
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
@@ -343,54 +341,22 @@ class _HomeScreenState extends State<HomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            user?.displayStudioName ?? 'Studio',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: isDark
-                                  ? AppColors.paper
-                                  : AppColors.lightTextMain,
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.pastelPeach.withValues(
-                                alpha: isDark ? 0.20 : 0.16),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: AppColors.pastelPeach
-                                  .withValues(alpha: 0.5),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: const Text(
-                            'PRO',
-                            style: TextStyle(
-                              color: AppColors.pastelPeach,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      user?.displayStudioName ?? 'Studio',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark
+                            ? AppColors.paper
+                            : AppColors.lightTextMain,
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${_getGreeting()}, ${user?.displayOwner ?? 'User'} 👋 · $dateStr',
+                      '$greeting · $dateStr',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -541,28 +507,28 @@ class _HomeScreenState extends State<HomeScreen>
               _QuickActionItem(
                 icon: Icons.camera_alt_rounded,
                 label: 'New Shoot',
-                color: AppColors.sky,
+                color: const Color(0xFF818CF8), // Pastel Periwinkle
                 isDark: isDark,
                 onTap: () => CreateEventSheet.show(context),
               ),
               _QuickActionItem(
                 icon: Icons.receipt_long_rounded,
                 label: 'Make Bill',
-                color: AppColors.pastelPeach,
+                color: const Color(0xFF93C5FD), // Pastel Soft Sky
                 isDark: isDark,
                 onTap: () => AppShellScope.of(context)?.switchTab(2),
               ),
               _QuickActionItem(
                 icon: Icons.calendar_month_rounded,
                 label: 'Calendar',
-                color: AppColors.pastelMint,
+                color: const Color(0xFF6EE7B7), // Pastel Mint
                 isDark: isDark,
                 onTap: () => AppShellScope.of(context)?.switchTab(1),
               ),
               _QuickActionItem(
                 icon: Icons.people_rounded,
                 label: 'Clients',
-                color: AppColors.pastelRose,
+                color: const Color(0xFFC084FC), // Pastel Lilac
                 isDark: isDark,
                 onTap: () => AppShellScope.of(context)?.switchTab(3),
               ),
@@ -639,7 +605,7 @@ class _HomeScreenState extends State<HomeScreen>
                         style: const TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.pastelPeach,
+                          color: AppColors.sky,
                         ),
                       ),
                       Text(

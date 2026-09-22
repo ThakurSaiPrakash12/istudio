@@ -326,19 +326,9 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
           decoration: BoxDecoration(
             color: isDark ? const Color(0xF5121622) : const Color(0xF8FFFFFF),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border(
-              top: BorderSide(
-                color: AppColors.sky.withValues(alpha: isDark ? 0.38 : 0.25),
-                width: 1.2,
-              ),
-              left: BorderSide(
-                color: AppColors.sky.withValues(alpha: isDark ? 0.15 : 0.10),
-                width: 0.8,
-              ),
-              right: BorderSide(
-                color: AppColors.sky.withValues(alpha: isDark ? 0.15 : 0.10),
-                width: 0.8,
-              ),
+            border: Border.all(
+              color: AppColors.sky.withValues(alpha: isDark ? 0.28 : 0.18),
+              width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
