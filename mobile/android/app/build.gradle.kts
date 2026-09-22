@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -25,10 +28,16 @@ android {
         versionName = flutter.versionName
     }
 
-    val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
-    val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-    val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
-    val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    val keystoreProperties = Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    }
+
+    val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: keystoreProperties.getProperty("storeFile")
+    val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword")
+    val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
+    val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
 
     signingConfigs {
         if (!releaseKeystorePath.isNullOrBlank() &&
@@ -46,9 +55,7 @@ android {
 
     buildTypes {
         release {
-            signingConfigs.findByName("release")?.let {
-                signingConfig = it
-            }
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
