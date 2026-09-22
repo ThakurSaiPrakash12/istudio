@@ -1,6 +1,6 @@
 {
-    "name": "lumen_studio",
-    "short_name": "lumen_studio",
+    "name": "Clients Hub",
+    "short_name": "Clients Hub",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

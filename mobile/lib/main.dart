@@ -154,7 +154,7 @@ class IStudioApp extends StatelessWidget {
         builder: (context, themeProvider, child) {
           return MaterialApp(
             navigatorKey: rootNavigatorKey,
-            title: 'iStudio',
+            title: 'Clients Hub',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
