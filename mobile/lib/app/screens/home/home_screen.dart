@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -120,8 +121,8 @@ class _HomeScreenState extends State<HomeScreen>
             constraints: const BoxConstraints(maxWidth: 860),
             child: Column(
               children: [
-                // 1. Authentic PhonePe Top Header Banner
-                _buildPhonePeHeader(
+                // 1. Pastel Liquid Glass Studio Header
+                _buildStudioHeader(
                   context,
                   user: user,
                   unreadAlerts: unreadAlerts,
@@ -130,7 +131,12 @@ class _HomeScreenState extends State<HomeScreen>
                 // 2. Main Content Body
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      12,
+                      16,
+                      130 + MediaQuery.paddingOf(context).bottom,
+                    ),
                     children: [
                       // Studio Services (PhonePe 4-Circle Action Card)
                       _AnimatedSection(
@@ -255,131 +261,188 @@ class _HomeScreenState extends State<HomeScreen>
   );
 }
 
-  // ================= 1. Authentic PhonePe Top Header =================
-  Widget _buildPhonePeHeader(
+  // ================= 1. Pastel Liquid Glass Studio Header =================
+  Widget _buildStudioHeader(
     BuildContext context, {
     required User? user,
     required int unreadAlerts,
   }) {
     final dateStr = DateFormat('EEE, d MMM').format(DateTime.now());
+    final isDark = context.isDark;
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AppColors.phonePeHeaderGradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x335F259F),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 15),
-      child: Row(
-        children: [
-          // Profile Avatar with clean white ring
-          GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              SmoothPageRoute(builder: (_) => const ProfileScreen()),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: isDark
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0x59232E44),
+                      Color(0x3B151B27),
+                    ],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xF2FFFFFF),
+                      Color(0xD9EEF2FF),
+                    ],
+                  ),
+            borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(26)),
+            border: Border.all(
+              color: isDark
+                  ? const Color(0x38A5B4FC)
+                  : const Color(0x33818CF8),
+              width: 1.0,
             ),
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  width: 1.5,
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.35)
+                    : const Color(0x100F172A),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: AppColors.sky.withValues(alpha: isDark ? 0.14 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Row(
+            children: [
+              // Profile Avatar with subtle pastel ring
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  SmoothPageRoute(builder: (_) => const ProfileScreen()),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.sky.withValues(alpha: 0.65),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: ProfileAvatar(logoUrl: user?.logoUrl, size: 42),
                 ),
               ),
-              child: ProfileAvatar(logoUrl: user?.logoUrl, size: 42),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Studio & Greeting
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+              const SizedBox(width: 12),
+              // Studio & Greeting
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(
-                      child: Text(
-                        user?.displayStudioName ?? 'Studio',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontSize: 16.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            user?.displayStudioName ?? 'Studio',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              color: isDark
+                                  ? AppColors.paper
+                                  : AppColors.lightTextMain,
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.pastelPeach.withValues(
+                                alpha: isDark ? 0.20 : 0.16),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: AppColors.pastelPeach
+                                  .withValues(alpha: 0.5),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: const Text(
+                            'PRO',
+                            style: TextStyle(
+                              color: AppColors.pastelPeach,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFB800),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        'PRO',
-                        style: TextStyle(
-                          color: Color(0xFF1A0A2E),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.8,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_getGreeting()}, ${user?.displayOwner ?? 'User'} 👋 · $dateStr',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isDark
+                            ? AppColors.muted
+                            : AppColors.lightTextMuted,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${_getGreeting()}, ${user?.displayOwner ?? 'User'} 👋 · $dateStr',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.88),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
+              ),
+              // Theme Toggle
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.sky.withValues(alpha: 0.12)
+                      : AppColors.sky.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.sky.withValues(alpha: 0.25)
+                        : AppColors.sky.withValues(alpha: 0.20),
+                    width: 0.9,
                   ),
                 ),
-              ],
-            ),
-          ),
-          // Theme Toggle
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: IconButton(
-              tooltip: context.isDark ? 'Light mode' : 'Dark mode',
-              iconSize: 20,
-              color: Colors.white,
-              icon: Icon(
-                context.isDark
-                    ? Icons.light_mode_rounded
-                    : Icons.dark_mode_rounded,
+                child: IconButton(
+                  tooltip: isDark ? 'Light mode' : 'Dark mode',
+                  iconSize: 20,
+                  color: isDark ? AppColors.sky : AppColors.skyDeep,
+                  icon: Icon(
+                    isDark
+                        ? Icons.light_mode_rounded
+                        : Icons.dark_mode_rounded,
+                  ),
+                  onPressed: () =>
+                      context.read<ThemeProvider?>()?.toggleTheme(),
+                ),
               ),
-              onPressed: () => context.read<ThemeProvider?>()?.toggleTheme(),
-            ),
+              const SizedBox(width: 6),
+              // Notification Bell
+              _buildHeaderNotificationBell(context, unreadAlerts),
+            ],
           ),
-          const SizedBox(width: 6),
-          // Notification Bell
-          _buildHeaderNotificationBell(context, unreadAlerts),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildHeaderNotificationBell(BuildContext context, int unreadAlerts) {
+    final isDark = context.isDark;
     return Semantics(
       label: 'Notifications ($unreadAlerts unread)',
       button: true,
@@ -388,13 +451,21 @@ class _HomeScreenState extends State<HomeScreen>
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: isDark
+                  ? AppColors.sky.withValues(alpha: 0.12)
+                  : AppColors.sky.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isDark
+                    ? AppColors.sky.withValues(alpha: 0.25)
+                    : AppColors.sky.withValues(alpha: 0.20),
+                width: 0.9,
+              ),
             ),
             child: IconButton(
               tooltip: 'Notifications',
               iconSize: 20,
-              color: Colors.white,
+              color: isDark ? AppColors.sky : AppColors.skyDeep,
               icon: const Icon(Icons.notifications_outlined),
               onPressed: () => NotificationsSheet.show(context),
             ),
@@ -406,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF3B30),
+                  color: AppColors.pastelRose,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
@@ -425,29 +496,13 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ================= 2. PhonePe Quick Action Grid =================
+  // ================= 2. Studio Quick Action Grid =================
   Widget _buildQuickActionGrid(BuildContext context) {
     final isDark = context.isDark;
 
-    return Container(
+    return StudioCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.22)
-                : const Color(0x080F172A),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      borderRadius: 22,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -457,21 +512,21 @@ class _HomeScreenState extends State<HomeScreen>
               Text(
                 'Studio Services',
                 style: TextStyle(
-                  color: isDark ? AppColors.paper : const Color(0xFF111827),
-                  fontSize: 13,
+                  color: isDark ? AppColors.paper : AppColors.lightTextMain,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF5F259F).withValues(alpha: 0.08),
+                  color: AppColors.sky.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
                   'Quick 4',
                   style: TextStyle(
-                    color: Color(0xFF5F259F),
+                    color: AppColors.sky,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                   ),
@@ -486,28 +541,28 @@ class _HomeScreenState extends State<HomeScreen>
               _QuickActionItem(
                 icon: Icons.camera_alt_rounded,
                 label: 'New Shoot',
-                color: const Color(0xFF5F259F),
+                color: AppColors.sky,
                 isDark: isDark,
                 onTap: () => CreateEventSheet.show(context),
               ),
               _QuickActionItem(
                 icon: Icons.receipt_long_rounded,
                 label: 'Make Bill',
-                color: const Color(0xFFFF9F43),
+                color: AppColors.pastelPeach,
                 isDark: isDark,
                 onTap: () => AppShellScope.of(context)?.switchTab(2),
               ),
               _QuickActionItem(
                 icon: Icons.calendar_month_rounded,
                 label: 'Calendar',
-                color: const Color(0xFF10B981),
+                color: AppColors.pastelMint,
                 isDark: isDark,
                 onTap: () => AppShellScope.of(context)?.switchTab(1),
               ),
               _QuickActionItem(
                 icon: Icons.people_rounded,
                 label: 'Clients',
-                color: const Color(0xFF0284C7),
+                color: AppColors.pastelRose,
                 isDark: isDark,
                 onTap: () => AppShellScope.of(context)?.switchTab(3),
               ),
@@ -518,41 +573,25 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ================= 3. PhonePe Studio Earnings Strip =================
+  // ================= 3. Studio Earnings Strip =================
   Widget _buildEarningsStrip(BuildContext context, InvoiceOverview overview) {
     final isDark = context.isDark;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.20)
-                : const Color(0x080F172A),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return StudioCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      borderRadius: 20,
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF5F259F).withValues(alpha: 0.12),
+              color: AppColors.sky.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.account_balance_wallet_rounded,
-              color: Color(0xFF5F259F),
+              color: AppColors.sky,
               size: 20,
             ),
           ),
@@ -567,7 +606,7 @@ class _HomeScreenState extends State<HomeScreen>
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.muted : const Color(0xFF6B7280),
+                    color: isDark ? AppColors.muted : AppColors.lightTextMuted,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -578,21 +617,21 @@ class _HomeScreenState extends State<HomeScreen>
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF10B981),
+                        color: AppColors.pastelMint,
                       ),
                     ),
                     Text(
                       ' recvd',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? AppColors.muted : const Color(0xFF9CA3AF),
+                        color: isDark ? AppColors.muted : AppColors.lightTextMuted,
                       ),
                     ),
                     if (overview.pending > 0) ...[
                       Text(
                         ' · ',
                         style: TextStyle(
-                          color: isDark ? AppColors.muted : const Color(0xFF9CA3AF),
+                          color: isDark ? AppColors.muted : AppColors.lightTextMuted,
                         ),
                       ),
                       Text(
@@ -600,14 +639,14 @@ class _HomeScreenState extends State<HomeScreen>
                         style: const TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFFF59E0B),
+                          color: AppColors.pastelPeach,
                         ),
                       ),
                       Text(
                         ' due',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? AppColors.muted : const Color(0xFF9CA3AF),
+                          color: isDark ? AppColors.muted : AppColors.lightTextMuted,
                         ),
                       ),
                     ],
@@ -622,7 +661,7 @@ class _HomeScreenState extends State<HomeScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF5F259F).withValues(alpha: 0.10),
+                color: AppColors.sky.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: const Row(
@@ -631,7 +670,7 @@ class _HomeScreenState extends State<HomeScreen>
                   Text(
                     'Summary',
                     style: TextStyle(
-                      color: Color(0xFF5F259F),
+                      color: AppColors.sky,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
                     ),
@@ -639,7 +678,7 @@ class _HomeScreenState extends State<HomeScreen>
                   SizedBox(width: 3),
                   Icon(
                     Icons.arrow_forward_ios_rounded,
-                    color: Color(0xFF5F259F),
+                    color: AppColors.sky,
                     size: 9,
                   ),
                 ],
@@ -659,9 +698,7 @@ class _HomeScreenState extends State<HomeScreen>
         subtitle: 'Fast & easy receipts to WhatsApp',
         icon: Icons.receipt_long_rounded,
         actionLabel: 'Make Bill',
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7B3FE4), Color(0xFF5F259F)],
-        ),
+        gradient: AppColors.skyGradient,
         onTap: () => AppShellScope.of(context)?.switchTab(2),
       ),
       _BannerData(

@@ -31,13 +31,10 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
 
   Color _statusColor(BuildContext context, InvoiceStatus status) {
     return switch (status) {
-      InvoiceStatus.paid => context.accentColor,
-      InvoiceStatus.pending =>
-        context.isDark ? const Color(0xFFB39DDB) : const Color(0xFF5F259F),
-      InvoiceStatus.partial =>
-        context.isDark ? const Color(0xFFE8B86D) : const Color(0xFFD97706),
-      InvoiceStatus.overdue =>
-        context.isDark ? const Color(0xFFFF7A8A) : const Color(0xFFDC2626),
+      InvoiceStatus.paid => AppColors.pastelMint,
+      InvoiceStatus.pending => AppColors.sky,
+      InvoiceStatus.partial => AppColors.pastelPeach,
+      InvoiceStatus.overdue => AppColors.pastelRose,
     };
   }
 
@@ -203,7 +200,7 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                   label: 'Received',
                   value: _money.format(overview.received),
                   icon: Icons.south_west_rounded,
-                  valueColor: context.accentColor,
+                  valueColor: AppColors.pastelMint,
                 ),
               ),
               const SizedBox(width: 8),
@@ -213,10 +210,8 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                   value: _money.format(overview.pending),
                   icon: Icons.north_east_rounded,
                   valueColor: overview.pending > 0
-                      ? (context.isDark
-                          ? const Color(0xFFE8B86D)
-                          : const Color(0xFFD97706))
-                      : context.accentColor,
+                      ? AppColors.pastelPeach
+                      : AppColors.pastelMint,
                 ),
               ),
             ],
@@ -293,7 +288,12 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
                   ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    4,
+                    16,
+                    130 + MediaQuery.paddingOf(context).bottom,
+                  ),
                   itemCount: invoices.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {

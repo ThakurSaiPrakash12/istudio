@@ -23,13 +23,13 @@ class AppTheme {
   static ThemeData get dark {
     const colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: AppColors.gold,
+      primary: AppColors.sky,
       onPrimary: Colors.white,
-      secondary: AppColors.slate,
-      onSecondary: AppColors.paper,
-      tertiary: Color(0xFF6739B7),
-      onTertiary: Colors.white,
-      error: Color(0xFFFF6B6B),
+      secondary: AppColors.pastelPeach,
+      onSecondary: Colors.white,
+      tertiary: AppColors.pastelMint,
+      onTertiary: Color(0xFF0C0E14),
+      error: AppColors.pastelRose,
       onError: Colors.white,
       surface: AppColors.ink,
       onSurface: AppColors.paper,
@@ -41,7 +41,7 @@ class AppTheme {
       scrim: Color(0x99000000),
       inverseSurface: AppColors.paper,
       onInverseSurface: AppColors.ink,
-      inversePrimary: AppColors.goldDeep,
+      inversePrimary: AppColors.skyDeep,
     );
 
     final font = GoogleFonts.plusJakartaSansTextTheme();
@@ -219,13 +219,13 @@ class AppTheme {
   static ThemeData get light {
     const colorScheme = ColorScheme(
       brightness: Brightness.light,
-      primary: AppColors.lightPrimary,
+      primary: AppColors.sky,
       onPrimary: Colors.white,
-      secondary: AppColors.slate,
+      secondary: AppColors.pastelPeach,
       onSecondary: Colors.white,
-      tertiary: Color(0xFF6739B7),
-      onTertiary: Colors.white,
-      error: Color(0xFFE11D48),
+      tertiary: AppColors.pastelMint,
+      onTertiary: Color(0xFF0F172A),
+      error: AppColors.pastelRose,
       onError: Colors.white,
       surface: AppColors.lightCard,
       onSurface: AppColors.lightTextMain,
@@ -237,7 +237,7 @@ class AppTheme {
       scrim: Color(0x33000000),
       inverseSurface: AppColors.lightTextMain,
       onInverseSurface: Colors.white,
-      inversePrimary: AppColors.lightPrimary,
+      inversePrimary: AppColors.skyDeep,
     );
 
     final font = GoogleFonts.plusJakartaSansTextTheme();

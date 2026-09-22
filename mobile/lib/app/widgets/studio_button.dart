@@ -53,29 +53,23 @@ class _StudioButtonState extends State<StudioButton> {
           )
         : BoxDecoration(
             borderRadius: radius,
-            gradient: isDark
-                ? AppColors.skyGradient
-                : const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF7B3FE4), Color(0xFF5F259F)],
-                  ),
+            gradient: AppColors.skyGradient,
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.5),
+              color: Colors.white.withValues(alpha: 0.45),
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.sky.withValues(alpha: isDark ? 0.38 : 0.25),
-                blurRadius: 22,
-                offset: const Offset(0, 8),
+                color: AppColors.sky.withValues(alpha: isDark ? 0.35 : 0.28),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
             ],
           );
 
     final textColor = widget.isSecondary
         ? (isDark ? AppColors.paper : AppColors.lightTextMain)
-        : Colors.white; // High-contrast crisp white on PhonePe Indigo
+        : Colors.white;
 
     return Semantics(
       button: true,

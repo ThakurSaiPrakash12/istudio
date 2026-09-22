@@ -116,13 +116,7 @@ class _InvoiceModeToggle extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
-                      gradient: isDark
-                          ? AppColors.skyGradient
-                          : const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF7B3FE4), Color(0xFF5F259F)],
-                            ),
+                      gradient: AppColors.skyGradient,
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.5),
                         width: 1,

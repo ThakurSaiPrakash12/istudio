@@ -7,50 +7,55 @@ import '../models/studio_event.dart';
 class AppColors {
   const AppColors._();
 
-  // ================= PhonePe Signature Palette =================
-  // Deep Indigo & Vibrant Purple (PhonePe signature)
-  static const Color sky = Color(0xFF5F259F);       // Deep Indigo / PhonePe Brand Purple
-  static const Color skyLight = Color(0xFFF0EBF8);  // Subtle lavender tint (chips/badges only)
-  static const Color skyDeep = Color(0xFF4A148C);   // Rich Purple (High contrast interactive)
-  static const Color skyGlow = Color(0x265F259F);   // 15% Subtle Focus Ring
-  static const Color skyCyan = Color(0xFF6739B7);   // Vibrant Purple Accent
-  static const Color receivedGreen = Color(0xFF10B981); // Emerald Green for Payments Received
+  // ================= Unique Pastel Studio Palette =================
+  // Ethereal Pastel Periwinkle & Radiant Peach Blossom (No PhonePe, No Cyan, No Gold)
+  static const Color sky = Color(0xFF818CF8);       // Luminous Pastel Periwinkle (Primary Brand)
+  static const Color skyLight = Color(0xFFEEF2FF);  // Soft Periwinkle Tint (chips/badges)
+  static const Color skyDeep = Color(0xFF6366F1);   // Radiant Iris Accent
+  static const Color skyGlow = Color(0x33818CF8);   // 20% Pastel Periwinkle Focus/Aura Ring
+  static const Color skyCyan = Color(0xFFA5B4FC);   // Soft Periwinkle Mist
+  
+  // Studio Pastel Spectrum
+  static const Color pastelPeach = Color(0xFFFF9E79); // Warm Pastel Peach Blossom (Spotlight/Active)
+  static const Color pastelMint = Color(0xFF6EE7B7);  // Fresh Pastel Mint (Earnings / Paid / Success)
+  static const Color pastelRose = Color(0xFFFB7185);  // Gentle Pastel Coral Rose (Alert / Dues)
+  static const Color receivedGreen = pastelMint;      // Pastel Mint for Payments Received
 
-  // Legacy aliases redirected to PhonePe
-  static const Color gold = sky;
-  static const Color goldLight = skyLight;
-  static const Color goldDeep = skyDeep;
-  static const Color goldGlow = skyGlow;
+  // Aliases for compatibility
+  static const Color gold = pastelPeach;
+  static const Color goldLight = Color(0xFFFFF1EB);
+  static const Color goldDeep = Color(0xFFF97316);
+  static const Color goldGlow = Color(0x33FF9E79);
 
-  // Dark Mode Surfaces (Clean Neutral Dark, NOT purple!)
-  static const Color ink = Color(0xFF0F1015);        // Clean deep neutral canvas
-  static const Color navy = Color(0xFF181A22);       // Dark Elevated Surface
-  static const Color slate = Color(0xFF222430);      // Dark Card Surface
-  static const Color paper = Color(0xFFF9FAFB);      // High Contrast Text
-  static const Color muted = Color(0xFF9CA3AF);      // Neutral Secondary Text
-  static const Color mist = Color(0x409CA3AF);
+  // Dark Mode Surfaces (Obsidian Mist with Refractive Depth)
+  static const Color ink = Color(0xFF0C0E14);        // Cosmic obsidian canvas
+  static const Color navy = Color(0xFF141824);       // Elevated Surface
+  static const Color slate = Color(0xFF1C2232);      // Elevated Card Surface
+  static const Color paper = Color(0xFFF8FAFC);      // Crisp Text
+  static const Color muted = Color(0xFF94A3B8);      // Secondary Text
+  static const Color mist = Color(0x3394A3B8);
 
-  // Modern Tactile Surfaces (Dark Mode)
-  static const Color glassSurfaceDark = Color(0xF2181A22);
-  static const Color glassCardDark = Color(0xFF181A22);
-  static const Color glassBorderDark = Color(0xFF282A36);  // Clean hairline dark border
-  static const Color glassInnerDark = Color(0xFF12131A);   // Inset container fill
-  static const Color glassSpecular = Color(0x1F6739B7);
+  // Liquid Glass Surfaces (Dark Mode - Full Vibrancy & Refraction)
+  static const Color glassSurfaceDark = Color(0x59161B26); // Liquid frosted body
+  static const Color glassCardDark = Color(0x3B1E283C);    // Translucent liquid glass card
+  static const Color glassBorderDark = Color(0x33A5B4FC);  // Pastel periwinkle refractive rim
+  static const Color glassInnerDark = Color(0x2B101420);   // Inset container fill
+  static const Color glassSpecular = Color(0x38FFFFFF);    // Specular highlight on glass edge
 
-  // Light Mode Surfaces (Authentic PhonePe: Clean grey scaffold + Pure white cards)
-  static const Color lightScaffold = Color(0xFFF4F5F8);    // Clean PhonePe grey canvas (NOT purple!)
-  static const Color lightCard = Color(0xFFFFFFFF);        // Pure crisp white card
-  static const Color lightTextMain = Color(0xFF111827);    // Deep neutral slate text
-  static const Color lightTextMuted = Color(0xFF6B7280);   // Neutral grey secondary
-  static const Color lightBorder = Color(0xFFE5E7EB);      // Hairline neutral grey border
-  static const Color lightInputFill = Color(0xFFFFFFFF);   // Clean white input container
-  static const Color lightPrimary = Color(0xFF5F259F);     // PhonePe Deep Purple
+  // Light Mode Surfaces (Pearlescent Crystal with Soft Pastel Glow)
+  static const Color lightScaffold = Color(0xFFF7F8FC);    // Pearlescent canvas
+  static const Color lightCard = Color(0xEBFFFFFF);        // Frosted milk glass card
+  static const Color lightTextMain = Color(0xFF0F172A);    // Deep slate text
+  static const Color lightTextMuted = Color(0xFF64748B);   // Slate muted text
+  static const Color lightBorder = Color(0x29818CF8);      // Soft pastel periwinkle hairline border
+  static const Color lightInputFill = Color(0xF5FFFFFF);   // Clean frosted input fill
+  static const Color lightPrimary = Color(0xFF818CF8);     // Pastel Periwinkle
 
-  // Modern Tactile Surfaces (Light Mode)
-  static const Color glassSurfaceLight = Color(0xF7FFFFFF);
-  static const Color glassCardLight = Color(0xFFFFFFFF);
-  static const Color glassBorderLight = Color(0xFFE5E7EB);
-  static const Color glassInnerLight = Color(0xFFF9FAFB);
+  // Liquid Glass Surfaces (Light Mode)
+  static const Color glassSurfaceLight = Color(0xEBFFFFFF);
+  static const Color glassCardLight = Color(0xEBFFFFFF);
+  static const Color glassBorderLight = Color(0x33818CF8);
+  static const Color glassInnerLight = Color(0x73EEF2FF);
 
   // Aliases for backwards compatibility
   static const Color aqua = sky;
@@ -62,26 +67,35 @@ class AppColors {
   static const Color blush = muted;
 
   // Gradients
-  static const LinearGradient phonePeHeaderGradient = LinearGradient(
+  static const LinearGradient studioHeaderGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF5F259F), Color(0xFF6739B7)],
+    colors: [
+      Color(0xFF1E2436),
+      Color(0xFF151926),
+    ],
   );
+
+  static const LinearGradient phonePeHeaderGradient = studioHeaderGradient;
 
   static const LinearGradient skyGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF6739B7), Color(0xFF5F259F)],
+    colors: [Color(0xFF818CF8), Color(0xFFFF9E79)],
   );
 
-  static const LinearGradient goldGradient = skyGradient;
+  static const LinearGradient goldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF9E79), Color(0xFFFB7185)],
+  );
 
   static const LinearGradient glassCardGradientDark = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF1E202B),
-      Color(0xFF181A22),
+      Color(0x4D25334D),
+      Color(0x28192233),
     ],
   );
 
@@ -89,8 +103,8 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFFFFFFF),
-      Color(0xFFFFFFFF),
+      Color(0xF5FFFFFF),
+      Color(0xD9F3F6FD),
     ],
   );
 
@@ -123,35 +137,34 @@ class AppColors {
       isDark(context) ? sky : lightPrimary;
 
   static Color expense(BuildContext context) =>
-      isDark(context) ? const Color(0xFFFF6B6B) : const Color(0xFFE11D48);
+      pastelRose;
 
   static Color profit(BuildContext context) =>
-      isDark(context) ? const Color(0xFF10B981) : const Color(0xFF059669);
+      pastelMint;
 
   static Color statusColor(BuildContext context, EventStatus status) {
-    final dark = isDark(context);
     switch (status) {
       case EventStatus.completed:
-        return dark ? const Color(0xFF10B981) : const Color(0xFF059669);
+        return pastelMint;
       case EventStatus.inProgress:
-        return dark ? sky : const Color(0xFF5F259F);
+        return sky;
       case EventStatus.paymentDue:
-        return dark ? const Color(0xFFFF9F43) : const Color(0xFFD97706);
+        return pastelPeach;
       case EventStatus.upcoming:
-        return dark ? sky : lightPrimary;
+        return sky;
       case EventStatus.cancelled:
-        return dark ? const Color(0xFFFF6B6B) : const Color(0xFFDC2626);
+        return pastelRose;
     }
   }
 
   static Color urgencyCritical(BuildContext context) =>
-      isDark(context) ? const Color(0xFFFF6B6B) : const Color(0xFFE11D48);
+      pastelRose;
 
   static Color urgencyWarning(BuildContext context) =>
-      isDark(context) ? const Color(0xFFFF9F43) : const Color(0xFFD97706);
+      pastelPeach;
 
   static Color urgencyNotice(BuildContext context) =>
-      isDark(context) ? sky : lightPrimary;
+      sky;
 
   static Color urgencyColor(BuildContext context, int daysLeft, int hoursLeft) {
     if (daysLeft == 0 && hoursLeft <= 24) {

@@ -47,56 +47,71 @@ class _AppShellState extends State<AppShell> {
 
     final isDark = context.isDark;
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return AppShellScope(
       switchTab: _switchTab,
       child: AuthBackground(
         child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // Persistent Kept-Alive Tab Stack with silky smooth cross-fade
-            for (int i = 0; i < _pages.length; i++)
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: i != _index,
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          body: Stack(
+            children: [
+              // Persistent Kept-Alive Tab Stack with silky smooth cross-fade
+              for (int i = 0; i < _pages.length; i++)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: i != _index,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeInOutCubic,
+                      opacity: i == _index ? 1.0 : 0.0,
+                      child: TickerMode(
+                        enabled: i == _index,
+                        child: _pages[i],
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Floating Frosted Liquid Glass Dock with Refraction & Pastel Vibrancy
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: bottomInset + 14,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOutCubic,
+                  offset: keyboardVisible ? const Offset(0, 1.8) : Offset.zero,
                   child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 240),
-                    curve: Curves.easeInOutCubic,
-                    opacity: i == _index ? 1.0 : 0.0,
-                    child: TickerMode(
-                      enabled: i == _index,
-                      child: _pages[i],
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInOut,
+                    opacity: keyboardVisible ? 0.0 : 1.0,
+                    child: IgnorePointer(
+                      ignoring: keyboardVisible,
+                      child: Center(
+                        heightFactor: 1.0,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 460),
+                          child: _LiquidGlassDock(
+                            currentIndex: _index,
+                            onTabSelected: _switchTab,
+                            isDark: isDark,
+                            shootsIn7Days: shootsIn7Days,
+                            unreadAlerts: unreadAlerts,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-
-            // Floating Frosted Glass Dock
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: bottomInset + 14,
-              child: Center(
-                heightFactor: 1.0,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 460),
-                  child: _LiquidGlassDock(
-                    currentIndex: _index,
-                    onTabSelected: _switchTab,
-                    isDark: isDark,
-                    shootsIn7Days: shootsIn7Days,
-                    unreadAlerts: unreadAlerts,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _LiquidGlassDock extends StatelessWidget {
@@ -121,25 +136,47 @@ class _LiquidGlassDock extends StatelessWidget {
     return ClipRRect(
       borderRadius: radius,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
-          height: 64,
+          height: 66,
           decoration: BoxDecoration(
             borderRadius: radius,
-            color: isDark
-                ? AppColors.glassSurfaceDark.withValues(alpha: 0.90)
-                : Colors.white.withValues(alpha: 0.88),
+            gradient: isDark
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0x59232E44),
+                      Color(0x3B151B27),
+                    ],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xF2FFFFFF),
+                      Color(0xD9EEF2FF),
+                    ],
+                  ),
             border: Border.all(
-              color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
-              width: 0.8,
+              color: isDark ? const Color(0x38A5B4FC) : const Color(0x33818CF8),
+              width: 1.1,
             ),
             boxShadow: [
+              // Atmospheric soft depth shadow
               BoxShadow(
                 color: isDark
-                    ? Colors.black.withValues(alpha: 0.35)
-                    : const Color(0x120F172A),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
+                    ? Colors.black.withValues(alpha: 0.45)
+                    : const Color(0x140F172A),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
+              ),
+              // Pastel periwinkle ambient refraction glow
+              BoxShadow(
+                color: AppColors.sky.withValues(alpha: isDark ? 0.22 : 0.16),
+                blurRadius: 24,
+                offset: const Offset(0, 4),
+                spreadRadius: -2,
               ),
             ],
           ),
@@ -260,7 +297,7 @@ class _DockItemState extends State<_DockItem>
   @override
   Widget build(BuildContext context) {
     final activeColor =
-        widget.isDark ? AppColors.sky : AppColors.lightPrimary;
+        widget.isDark ? const Color(0xFFA5B4FC) : AppColors.sky;
     final inactiveColor =
         widget.isDark ? AppColors.muted : AppColors.lightTextMuted;
 
@@ -278,17 +315,35 @@ class _DockItemState extends State<_DockItem>
               padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                color: widget.isSelected
-                    ? activeColor.withValues(
-                        alpha: widget.isDark ? 0.16 : 0.12)
-                    : Colors.transparent,
+                gradient: widget.isSelected
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.sky.withValues(
+                              alpha: widget.isDark ? 0.32 : 0.22),
+                          AppColors.pastelPeach.withValues(
+                              alpha: widget.isDark ? 0.20 : 0.14),
+                        ],
+                      )
+                    : null,
                 border: Border.all(
                   color: widget.isSelected
-                      ? activeColor.withValues(
-                          alpha: widget.isDark ? 0.35 : 0.25)
+                      ? AppColors.sky.withValues(
+                          alpha: widget.isDark ? 0.60 : 0.45)
                       : Colors.transparent,
-                  width: 1.1,
+                  width: 1.2,
                 ),
+                boxShadow: widget.isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.sky.withValues(
+                              alpha: widget.isDark ? 0.28 : 0.18),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Center(
                 child: FittedBox(
@@ -323,16 +378,14 @@ class _DockItemState extends State<_DockItem>
                                 height: 8,
                                 decoration: BoxDecoration(
                                   color: widget.isUrgentBadge
-                                      ? AppColors.urgencyWarning(context)
-                                      : AppColors.urgencyCritical(context),
+                                      ? AppColors.pastelPeach
+                                      : AppColors.pastelRose,
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
                                       color: (widget.isUrgentBadge
-                                              ? AppColors.urgencyWarning(
-                                                  context)
-                                              : AppColors.urgencyCritical(
-                                                  context))
+                                              ? AppColors.pastelPeach
+                                              : AppColors.pastelRose)
                                           .withValues(alpha: 0.7),
                                       blurRadius: 6,
                                     ),
@@ -347,7 +400,9 @@ class _DockItemState extends State<_DockItem>
                         duration: const Duration(milliseconds: 200),
                         style: TextStyle(
                           color: widget.isSelected
-                              ? activeColor
+                              ? (widget.isDark
+                                  ? const Color(0xFFF8FAFC)
+                                  : AppColors.lightTextMain)
                               : inactiveColor,
                           fontSize: 10,
                           fontWeight: widget.isSelected

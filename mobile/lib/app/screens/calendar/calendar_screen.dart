@@ -153,7 +153,12 @@ class _CalendarScreenState extends State<CalendarScreen>
               ),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    4,
+                    16,
+                    130 + MediaQuery.paddingOf(context).bottom,
+                  ),
                   children: [
                     // Calendar Card
                     FadeTransition(
@@ -496,7 +501,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                 style: TextStyle(
                   color: amountDue > 0
                       ? AppColors.urgencyWarning(context)
-                      : const Color(0xFF10B981),
+                      : AppColors.pastelMint,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),

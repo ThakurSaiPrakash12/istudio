@@ -13,8 +13,8 @@ class StudioCard extends StatefulWidget {
     this.borderRadius = 22.0,
     this.customBorder,
     this.gradient,
-    this.blurSigma = 0.0,
-    this.enableSpecularRim = false,
+    this.blurSigma = 16.0,
+    this.enableSpecularRim = true,
     this.animateOnAppear = false,
     this.appearDelay = Duration.zero,
   });
@@ -65,20 +65,31 @@ class _StudioCardState extends State<StudioCard>
     final cardDecoration = BoxDecoration(
       color: isDark ? AppColors.glassCardDark : AppColors.lightCard,
       borderRadius: radius,
-      gradient: widget.gradient,
+      gradient: widget.gradient ??
+          (isDark
+              ? AppColors.glassCardGradientDark
+              : AppColors.glassCardGradientLight),
       border: widget.customBorder ??
           Border.all(
             color: isDark ? AppColors.glassBorderDark : AppColors.lightBorder,
-            width: 0.8,
+            width: 0.9,
           ),
       boxShadow: [
+        // Ambient soft depth shadow
         BoxShadow(
           color: isDark
-              ? Colors.black.withValues(alpha: 0.25)
+              ? Colors.black.withValues(alpha: 0.35)
               : const Color(0x0A0F172A),
-          blurRadius: 12,
-          offset: const Offset(0, 3),
+          blurRadius: 18,
+          offset: const Offset(0, 6),
           spreadRadius: 0,
+        ),
+        // Subtle pastel chromatic vibrancy halo
+        BoxShadow(
+          color: (isDark ? AppColors.sky : AppColors.pastelPeach)
+              .withValues(alpha: isDark ? 0.07 : 0.05),
+          blurRadius: 20,
+          offset: const Offset(0, 2),
         ),
       ],
     );

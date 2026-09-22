@@ -281,8 +281,12 @@ class _ClientsScreenState extends State<ClientsScreen>
                         )
                       : ListView.separated(
                           key: const ValueKey('clients_list'),
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            4,
+                            16,
+                            130 + MediaQuery.paddingOf(context).bottom,
+                          ),
                           itemCount: filteredClients.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 10),

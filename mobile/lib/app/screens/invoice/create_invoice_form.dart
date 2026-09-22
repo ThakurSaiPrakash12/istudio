@@ -215,7 +215,12 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          130 + MediaQuery.paddingOf(context).bottom,
+        ),
         children: [
           _sectionTitle(context, 'Client Details'),
           const SizedBox(height: 12),
