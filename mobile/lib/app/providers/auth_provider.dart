@@ -1,25 +1,22 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/secure_vault_service.dart';
 import '../utils/validators.dart';
 
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({AuthService? authService})
-    : _authService = authService ?? AuthService() {
+  AuthProvider({AuthService? authService, SecureVaultService? vault})
+      : _authService = authService ?? AuthService(),
+        _vault = vault ?? SecureVaultService.instance {
     ApiService.onUnauthorized = handleUnauthorized;
   }
 
-  static const _tokenKey = 'lumen_auth_token';
-  static const _userKey = 'lumen_cached_user';
-  static const _logoKeyPrefix = 'lumen_cached_studio_logo_';
-
   final AuthService _authService;
-  static const _secureStorage = FlutterSecureStorage();
+  final SecureVaultService _vault;
 
   User? _user;
   String? _token;
@@ -36,62 +33,58 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> bootstrap() async {
     try {
+      // 1. One-time seamless migration of any existing unencrypted SharedPreferences data
       final prefs = await SharedPreferences.getInstance();
-      final storedToken = await _readToken(prefs);
-      final storedUserJson = prefs.getString(_userKey);
-      final tokenIsUsable =
-          storedToken != null &&
+      await _vault.migrateLegacyStorage(prefs);
+
+      // 2. Read from hardware-encrypted secure vault
+      final storedToken = await _vault.readToken();
+      final storedUser = await _vault.readUser();
+      final tokenIsUsable = storedToken != null &&
           storedToken.isNotEmpty &&
           !_isTokenExpired(storedToken);
 
-      // 1. Immediately restore cached session and logo so UI doesn't flicker or wait for cold start
+      // 3. Immediately restore cached session so UI doesn't flicker or wait
       if (tokenIsUsable) {
         _token = storedToken;
-        if (storedUserJson != null && storedUserJson.isNotEmpty) {
-          try {
-            _user = User.fromJson(
-              jsonDecode(storedUserJson) as Map<String, dynamic>,
-            );
-          } catch (_) {}
-        }
-        final storedLogo = _user == null
-            ? null
-            : prefs.getString('$_logoKeyPrefix${_user!.id}');
-        if (_user != null &&
-            _user!.logoUrl.isEmpty &&
-            storedLogo != null &&
-            storedLogo.isNotEmpty) {
-          _user = _user!.copyWith(logoUrl: storedLogo);
+        _user = storedUser;
+
+        if (_user != null && _user!.logoUrl.isEmpty) {
+          final storedLogo = await _vault.readStudioLogo(_user!.id);
+          if (storedLogo != null && storedLogo.isNotEmpty) {
+            _user = _user!.copyWith(logoUrl: storedLogo);
+          }
         }
       }
 
       _isBootstrapping = false;
       notifyListeners();
 
-      // 2. Fetch fresh profile in background without logging user out if server is sleeping
+      // 4. Fetch fresh profile in background without logging user out if server is sleeping
       if (tokenIsUsable) {
         try {
-          final user = await _authService.me(storedToken);
-          _user = user;
-          await prefs.setString(_userKey, jsonEncode(user.toJson()));
-          await _persistLogo(prefs, user);
+          final freshUser = await _authService.me(storedToken);
+          _user = freshUser;
+          await _vault.writeUser(freshUser);
+          if (freshUser.logoUrl.isNotEmpty) {
+            await _vault.writeStudioLogo(freshUser.id, freshUser.logoUrl);
+          }
           notifyListeners();
         } on ApiException catch (error) {
           if (error.statusCode == 401) {
             await _clearSession();
             notifyListeners();
           }
-          // If server is sleeping or network error, retain cached user session!
         } catch (_) {
-          // Server sleeping / cold start - retain cached user session
+          // Retain cached user session if offline or cold starting
         }
       }
+
       if (!tokenIsUsable && storedToken != null && storedToken.isNotEmpty) {
         await _clearSession();
         notifyListeners();
       }
     } catch (_) {
-      // SharedPreferences error fallback
       _isBootstrapping = false;
       notifyListeners();
     }
@@ -122,6 +115,50 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  Future<Map<String, dynamic>> sendSignupOtp({
+    required String username,
+    required String phone,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final normalized = Validators.normalizePhone(phone);
+      final res = await _authService.sendSignupOtp(
+        username: username.trim(),
+        phone: normalized,
+      );
+      return res;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      rethrow;
+    } catch (_) {
+      _errorMessage =
+          'Unable to send signup verification code. Please try again.';
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> verifySignupAndLogin({
+    required String username,
+    required String phone,
+    required String password,
+    required String otp,
+  }) async {
+    return _runAuth(() async {
+      final result = await _authService.verifySignupAndLogin(
+        username: username.trim(),
+        phone: Validators.normalizePhone(phone),
+        password: password,
+        otp: otp.trim(),
+      );
+      await _persistSession(result);
+    });
+  }
+
   Future<bool> updateProfile(Map<String, dynamic> fields) async {
     if (_token == null) {
       _errorMessage = 'Please sign in before updating your profile.';
@@ -133,16 +170,11 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _user = await _authService.updateProfile(token: _token!, fields: fields);
-      final prefs = await SharedPreferences.getInstance();
       if (_user != null) {
-        await prefs.setString(_userKey, jsonEncode(_user!.toJson()));
+        await _vault.writeUser(_user!);
         if (fields.containsKey('logoUrl')) {
           final newLogo = fields['logoUrl'] as String? ?? '';
-          if (newLogo.isEmpty) {
-            await prefs.remove('$_logoKeyPrefix${_user!.id}');
-          } else {
-            await prefs.setString('$_logoKeyPrefix${_user!.id}', newLogo);
-          }
+          await _vault.writeStudioLogo(_user!.id, newLogo);
         }
       }
       return true;
@@ -163,10 +195,8 @@ class AuthProvider extends ChangeNotifier {
       _user = _user!.copyWith(logoUrl: logoUrl);
       notifyListeners();
       final user = _user!;
-      SharedPreferences.getInstance().then((prefs) async {
-        await _persistLogo(prefs, user);
-        await prefs.setString(_userKey, jsonEncode(user.toJson()));
-      });
+      _vault.writeStudioLogo(user.id, logoUrl);
+      _vault.writeUser(user);
     }
   }
 
@@ -186,9 +216,10 @@ class AuthProvider extends ChangeNotifier {
         filename: filename,
       );
       _user = updatedUser;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userKey, jsonEncode(updatedUser.toJson()));
-      await _persistLogo(prefs, updatedUser);
+      await _vault.writeUser(updatedUser);
+      if (updatedUser.logoUrl.isNotEmpty) {
+        await _vault.writeStudioLogo(updatedUser.id, updatedUser.logoUrl);
+      }
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -219,6 +250,78 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>> sendForgotPasswordOtp(String phone) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final normalized = Validators.normalizePhone(phone);
+      final res = await _authService.sendForgotPasswordOtp(normalized);
+      return res;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      rethrow;
+    } catch (_) {
+      _errorMessage =
+          'Unable to send verification code. Please check your connection.';
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String> verifyForgotPasswordOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final normalized = Validators.normalizePhone(phone);
+      final token = await _authService.verifyForgotPasswordOtp(
+        phone: normalized,
+        otp: otp.trim(),
+      );
+      return token;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      rethrow;
+    } catch (_) {
+      _errorMessage = 'Invalid or expired code. Please try again.';
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authService.resetPassword(
+        resetToken: resetToken,
+        newPassword: newPassword,
+      );
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to reset password. Please try again.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> _runAuth(Future<void> Function() action) async {
     _isLoading = true;
     _errorMessage = null;
@@ -240,41 +343,19 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _persistSession(AuthResult result) async {
-    final prefs = await SharedPreferences.getInstance();
-    await _secureStorage.write(key: _tokenKey, value: result.token);
-    await prefs.remove(_tokenKey);
-    await prefs.setString(_userKey, jsonEncode(result.user.toJson()));
-    await _persistLogo(prefs, result.user);
+    await _vault.writeToken(result.token);
+    await _vault.writeUser(result.user);
+    if (result.user.logoUrl.isNotEmpty) {
+      await _vault.writeStudioLogo(result.user.id, result.user.logoUrl);
+    }
     _token = result.token;
     _user = result.user;
   }
 
   Future<void> _clearSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    await _secureStorage.delete(key: _tokenKey);
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_userKey);
+    await _vault.clearAllSessionData();
     _token = null;
     _user = null;
-  }
-
-  Future<String?> _readToken(SharedPreferences prefs) async {
-    try {
-      final token = await _secureStorage
-          .read(key: _tokenKey)
-          .timeout(const Duration(milliseconds: 250));
-      if (token != null && token.isNotEmpty) return token;
-    } catch (_) {
-      // Platform secure storage may be unavailable in desktop/test environments.
-    }
-    final legacyToken = prefs.getString(_tokenKey);
-    if (legacyToken != null && legacyToken.isNotEmpty) {
-      try {
-        await _secureStorage.write(key: _tokenKey, value: legacyToken);
-        await prefs.remove(_tokenKey);
-      } catch (_) {}
-    }
-    return legacyToken;
   }
 
   bool _isTokenExpired(String token) {
@@ -290,15 +371,6 @@ class AuthProvider extends ChangeNotifier {
           expiresAt <= DateTime.now().millisecondsSinceEpoch ~/ 1000;
     } catch (_) {
       return true;
-    }
-  }
-
-  Future<void> _persistLogo(SharedPreferences prefs, User user) async {
-    final key = '$_logoKeyPrefix${user.id}';
-    if (user.logoUrl.isEmpty) {
-      await prefs.remove(key);
-    } else {
-      await prefs.setString(key, user.logoUrl);
     }
   }
 }

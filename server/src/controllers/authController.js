@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 
 const userRepository = require('../repositories/userRepository');
+const otpService = require('../services/otpService');
 const { uploadToCloudinary } = require('../config/cloudinary');
 
 function normalizePhone(value = '') {
@@ -283,11 +284,178 @@ async function uploadLogo(req, res) {
   }
 }
 
+async function forgotPasswordSendOtp(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const phone = normalizePhone(req.body.phone);
+    const user = await userRepository.findByPhone(phone);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No registered studio account found with this phone number.',
+      });
+    }
+
+    const result = await otpService.generateAndSendOtp(phone);
+    return res.json(result);
+  } catch (error) {
+    console.error('forgotPasswordSendOtp error:', error);
+    const status = error.statusCode || 500;
+    return res.status(status).json({
+      success: false,
+      message: error.message || 'Unable to send OTP at this time.',
+    });
+  }
+}
+
+async function forgotPasswordVerifyOtp(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const phone = normalizePhone(req.body.phone);
+    const otp = String(req.body.otp || '').trim();
+
+    const result = await otpService.verifyOtpAndIssueResetToken(phone, otp);
+    return res.json(result);
+  } catch (error) {
+    console.error('forgotPasswordVerifyOtp error:', error);
+    const status = error.statusCode || 400;
+    return res.status(status).json({
+      success: false,
+      message: error.message || 'Unable to verify OTP.',
+    });
+  }
+}
+
+async function forgotPasswordReset(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const resetToken = String(req.body.resetToken || '').trim();
+    const newPassword = String(req.body.newPassword || '');
+
+    const phone = otpService.verifyResetToken(resetToken);
+    const user = await userRepository.findByPhone(phone);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found.',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await userRepository.updateUser(user._id || user.id, { password: hashedPassword });
+
+    return res.json({
+      success: true,
+      message: 'Password reset successfully. You can now sign in with your new password.',
+    });
+  } catch (error) {
+    console.error('forgotPasswordReset error:', error);
+    const status = error.statusCode || 500;
+    return res.status(status).json({
+      success: false,
+      message: error.message || 'Unable to reset password.',
+    });
+  }
+}
+
+async function signupSendOtp(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const username = String(req.body.username || '').trim();
+    const phone = normalizePhone(req.body.phone);
+
+    const existingPhone = await userRepository.findByPhone(phone);
+    if (existingPhone) {
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this phone number already exists.',
+      });
+    }
+
+    const existingUsername = await userRepository.findByUsername(username);
+    if (existingUsername) {
+      return res.status(409).json({
+        success: false,
+        message: 'That username is already taken.',
+      });
+    }
+
+    const result = await otpService.generateAndSendOtp(phone);
+    return res.json(result);
+  } catch (error) {
+    console.error('signupSendOtp error:', error);
+    const status = error.statusCode || 500;
+    return res.status(status).json({
+      success: false,
+      message: error.message || 'Unable to send signup verification code.',
+    });
+  }
+}
+
+async function signupVerify(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const username = String(req.body.username || '').trim();
+    const phone = normalizePhone(req.body.phone);
+    const password = String(req.body.password || '');
+    const otp = String(req.body.otp || '').trim();
+
+    const existingPhone = await userRepository.findByPhone(phone);
+    if (existingPhone) {
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this phone number already exists.',
+      });
+    }
+
+    const existingUsername = await userRepository.findByUsername(username);
+    if (existingUsername) {
+      return res.status(409).json({
+        success: false,
+        message: 'That username is already taken.',
+      });
+    }
+
+    // Verify OTP
+    await otpService.verifyOtpForPhone(phone, otp);
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await userRepository.createUser({
+      username,
+      phone,
+      password: hashedPassword,
+    });
+
+    return res.status(201).json({
+      success: true,
+      token: signToken(user),
+      user: user.toPublicJSON(),
+    });
+  } catch (error) {
+    console.error('signupVerify error:', error);
+    const status = error.statusCode || 400;
+    return res.status(status).json({
+      success: false,
+      message: error.message || 'Unable to verify code and complete signup.',
+    });
+  }
+}
+
 module.exports = {
   signup,
+  signupSendOtp,
+  signupVerify,
   login,
   me,
   updateProfile,
   uploadLogo,
   normalizePhone,
+  forgotPasswordSendOtp,
+  forgotPasswordVerifyOtp,
+  forgotPasswordReset,
 };

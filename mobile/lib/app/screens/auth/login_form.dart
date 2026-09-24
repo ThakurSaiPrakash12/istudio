@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../theme/app_colors.dart';
 import '../../utils/validators.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_text_field.dart';
+import 'forgot_password_sheet.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({
@@ -70,7 +72,32 @@ class _LoginFormState extends State<LoginForm> {
               validator: Validators.password,
               onFieldSubmitted: (_) => _submit(),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  ForgotPasswordSheet.show(
+                    context,
+                    initialPhone: _phoneController.text,
+                  );
+                },
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: AppColors.sky,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                ),
+                child: const Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             StudioButton(
               label: 'Sign in',
               isLoading: widget.isLoading,

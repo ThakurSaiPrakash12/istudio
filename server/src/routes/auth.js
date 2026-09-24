@@ -5,9 +5,14 @@ const {
   login,
   me,
   signup,
+  signupSendOtp,
+  signupVerify,
   updateProfile,
   uploadLogo,
   normalizePhone,
+  forgotPasswordSendOtp,
+  forgotPasswordVerifyOtp,
+  forgotPasswordReset,
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/auth');
 const {
@@ -25,21 +30,40 @@ const phoneRule = body('phone')
   .isNumeric()
   .withMessage('Enter a valid 10-digit phone number');
 
+const usernameRule = body('username')
+  .trim()
+  .isLength({ min: 3, max: 24 })
+  .withMessage('Username must be 3-24 characters')
+  .matches(/^[A-Za-z0-9_]+$/)
+  .withMessage('Username can only include letters, numbers, and underscores');
+
+const passwordRule = body('password')
+  .isLength({ min: 8 })
+  .withMessage('Password must be at least 8 characters');
+
+const otpRule = body('otp')
+  .trim()
+  .isLength({ min: 6, max: 6 })
+  .withMessage('Enter the 6-digit verification code')
+  .isNumeric()
+  .withMessage('OTP must be numbers only');
+
 router.post(
   '/signup',
-  [
-    body('username')
-      .trim()
-      .isLength({ min: 3, max: 24 })
-      .withMessage('Username must be 3-24 characters')
-      .matches(/^[A-Za-z0-9_]+$/)
-      .withMessage('Username can only include letters, numbers, and underscores'),
-    phoneRule,
-    body('password')
-      .isLength({ min: 8 })
-      .withMessage('Password must be at least 8 characters'),
-  ],
+  [usernameRule, phoneRule, passwordRule],
   signup,
+);
+
+router.post(
+  '/signup/send-otp',
+  [usernameRule, phoneRule],
+  signupSendOtp,
+);
+
+router.post(
+  '/signup/verify',
+  [usernameRule, phoneRule, passwordRule, otpRule],
+  signupVerify,
 );
 
 router.post(
@@ -49,6 +73,37 @@ router.post(
     body('password').notEmpty().withMessage('Enter your password'),
   ],
   login,
+);
+
+router.post(
+  '/forgot-password/send-otp',
+  [phoneRule],
+  forgotPasswordSendOtp,
+);
+
+router.post(
+  '/forgot-password/verify-otp',
+  [
+    phoneRule,
+    body('otp')
+      .trim()
+      .isLength({ min: 6, max: 6 })
+      .withMessage('Enter the 6-digit verification code')
+      .isNumeric()
+      .withMessage('OTP must be numbers only'),
+  ],
+  forgotPasswordVerifyOtp,
+);
+
+router.post(
+  '/forgot-password/reset',
+  [
+    body('resetToken').notEmpty().withMessage('Verification session token is required'),
+    body('newPassword')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters'),
+  ],
+  forgotPasswordReset,
 );
 
 function handleLogoUpload(req, res, next) {
