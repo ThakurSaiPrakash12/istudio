@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 
@@ -93,11 +94,13 @@ class _StudioCardState extends State<StudioCard>
       ],
     );
 
-    Widget cardWidget = Container(
-      width: double.infinity,
-      padding: widget.padding,
-      decoration: cardDecoration,
-      child: widget.child,
+    Widget cardWidget = RepaintBoundary(
+      child: Container(
+        width: double.infinity,
+        padding: widget.padding,
+        decoration: cardDecoration,
+        child: widget.child,
+      ),
     );
 
     if (widget.blurSigma > 0) {
@@ -116,7 +119,10 @@ class _StudioCardState extends State<StudioCard>
     if (widget.onTap == null) return cardWidget;
 
     return GestureDetector(
-      onTapDown: (_) => _pressController.forward(),
+      onTapDown: (_) {
+        HapticFeedback.selectionClick();
+        _pressController.forward();
+      },
       onTapUp: (_) => _pressController.reverse(),
       onTapCancel: () => _pressController.reverse(),
       onTap: widget.onTap,

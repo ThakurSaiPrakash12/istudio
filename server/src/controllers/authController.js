@@ -328,19 +328,94 @@ async function forgotPasswordVerifyOtp(req, res) {
   }
 }
 
+async function forgotPasswordVerifyUsername(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const username = String(req.body.username || '').trim();
+    const user = await userRepository.findByUsername(username);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: `No studio account found with username "${username}".`,
+      });
+    }
+
+    const resetToken = jwt.sign(
+      {
+        id: (user._id || user.id).toString(),
+        username: user.username,
+        action: 'reset_password',
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' },
+    );
+
+    const phone = user.phone || '';
+    const maskedPhone =
+      phone.length >= 4
+        ? '•'.repeat(Math.max(0, phone.length - 4)) + phone.slice(-4)
+        : phone;
+
+    return res.json({
+      success: true,
+      message: 'Account verified successfully.',
+      username: user.username,
+      maskedPhone,
+      resetToken,
+    });
+  } catch (error) {
+    console.error('forgotPasswordVerifyUsername error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to verify username right now.',
+    });
+  }
+}
+
 async function forgotPasswordReset(req, res) {
   if (sendValidationError(req, res)) return;
 
   try {
+    const username = String(req.body.username || '').trim();
     const resetToken = String(req.body.resetToken || '').trim();
     const newPassword = String(req.body.newPassword || '');
 
-    const phone = otpService.verifyResetToken(resetToken);
-    const user = await userRepository.findByPhone(phone);
+    let user;
+
+    // 1. Try finding user directly by username if provided
+    if (username) {
+      user = await userRepository.findByUsername(username);
+    }
+
+    // 2. Try validating signed JWT resetToken if user not found yet
+    if (!user && resetToken) {
+      try {
+        const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+        if (decoded.id) {
+          user = await userRepository.findById(decoded.id);
+        } else if (decoded.username) {
+          user = await userRepository.findByUsername(decoded.username);
+        }
+      } catch (_) {
+        // Fallback to legacy token decode
+      }
+    }
+
+    // 3. Try legacy OTP resetToken (stores phone in otpStore)
+    if (!user && resetToken) {
+      try {
+        const phone = otpService.verifyResetToken(resetToken);
+        if (phone) {
+          user = await userRepository.findByPhone(phone);
+        }
+      } catch (_) {}
+    }
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Account not found.',
+        message: 'Account not found. Please verify your username again.',
       });
     }
 
@@ -458,4 +533,5 @@ module.exports = {
   forgotPasswordSendOtp,
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
+  forgotPasswordVerifyUsername,
 };

@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumen_studio/app/models/user.dart';
 import 'package:lumen_studio/app/services/crash_reporter.dart';
 import 'package:lumen_studio/app/widgets/error_boundary.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('Phase 1: CrashReporter & Telemetry Tests', () {

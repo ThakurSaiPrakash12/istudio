@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 
@@ -76,7 +77,12 @@ class _StudioButtonState extends State<StudioButton> {
       enabled: enabled,
       label: widget.label,
       child: GestureDetector(
-        onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapDown: enabled
+            ? (_) {
+                HapticFeedback.lightImpact();
+                setState(() => _pressed = true);
+              }
+            : null,
         onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
         onTapCancel: () => setState(() => _pressed = false),
         onTap: enabled ? widget.onPressed : null,

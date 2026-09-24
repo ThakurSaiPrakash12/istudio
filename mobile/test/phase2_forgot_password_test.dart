@@ -14,7 +14,7 @@ void main() {
           home: Scaffold(
             body: LoginForm(
               isLoading: false,
-              onSubmit: (_, __) async {},
+              onSubmit: (username, password) async {},
             ),
           ),
         ),
@@ -24,22 +24,22 @@ void main() {
       expect(forgotBtn, findsOneWidget);
     });
 
-    testWidgets('ForgotPasswordSheet displays step 1 phone validation correctly',
+    testWidgets('ForgotPasswordSheet displays step 1 username verification correctly',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: ChangeNotifierProvider(
               create: (_) => AuthProvider(),
-              child: const ForgotPasswordSheet(initialPhone: '9876543210'),
+              child: const ForgotPasswordSheet(initialUsername: 'studio_pro'),
             ),
           ),
         ),
       );
 
       expect(find.text('Reset Studio Password'), findsOneWidget);
-      expect(find.text('Send Verification Code'), findsOneWidget);
-      expect(find.text('9876543210'), findsOneWidget);
+      expect(find.text('Verify Username'), findsOneWidget);
+      expect(find.text('studio_pro'), findsOneWidget);
     });
   });
 }

@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
@@ -10,19 +8,31 @@ import '../../utils/validators.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_text_field.dart';
 
-enum _ResetStep { phone, otp, newPassword, success }
+enum _ResetStep { verifyUsername, newPassword, success }
 
 class ForgotPasswordSheet extends StatefulWidget {
-  const ForgotPasswordSheet({super.key, this.initialPhone});
+  const ForgotPasswordSheet({
+    super.key,
+    this.initialUsername,
+    this.initialPhone,
+  });
 
+  final String? initialUsername;
   final String? initialPhone;
 
-  static Future<bool?> show(BuildContext context, {String? initialPhone}) {
+  static Future<bool?> show(
+    BuildContext context, {
+    String? initialUsername,
+    String? initialPhone,
+  }) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ForgotPasswordSheet(initialPhone: initialPhone),
+      builder: (context) => ForgotPasswordSheet(
+        initialUsername: initialUsername,
+        initialPhone: initialPhone,
+      ),
     );
   }
 
@@ -31,23 +41,18 @@ class ForgotPasswordSheet extends StatefulWidget {
 }
 
 class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
-  _ResetStep _step = _ResetStep.phone;
+  _ResetStep _step = _ResetStep.verifyUsername;
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Step 1: Phone
-  final _phoneKey = GlobalKey<FormState>();
-  late final TextEditingController _phoneController;
-
-  // Step 2: OTP
-  final List<TextEditingController> _otpControllers =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
-  int _cooldownSeconds = 60;
-  Timer? _cooldownTimer;
+  // Step 1: Verify Username
+  final _usernameKey = GlobalKey<FormState>();
+  late final TextEditingController _usernameController;
+  String? _verifiedUsername;
   String? _verifiedResetToken;
+  String? _maskedPhone;
 
-  // Step 3: New Password
+  // Step 2: New Password
   final _passwordKey = GlobalKey<FormState>();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -55,40 +60,21 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
   @override
   void initState() {
     super.initState();
-    _phoneController = TextEditingController(text: widget.initialPhone ?? '');
+    _usernameController =
+        TextEditingController(text: widget.initialUsername ?? '');
   }
 
   @override
   void dispose() {
-    _cooldownTimer?.cancel();
-    _phoneController.dispose();
-    for (final c in _otpControllers) {
-      c.dispose();
-    }
-    for (final f in _otpFocusNodes) {
-      f.dispose();
-    }
+    _usernameController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _startCooldown([int seconds = 60]) {
-    _cooldownTimer?.cancel();
-    setState(() => _cooldownSeconds = seconds);
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_cooldownSeconds <= 1) {
-        timer.cancel();
-        setState(() => _cooldownSeconds = 0);
-      } else {
-        setState(() => _cooldownSeconds--);
-      }
-    });
-  }
-
-  Future<void> _handleSendOtp() async {
+  Future<void> _handleVerifyUsername() async {
     FocusScope.of(context).unfocus();
-    if (!(_phoneKey.currentState?.validate() ?? false)) return;
+    if (!(_usernameKey.currentState?.validate() ?? false)) return;
 
     setState(() {
       _isLoading = true;
@@ -97,74 +83,20 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
     final auth = context.read<AuthProvider>();
     try {
-      final res = await auth.sendForgotPasswordOtp(_phoneController.text);
-      final cd = (res['cooldownSeconds'] as num?)?.toInt() ?? 60;
-      final debugOtp = res['debugOtp'] as String?;
-      _startCooldown(cd);
+      final res = await auth.verifyForgotPasswordUsername(_usernameController.text);
+      if (!mounted) return;
       setState(() {
-        _step = _ResetStep.otp;
-      });
-      // Auto focus first OTP digit
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _otpFocusNodes[0].requestFocus();
-      });
-
-      if (debugOtp != null && debugOtp.isNotEmpty && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.sky,
-            duration: const Duration(seconds: 10),
-            content: Text('Your verification code: $debugOtp'),
-            action: SnackBarAction(
-              label: 'Auto-fill',
-              textColor: Colors.white,
-              onPressed: () {
-                for (int i = 0; i < 6 && i < debugOtp.length; i++) {
-                  _otpControllers[i].text = debugOtp[i];
-                }
-                _handleVerifyOtp();
-              },
-            ),
-          ),
-        );
-      }
-    } on ApiException catch (e) {
-      setState(() => _errorMessage = e.message);
-    } catch (_) {
-      setState(() =>
-          _errorMessage = 'Unable to send verification code. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _handleVerifyOtp() async {
-    FocusScope.of(context).unfocus();
-    final otp = _otpControllers.map((c) => c.text.trim()).join();
-    if (otp.length != 6) {
-      setState(() => _errorMessage = 'Please enter the complete 6-digit code.');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final auth = context.read<AuthProvider>();
-    try {
-      final token = await auth.verifyForgotPasswordOtp(
-        phone: _phoneController.text,
-        otp: otp,
-      );
-      _verifiedResetToken = token;
-      setState(() {
+        _verifiedUsername =
+            (res['username'] as String?)?.trim() ?? _usernameController.text.trim();
+        _verifiedResetToken = res['resetToken'] as String?;
+        _maskedPhone = res['maskedPhone'] as String?;
         _step = _ResetStep.newPassword;
       });
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = 'Invalid or expired code. Please try again.');
+      setState(() => _errorMessage =
+          'Unable to verify username. Please check your connection.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -178,11 +110,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       return;
     }
 
-    if (_verifiedResetToken == null) {
-      setState(() => _errorMessage = 'Session expired. Please request a new code.');
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -190,7 +117,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
     final auth = context.read<AuthProvider>();
     final success = await auth.resetPassword(
-      resetToken: _verifiedResetToken!,
+      username: _verifiedUsername,
+      resetToken: _verifiedResetToken,
       newPassword: _newPasswordController.text,
     );
 
@@ -205,30 +133,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
         setState(() =>
             _errorMessage = auth.errorMessage ?? 'Unable to reset password.');
       }
-    }
-  }
-
-  void _onOtpChanged(int index, String value) {
-    if (value.length > 1) {
-      // Pasted full 6-digit code
-      final digits = value.replaceAll(RegExp(r'\D'), '');
-      for (int i = 0; i < 6 && i < digits.length; i++) {
-        _otpControllers[i].text = digits[i];
-      }
-      if (digits.length >= 6) {
-        _otpFocusNodes[5].unfocus();
-        _handleVerifyOtp();
-      } else {
-        _otpFocusNodes[digits.length].requestFocus();
-      }
-      return;
-    }
-
-    if (value.isNotEmpty && index < 5) {
-      _otpFocusNodes[index + 1].requestFocus();
-    }
-    if (_otpControllers.every((c) => c.text.isNotEmpty)) {
-      _handleVerifyOtp();
     }
   }
 
@@ -276,7 +180,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             // Error Banner if present
             if (_errorMessage != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.redAccent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
@@ -286,7 +191,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, color: Colors.redAccent, size: 18),
+                    const Icon(Icons.info_outline,
+                        color: Colors.redAccent, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -305,19 +211,21 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             ],
 
             // Step Content
-            if (_step == _ResetStep.phone) _buildPhoneStep(isDark),
-            if (_step == _ResetStep.otp) _buildOtpStep(isDark),
-            if (_step == _ResetStep.newPassword) _buildPasswordStep(isDark),
-            if (_step == _ResetStep.success) _buildSuccessStep(isDark),
+            if (_step == _ResetStep.verifyUsername)
+              _buildVerifyUsernameStep(isDark),
+            if (_step == _ResetStep.newPassword)
+              _buildPasswordStep(isDark),
+            if (_step == _ResetStep.success)
+              _buildSuccessStep(isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPhoneStep(bool isDark) {
+  Widget _buildVerifyUsernameStep(bool isDark) {
     return Form(
-      key: _phoneKey,
+      key: _usernameKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -347,9 +255,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'We will send a 6-digit verification code.',
+                      'Enter your username to verify your account.',
                       style: TextStyle(
-                        color: isDark ? AppColors.muted : AppColors.lightTextMuted,
+                        color:
+                            isDark ? AppColors.muted : AppColors.lightTextMuted,
                         fontSize: 12.5,
                       ),
                     ),
@@ -358,155 +267,24 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 22),
           StudioTextField(
-            label: 'Registered phone number',
-            hint: '10-digit mobile number',
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            prefixIcon: Icons.phone_outlined,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(10),
-            ],
-            validator: Validators.phone,
+            label: 'Username',
+            hint: 'Enter your studio username',
+            controller: _usernameController,
+            prefixIcon: Icons.alternate_email_rounded,
+            autofillHints: const [AutofillHints.username],
+            validator: Validators.username,
+            onFieldSubmitted: (_) => _handleVerifyUsername(),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 22),
           StudioButton(
-            label: 'Send Verification Code',
+            label: 'Verify Username',
             isLoading: _isLoading,
-            onPressed: _isLoading ? null : _handleSendOtp,
+            onPressed: _isLoading ? null : _handleVerifyUsername,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildOtpStep(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Verify Your Number',
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.lightTextMain,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Code sent to +91 ${_phoneController.text}',
-                  style: TextStyle(
-                    color: isDark ? AppColors.muted : AppColors.lightTextMuted,
-                    fontSize: 12.5,
-                  ),
-                ),
-              ],
-            ),
-            TextButton(
-              onPressed: () => setState(() => _step = _ResetStep.phone),
-              child: const Text('Edit Phone', style: TextStyle(fontSize: 12)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-
-        // 6 Discrete PIN Boxes
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(6, (index) {
-            return SizedBox(
-              width: 44,
-              height: 52,
-              child: KeyboardListener(
-                focusNode: FocusNode(),
-                onKeyEvent: (event) {
-                  if (event is KeyDownEvent &&
-                      event.logicalKey == LogicalKeyboardKey.backspace &&
-                      _otpControllers[index].text.isEmpty &&
-                      index > 0) {
-                    _otpFocusNodes[index - 1].requestFocus();
-                  }
-                },
-                child: TextField(
-                  controller: _otpControllers[index],
-                  focusNode: _otpFocusNodes[index],
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  maxLength: 1,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.lightTextMain,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    counterText: '',
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.glassInnerDark
-                        : AppColors.lightInputFill,
-                    contentPadding: EdgeInsets.zero,
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: isDark
-                            ? AppColors.glassBorderDark
-                            : AppColors.lightBorder,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppColors.sky,
-                        width: 1.8,
-                      ),
-                    ),
-                  ),
-                  onChanged: (val) => _onOtpChanged(index, val),
-                ),
-              ),
-            );
-          }),
-        ),
-        const SizedBox(height: 20),
-
-        // Resend Timer
-        Center(
-          child: _cooldownSeconds > 0
-              ? Text(
-                  'Resend code in ${_cooldownSeconds}s',
-                  style: TextStyle(
-                    color: isDark ? AppColors.muted : AppColors.lightTextMuted,
-                    fontSize: 12.5,
-                  ),
-                )
-              : TextButton.icon(
-                  onPressed: _isLoading ? null : _handleSendOtp,
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text(
-                    'Resend Code',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-        ),
-        const SizedBox(height: 20),
-        StudioButton(
-          label: 'Verify Code',
-          isLoading: _isLoading,
-          onPressed: _isLoading ? null : _handleVerifyOtp,
-        ),
-      ],
     );
   }
 
@@ -516,6 +294,69 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Verified user badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.pastelMint.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AppColors.pastelMint.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.verified_user_rounded,
+                  color: AppColors.pastelMint,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Verified: @${_verifiedUsername ?? ''}',
+                        style: TextStyle(
+                          color:
+                              isDark ? Colors.white : AppColors.lightTextMain,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                      if (_maskedPhone != null && _maskedPhone!.isNotEmpty)
+                        Text(
+                          'Linked phone: $_maskedPhone',
+                          style: TextStyle(
+                            color: isDark
+                                ? AppColors.muted
+                                : AppColors.lightTextMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          setState(() {
+                            _step = _ResetStep.verifyUsername;
+                            _errorMessage = null;
+                          });
+                        },
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: AppColors.sky,
+                  ),
+                  child: const Text('Change'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
           Text(
             'Create New Password',
             style: TextStyle(
@@ -526,7 +367,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           ),
           const SizedBox(height: 2),
           Text(
-            'Enter a secure password for your studio account.',
+            'Enter a secure new password for your studio account.',
             style: TextStyle(
               color: isDark ? AppColors.muted : AppColors.lightTextMuted,
               fontSize: 12.5,
@@ -559,10 +400,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               }
               return null;
             },
+            onFieldSubmitted: (_) => _handleResetPassword(),
           ),
           const SizedBox(height: 24),
           StudioButton(
-            label: 'Update Password',
+            label: 'Change Password',
             isLoading: _isLoading,
             onPressed: _isLoading ? null : _handleResetPassword,
           ),
@@ -573,7 +415,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
   Widget _buildSuccessStep(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -595,7 +437,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Password Updated!',
+            'Password Changed!',
             style: TextStyle(
               color: isDark ? Colors.white : AppColors.lightTextMain,
               fontSize: 19,
@@ -604,12 +446,18 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           ),
           const SizedBox(height: 6),
           Text(
-            'You can now sign in with your new password.',
+            'Your password has been successfully updated.\nYou can now sign in with your new password.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isDark ? AppColors.muted : AppColors.lightTextMuted,
               fontSize: 13,
+              height: 1.4,
             ),
+          ),
+          const SizedBox(height: 20),
+          StudioButton(
+            label: 'Back to Sign In',
+            onPressed: () => Navigator.of(context).pop(true),
           ),
         ],
       ),

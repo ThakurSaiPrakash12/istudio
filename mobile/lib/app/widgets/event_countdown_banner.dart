@@ -46,8 +46,9 @@ class EventCountdownBanner extends StatelessWidget {
 
     final radius = BorderRadius.circular(32);
 
-    return Container(
-      width: double.infinity,
+    return RepaintBoundary(
+      child: Container(
+        width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: radius,
         gradient: isDark
@@ -322,8 +323,9 @@ class EventCountdownBanner extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTimerUnit(
     BuildContext context, {

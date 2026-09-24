@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -220,6 +221,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                                     .withValues(alpha: 0.4),
                           ),
                           onSelected: (_) {
+                            HapticFeedback.selectionClick();
                             setState(() => _activeFilter = filter);
                           },
                         ),

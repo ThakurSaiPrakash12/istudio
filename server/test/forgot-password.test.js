@@ -67,9 +67,53 @@ async function runTests() {
   const updatedUser = await userRepository.findByPhone(testPhone, { withPassword: true });
   const isMatch = await bcrypt.compare(newPassword, updatedUser.password);
   assert.strictEqual(isMatch, true, 'User should authenticate with new password');
-  console.log('✓ Password reset persisted and verified');
+  // Test 7: Verify Username directly without OTP
+  const authController = require('../src/controllers/authController');
+  
+  // 7a. Non-existent username
+  let mockRes = {
+    statusCode: 200,
+    status(code) { this.statusCode = code; return this; },
+    json(data) { this.data = data; return this; }
+  };
+  await authController.forgotPasswordVerifyUsername({ body: { username: 'non_existent_studio_xyz' } }, mockRes);
+  assert.strictEqual(mockRes.statusCode, 404);
+  console.log('✓ Non-existent username correctly rejected (404)');
 
-  console.log('All backend Forgot Password & OTP tests passed successfully!');
+  // 7b. Existing username verification
+  mockRes = {
+    statusCode: 200,
+    status(code) { this.statusCode = code; return this; },
+    json(data) { this.data = data; return this; }
+  };
+  await authController.forgotPasswordVerifyUsername({ body: { username: 'test_photographer' } }, mockRes);
+  assert.strictEqual(mockRes.data.success, true);
+  assert.strictEqual(mockRes.data.username, 'test_photographer');
+  assert(mockRes.data.resetToken, 'Should return reset token');
+  console.log('✓ Existing username verified without OTP');
+
+  // 7c. Reset password using username directly
+  const finalPassword = 'DirectPassword789';
+  mockRes = {
+    statusCode: 200,
+    status(code) { this.statusCode = code; return this; },
+    json(data) { this.data = data; return this; }
+  };
+  await authController.forgotPasswordReset({
+    body: {
+      username: 'test_photographer',
+      newPassword: finalPassword,
+    }
+  }, mockRes);
+  assert.strictEqual(mockRes.data.success, true);
+
+  const finalUser = await userRepository.findByUsername('test_photographer');
+  const userWithPw = await userRepository.findByPhone(finalUser.phone, { withPassword: true });
+  const isFinalMatch = await bcrypt.compare(finalPassword, userWithPw.password);
+  assert.strictEqual(isFinalMatch, true, 'User password reset via username succeeds');
+  console.log('✓ Password reset directly via username verified');
+
+  console.log('All backend Forgot Password tests passed successfully!');
 }
 
 runTests().catch((err) => {

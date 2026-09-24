@@ -76,11 +76,17 @@ class _LoginFormState extends State<LoginForm> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {
-                  ForgotPasswordSheet.show(
-                    context,
-                    initialPhone: _phoneController.text,
-                  );
+                onPressed: () async {
+                  final reset = await ForgotPasswordSheet.show(context);
+                  if (reset == true && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Password updated! Please sign in with your new password.',
+                        ),
+                      ),
+                    );
+                  }
                 },
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,

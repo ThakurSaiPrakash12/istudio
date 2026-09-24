@@ -250,6 +250,27 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>> verifyForgotPasswordUsername(String username) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final res =
+          await _authService.verifyForgotPasswordUsername(username.trim());
+      return res;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      rethrow;
+    } catch (_) {
+      _errorMessage =
+          'Unable to verify username. Please check your connection.';
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<Map<String, dynamic>> sendForgotPasswordOtp(String phone) async {
     _isLoading = true;
     _errorMessage = null;
@@ -298,7 +319,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> resetPassword({
-    required String resetToken,
+    String? resetToken,
+    String? username,
     required String newPassword,
   }) async {
     _isLoading = true;
@@ -307,6 +329,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.resetPassword(
         resetToken: resetToken,
+        username: username,
         newPassword: newPassword,
       );
       return true;

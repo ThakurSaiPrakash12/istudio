@@ -13,6 +13,7 @@ const {
   forgotPasswordSendOtp,
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
+  forgotPasswordVerifyUsername,
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/auth');
 const {
@@ -76,6 +77,12 @@ router.post(
 );
 
 router.post(
+  '/forgot-password/verify-username',
+  [usernameRule],
+  forgotPasswordVerifyUsername,
+);
+
+router.post(
   '/forgot-password/send-otp',
   [phoneRule],
   forgotPasswordSendOtp,
@@ -98,7 +105,12 @@ router.post(
 router.post(
   '/forgot-password/reset',
   [
-    body('resetToken').notEmpty().withMessage('Verification session token is required'),
+    body('username').custom((val, { req }) => {
+      if (!val && !req.body.resetToken) {
+        throw new Error('Username or verification session is required');
+      }
+      return true;
+    }),
     body('newPassword')
       .isLength({ min: 8 })
       .withMessage('Password must be at least 8 characters'),

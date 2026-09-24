@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -58,22 +59,29 @@ class MonthCalendar extends StatelessWidget {
           children: [
             IconButton(
               tooltip: 'Previous Year',
-              onPressed: () => onMonthChanged(
-                DateTime(visibleMonth.year - 1, visibleMonth.month),
-              ),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onMonthChanged(
+                  DateTime(visibleMonth.year - 1, visibleMonth.month),
+                );
+              },
               icon: Icon(Icons.first_page_rounded, color: textMuted, size: 20),
             ),
             IconButton(
               tooltip: 'Previous Month',
-              onPressed: () => onMonthChanged(
-                DateTime(visibleMonth.year, visibleMonth.month - 1),
-              ),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onMonthChanged(
+                  DateTime(visibleMonth.year, visibleMonth.month - 1),
+                );
+              },
               icon: Icon(Icons.chevron_left_rounded, color: textMain),
             ),
             Expanded(
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () async {
+                  HapticFeedback.selectionClick();
                   final picked = await showDatePicker(
                     context: context,
                     initialDate: selectedDay,
@@ -119,16 +127,22 @@ class MonthCalendar extends StatelessWidget {
             ),
             IconButton(
               tooltip: 'Next Month',
-              onPressed: () => onMonthChanged(
-                DateTime(visibleMonth.year, visibleMonth.month + 1),
-              ),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onMonthChanged(
+                  DateTime(visibleMonth.year, visibleMonth.month + 1),
+                );
+              },
               icon: Icon(Icons.chevron_right_rounded, color: textMain),
             ),
             IconButton(
               tooltip: 'Next Year',
-              onPressed: () => onMonthChanged(
-                DateTime(visibleMonth.year + 1, visibleMonth.month),
-              ),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onMonthChanged(
+                  DateTime(visibleMonth.year + 1, visibleMonth.month),
+                );
+              },
               icon: Icon(Icons.last_page_rounded, color: textMuted, size: 20),
             ),
           ],
@@ -182,7 +196,10 @@ class MonthCalendar extends StatelessWidget {
               label: DateFormat('EEEE d MMMM').format(day),
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () => onDaySelected(day),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onDaySelected(day);
+                },
                 child: _DayCell(
                   day: day,
                   isSelected: isSelected,

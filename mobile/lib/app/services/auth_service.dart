@@ -91,6 +91,13 @@ class AuthService {
     return _parseUser(payload);
   }
 
+  Future<Map<String, dynamic>> verifyForgotPasswordUsername(String username) async {
+    final payload = await _api.post('/auth/forgot-password/verify-username', {
+      'username': username.trim(),
+    });
+    return payload;
+  }
+
   Future<Map<String, dynamic>> sendForgotPasswordOtp(String phone) async {
     final payload = await _api.post('/auth/forgot-password/send-otp', {
       'phone': phone,
@@ -114,13 +121,20 @@ class AuthService {
   }
 
   Future<void> resetPassword({
-    required String resetToken,
+    String? resetToken,
+    String? username,
     required String newPassword,
   }) async {
-    await _api.post('/auth/forgot-password/reset', {
-      'resetToken': resetToken,
+    final body = <String, dynamic>{
       'newPassword': newPassword,
-    });
+    };
+    if (resetToken != null && resetToken.isNotEmpty) {
+      body['resetToken'] = resetToken;
+    }
+    if (username != null && username.isNotEmpty) {
+      body['username'] = username.trim();
+    }
+    await _api.post('/auth/forgot-password/reset', body);
   }
 
   User _parseUser(Map<String, dynamic> payload) {

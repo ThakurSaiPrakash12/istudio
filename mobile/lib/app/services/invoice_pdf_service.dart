@@ -39,6 +39,43 @@ class InvoicePdfService {
     required Invoice invoice,
     User? studio,
   }) async {
+    Uint8List? logoBytes;
+    if (studio != null && studio.logoUrl.trim().isNotEmpty) {
+      final resolvedLogo = ApiConfig.resolveMedia(studio.logoUrl.trim());
+      try {
+        if (resolvedLogo.startsWith('data:image/')) {
+          final base64Str = resolvedLogo.split(',').last;
+          logoBytes = base64Decode(base64Str);
+        } else if (resolvedLogo.startsWith('http://') ||
+            resolvedLogo.startsWith('https://')) {
+          try {
+            final res = await http.get(Uri.parse(resolvedLogo));
+            if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+              logoBytes = res.bodyBytes;
+            }
+          } catch (_) {}
+        }
+      } catch (e) {
+        debugPrint('Error loading logo in PDF: $e');
+      }
+    }
+
+    // Offload CPU-intensive PDF layout and compression to background isolate
+    return compute(
+      _generatePdfBytes,
+      _PdfParams(
+        invoice: invoice,
+        studio: studio,
+        logoBytes: logoBytes,
+      ),
+    );
+  }
+
+  static Future<Uint8List> _generatePdfBytes(_PdfParams params) async {
+    final invoice = params.invoice;
+    final studio = params.studio;
+    final logoBytes = params.logoBytes;
+
     final doc = pw.Document();
     final studioName = (studio?.displayStudioName.trim().isNotEmpty ?? false)
         ? studio!.displayStudioName
@@ -55,27 +92,8 @@ class InvoicePdfService {
     ].where((part) => part != null && part.trim().isNotEmpty).join(', ');
 
     pw.ImageProvider? logoProvider;
-    if (studio != null && studio.logoUrl.trim().isNotEmpty) {
-      final resolvedLogo = ApiConfig.resolveMedia(studio.logoUrl.trim());
-      try {
-        if (resolvedLogo.startsWith('data:image/')) {
-          final base64Str = resolvedLogo.split(',').last;
-          final bytes = base64Decode(base64Str);
-          logoProvider = pw.MemoryImage(bytes);
-        } else if (resolvedLogo.startsWith('http://') ||
-            resolvedLogo.startsWith('https://')) {
-          try {
-            logoProvider = await networkImage(resolvedLogo);
-          } catch (_) {
-            final res = await http.get(Uri.parse(resolvedLogo));
-            if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
-              logoProvider = pw.MemoryImage(res.bodyBytes);
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Error loading logo in PDF: $e');
-      }
+    if (logoBytes != null && logoBytes.isNotEmpty) {
+      logoProvider = pw.MemoryImage(logoBytes);
     }
 
     doc.addPage(
@@ -691,4 +709,16 @@ class InvoicePdfService {
       );
     }
   }
+}
+
+class _PdfParams {
+  final Invoice invoice;
+  final User? studio;
+  final Uint8List? logoBytes;
+
+  const _PdfParams({
+    required this.invoice,
+    this.studio,
+    this.logoBytes,
+  });
 }

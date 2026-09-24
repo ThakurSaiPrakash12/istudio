@@ -257,10 +257,10 @@ void main() {
 
         // Verify filter chips
         expect(find.text('All'), findsOneWidget);
-        expect(find.text('Upcoming'), findsOneWidget);
+        expect(find.text('Coming Up'), findsOneWidget);
         expect(find.text('Active'), findsOneWidget);
-        expect(find.text('Past'), findsOneWidget);
-        expect(find.text('Payment Due'), findsOneWidget);
+        expect(find.text('Done'), findsOneWidget);
+        expect(find.text('Due'), findsOneWidget);
 
         // Test Search by phone
         await tester.enterText(find.byType(TextField), '98234');
@@ -320,7 +320,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify EventDetailsScreen opened
-        expect(find.text('Event Financials'), findsOneWidget);
+        expect(find.text('Payment Details'), findsOneWidget);
         expect(find.text('Work Progress'), findsOneWidget);
       },
     );
@@ -339,6 +339,8 @@ void main() {
             providers: [
               ChangeNotifierProvider(create: (_) => AuthProvider()),
               ChangeNotifierProvider(create: (_) => _populatedProvider()),
+              ChangeNotifierProvider(create: (_) => InvoicesProvider()),
+              ChangeNotifierProvider(create: (_) => NotificationsProvider()),
             ],
             child: MaterialApp(
               theme: AppTheme.dark,
@@ -348,10 +350,9 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Upcoming Events'), findsOneWidget);
-        expect(find.textContaining('Add Event'), findsOneWidget);
-        expect(find.text('Past Events'), findsOneWidget);
-        expect(find.text('View all →'), findsNWidgets(2));
+        expect(find.text('Coming Up'), findsOneWidget);
+        expect(find.text('Done'), findsWidgets);
+        expect(find.text('See all'), findsNWidgets(2));
       },
     );
 
@@ -396,10 +397,10 @@ void main() {
         await tester.tap(find.text('Calendar').last);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
-        expect(find.text('Booked sessions & shoot schedule'), findsOneWidget);
+        expect(find.text('Booked sessions'), findsOneWidget);
 
-        // Tap Invoices
-        await tester.tap(find.text('Invoices').last);
+        // Tap Receipt
+        await tester.tap(find.text('Receipt').last);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
@@ -444,12 +445,12 @@ void main() {
         await tester.tap(find.text('Open Summary'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Monthly Financial Summary'), findsOneWidget);
+        expect(find.text('Monthly Earnings'), findsOneWidget);
         expect(find.text('August 2026'), findsOneWidget);
-        expect(find.text('Total Event Value'), findsOneWidget);
-        expect(find.text('Amount Received'), findsOneWidget);
-        expect(find.text('Total Expenditure'), findsOneWidget);
-        expect(find.text('Net Amount Left'), findsOneWidget);
+        expect(find.text('Total Booked'), findsOneWidget);
+        expect(find.text('Received'), findsOneWidget);
+        expect(find.text('Expenses'), findsOneWidget);
+        expect(find.text('Profit (Net)'), findsOneWidget);
 
         notifs.dispose();
       },

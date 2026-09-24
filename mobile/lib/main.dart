@@ -118,6 +118,7 @@ class IStudioApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: themeProvider.themeMode,
+            scrollBehavior: const FluidScrollBehavior(),
             builder: (context, childWidget) {
               return GlobalErrorBoundary(
                 child: childWidget ?? const SizedBox.shrink(),
@@ -128,6 +129,30 @@ class IStudioApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// Universal 120Hz-tuned fluid scrolling behavior:
+/// - Smooth bouncing scroll physics across Android, iOS, and all platforms
+/// - Eliminates rigid clamping and jarring edge stops
+/// - Delivers natural rubber-band momentum so list motion feels weightless
+class FluidScrollBehavior extends MaterialScrollBehavior {
+  const FluidScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics(
+      parent: AlwaysScrollableScrollPhysics(),
+    );
+  }
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
   }
 }
 

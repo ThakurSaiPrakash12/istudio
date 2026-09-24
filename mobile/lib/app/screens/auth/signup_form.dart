@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 
-import '../../providers/auth_provider.dart';
-import '../../services/api_service.dart';
 import '../../utils/validators.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_text_field.dart';
-import 'signup_otp_sheet.dart';
 
 class SignupForm extends StatefulWidget {
   const SignupForm({
@@ -34,7 +30,6 @@ class _SignupFormState extends State<SignupForm> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
-  bool _isSendingOtp = false;
 
   @override
   void dispose() {
@@ -56,39 +51,11 @@ class _SignupFormState extends State<SignupForm> {
       return;
     }
 
-    final auth = context.read<AuthProvider>();
-    setState(() => _isSendingOtp = true);
-    try {
-      final res = await auth.sendSignupOtp(
-        username: _usernameController.text,
-        phone: _phoneController.text,
-      );
-      final cd = (res['cooldownSeconds'] as num?)?.toInt() ?? 60;
-      final debugOtp = res['debugOtp'] as String?;
-      if (!mounted) return;
-      await SignupOtpSheet.show(
-        context,
-        username: _usernameController.text,
-        phone: _phoneController.text,
-        password: _passwordController.text,
-        initialCooldown: cd,
-        initialDebugOtp: debugOtp,
-      );
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to send verification code.')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSendingOtp = false);
-    }
+    await widget.onSubmit(
+      username: _usernameController.text,
+      phone: _phoneController.text,
+      password: _passwordController.text,
+    );
   }
 
   @override
@@ -147,8 +114,8 @@ class _SignupFormState extends State<SignupForm> {
             const SizedBox(height: 28),
             StudioButton(
               label: 'Create account',
-              isLoading: widget.isLoading || _isSendingOtp,
-              onPressed: (widget.isLoading || _isSendingOtp) ? null : _submit,
+              isLoading: widget.isLoading,
+              onPressed: widget.isLoading ? null : _submit,
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lumen_studio/main.dart';
@@ -8,10 +9,10 @@ void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
 
   Future<void> pumpAuth(WidgetTester tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const IStudioApp());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pumpAndSettle();
   }
 
   testWidgets('shows the login screen', (WidgetTester tester) async {

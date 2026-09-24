@@ -44,15 +44,17 @@ Widget buildSmoothPageTransition({
     end: 0.98,
   ).animate(secondaryCurve);
 
-  return SlideTransition(
-    position: slideOut,
-    child: ScaleTransition(
-      scale: scaleOut,
-      child: SlideTransition(
-        position: slideIn,
-        child: FadeTransition(
-          opacity: fadeIn,
-          child: child,
+  return RepaintBoundary(
+    child: SlideTransition(
+      position: slideOut,
+      child: ScaleTransition(
+        scale: scaleOut,
+        child: SlideTransition(
+          position: slideIn,
+          child: FadeTransition(
+            opacity: fadeIn,
+            child: child,
+          ),
         ),
       ),
     ),
