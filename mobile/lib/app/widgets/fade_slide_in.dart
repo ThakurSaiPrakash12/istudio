@@ -8,7 +8,7 @@ class FadeSlideIn extends StatelessWidget {
     super.key,
     required this.animation,
     required this.child,
-    this.beginOffset = const Offset(0, 0.06),
+    this.beginOffset = const Offset(0, 0.03),
   });
 
   final Animation<double> animation;

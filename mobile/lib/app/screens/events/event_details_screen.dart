@@ -14,6 +14,7 @@ import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/shimmer_loading.dart';
+import '../../widgets/animated_financial_text.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   const EventDetailsScreen({
@@ -628,8 +629,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                         color: dueColor.withValues(alpha: 0.5),
                       ),
                     ),
-                    child: Text(
-                      '${_currency.format(remaining)} Due',
+                    child: AnimatedFinancialText(
+                      amount: remaining,
+                      suffix: ' Due',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -742,8 +744,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerRight,
-                        child: Text(
-                          _currency.format(event.netProfit),
+                        child: AnimatedFinancialText(
+                          amount: event.netProfit,
                           style: GoogleFonts.plusJakartaSans(
                             color: event.netProfit >= 0
                                 ? AppColors.profit(context)

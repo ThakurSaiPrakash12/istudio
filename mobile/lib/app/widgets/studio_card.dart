@@ -118,6 +118,14 @@ class _StudioCardState extends State<StudioCard>
 
     if (widget.onTap == null) return cardWidget;
 
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: cardWidget,
+      );
+    }
+
     return GestureDetector(
       onTapDown: (_) {
         HapticFeedback.selectionClick();

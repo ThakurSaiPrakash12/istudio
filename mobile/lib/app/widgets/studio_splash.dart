@@ -33,7 +33,8 @@ class _StudioSplashState extends State<StudioSplash>
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.accessibleNavigationOf(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context);
     final reveal = reduceMotion
         ? const AlwaysStoppedAnimation<double>(1)
         : CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);

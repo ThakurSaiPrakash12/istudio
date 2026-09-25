@@ -14,6 +14,7 @@ import '../../widgets/shimmer_loading.dart';
 import 'create_event_sheet.dart';
 import 'event_details_screen.dart';
 import '../../routes/smooth_page_route.dart';
+import '../../widgets/animated_financial_text.dart';
 
 class UpcomingEventsScreen extends StatefulWidget {
   const UpcomingEventsScreen({super.key});
@@ -22,9 +23,11 @@ class UpcomingEventsScreen extends StatefulWidget {
   State<UpcomingEventsScreen> createState() => _UpcomingEventsScreenState();
 }
 
-class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
+class _UpcomingEventsScreenState extends State<UpcomingEventsScreen>
+    with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   String _selectedCategory = 'All';
+  late final AnimationController _entranceController;
 
   static final _currency =
       NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
@@ -41,7 +44,17 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..forward();
+  }
+
+  @override
   void dispose() {
+    _entranceController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -220,7 +233,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                               separatorBuilder: (_, _) => const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final event = filtered[index];
-                                return _buildUpcomingEventCard(context, event);
+                                return _buildUpcomingEventCard(context, event, index);
                               },
                             ),
                 ),
@@ -232,7 +245,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
     );
   }
 
-  Widget _buildUpcomingEventCard(BuildContext context, StudioEvent event) {
+  Widget _buildUpcomingEventCard(BuildContext context, StudioEvent event, int index) {
     final dateStr = DateFormat('d MMM yyyy').format(event.startsAt);
     final dayStr = DateFormat('EEEE').format(event.startsAt);
     final remaining = event.remainingAmount;
@@ -240,7 +253,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
     final textMuted = context.textMuted;
     final accent = context.accentColor;
 
-    return StudioCard(
+    final cardWidget = StudioCard(
       padding: const EdgeInsets.all(16),
       onTap: () {
         Navigator.of(context).push(
@@ -353,22 +366,30 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  remaining > 0
-                      ? '${_currency.format(remaining)} due'
-                      : 'Fully Paid',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: remaining > 0
-                        ? (context.isDark
-                            ? const Color(0xFFE8B86D)
-                            : const Color(0xFFD97706))
-                        : accent,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
+                child: remaining > 0
+                    ? AnimatedFinancialText(
+                        amount: remaining,
+                        suffix: ' due',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.isDark
+                              ? const Color(0xFFE8B86D)
+                              : const Color(0xFFD97706),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      )
+                    : Text(
+                        'Fully Paid',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
               ),
               const SizedBox(width: 8),
               FittedBox(
@@ -392,6 +413,28 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
             ),
           ],
         ],
+      ),
+    );
+
+    if (MediaQuery.disableAnimationsOf(context) || index >= 8) {
+      return cardWidget;
+    }
+
+    final start = (index * 0.05).clamp(0.0, 0.55);
+    final end = (start + 0.35).clamp(0.0, 1.0);
+    final anim = CurvedAnimation(
+      parent: _entranceController,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+
+    return FadeTransition(
+      opacity: anim,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.03),
+          end: Offset.zero,
+        ).animate(anim),
+        child: cardWidget,
       ),
     );
   }

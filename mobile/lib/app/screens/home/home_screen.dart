@@ -30,6 +30,7 @@ import '../profile/profile_screen.dart';
 import '../shell/app_shell.dart';
 import '../../routes/smooth_page_route.dart';
 import '../../widgets/shimmer_loading.dart';
+import '../../widgets/animated_financial_text.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -51,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen>
   late final Animation<double> _sAnim4;
   late final Animation<double> _sAnim5;
   late final Animation<double> _sAnim6;
+  late final Animation<double> _sAnim7;
   int _currentCarouselIndex = 0;
   int _currentBannerIndex = 0;
   bool _dismissedHeroAlert = false;
@@ -66,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen>
     _bannerPageController = PageController(viewportFraction: 1.0);
     _staggerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 560),
     )..forward();
     // Cache all staggered intervals once — reused across every rebuild
     _sAnim0 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.00, 0.25, curve: Curves.easeOutCubic));
@@ -76,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen>
     _sAnim4 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.28, 0.58, curve: Curves.easeOutCubic));
     _sAnim5 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.35, 0.65, curve: Curves.easeOutCubic));
     _sAnim6 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.44, 0.72, curve: Curves.easeOutCubic));
+    _sAnim7 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.52, 0.82, curve: Curves.easeOutCubic));
 
     // Auto-scroll banners every 4 seconds
     _bannerAutoScrollTimer = Timer.periodic(
@@ -233,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                     // 8. Past Events List
                     _AnimatedSection(
-                      animation: _sAnim6,
+                      animation: _sAnim7,
                       child: past.isEmpty
                           ? StudioCard(
                               borderRadius: 999,
@@ -631,52 +634,50 @@ class _HomeScreenState extends State<HomeScreen>
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: _currency.format(overview.received),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedFinancialText(
+                          amount: overview.received,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.pastelMint,
+                          ),
+                        ),
+                        Text(
+                          ' recvd',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? AppColors.muted : AppColors.lightTextMuted,
+                          ),
+                        ),
+                        if (overview.pending > 0) ...[
+                          Text(
+                            ' · ',
+                            style: TextStyle(
+                              color: isDark ? AppColors.muted : AppColors.lightTextMuted,
+                            ),
+                          ),
+                          AnimatedFinancialText(
+                            amount: overview.pending,
                             style: const TextStyle(
                               fontSize: 14.5,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.pastelMint,
+                              color: AppColors.sky,
                             ),
                           ),
-                          TextSpan(
-                            text: ' recvd',
+                          Text(
+                            ' due',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                               color: isDark ? AppColors.muted : AppColors.lightTextMuted,
                             ),
                           ),
-                          if (overview.pending > 0) ...[
-                            TextSpan(
-                              text: ' · ',
-                              style: TextStyle(
-                                color: isDark ? AppColors.muted : AppColors.lightTextMuted,
-                              ),
-                            ),
-                            TextSpan(
-                              text: _currency.format(overview.pending),
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.sky,
-                              ),
-                            ),
-                            TextSpan(
-                              text: ' due',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: isDark ? AppColors.muted : AppColors.lightTextMuted,
-                              ),
-                            ),
-                          ],
                         ],
-                      ),
-                      maxLines: 1,
+                      ],
                     ),
                   ),
                 ),
@@ -1574,11 +1575,14 @@ class _AnimatedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return child;
+    }
     return FadeTransition(
       opacity: animation,
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, 0.04),
+          begin: const Offset(0, 0.03),
           end: Offset.zero,
         ).animate(animation),
         child: child,
@@ -1606,6 +1610,12 @@ class _PressableButtonState extends State<_PressableButton> {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return GestureDetector(
+        onTap: widget.onTap,
+        child: widget.child,
+      );
+    }
     return GestureDetector(
       onTapDown: (_) {
         HapticFeedback.lightImpact();
@@ -1615,8 +1625,8 @@ class _PressableButtonState extends State<_PressableButton> {
       onTapCancel: () => setState(() => _pressed = false),
       onTap: widget.onTap,
       child: AnimatedScale(
-        scale: _pressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 120),
+        scale: _pressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
         child: widget.child,
       ),

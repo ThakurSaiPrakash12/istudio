@@ -72,7 +72,10 @@ class SmoothPageRoute<T> extends PageRouteBuilder<T> {
           transitionDuration: enter,
           reverseTransitionDuration: exit,
           pageBuilder: (context, _, _) => builder(context),
-          transitionsBuilder: (_, animation, secondaryAnimation, child) {
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            if (MediaQuery.disableAnimationsOf(context)) {
+              return child;
+            }
             return buildSmoothPageTransition(
               animation: animation,
               secondaryAnimation: secondaryAnimation,
@@ -98,6 +101,9 @@ class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return child;
+    }
     return buildSmoothPageTransition(
       animation: animation,
       secondaryAnimation: secondaryAnimation,
