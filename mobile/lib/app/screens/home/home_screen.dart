@@ -29,6 +29,7 @@ import '../events/upcoming_events_screen.dart';
 import '../profile/profile_screen.dart';
 import '../shell/app_shell.dart';
 import '../../routes/smooth_page_route.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,6 +43,14 @@ class _HomeScreenState extends State<HomeScreen>
   late final PageController _pageController;
   late final PageController _bannerPageController;
   late final AnimationController _staggerController;
+  // Pre-cached staggered entrance animations — never recreated on rebuild
+  late final Animation<double> _sAnim0;
+  late final Animation<double> _sAnim1;
+  late final Animation<double> _sAnim2;
+  late final Animation<double> _sAnim3;
+  late final Animation<double> _sAnim4;
+  late final Animation<double> _sAnim5;
+  late final Animation<double> _sAnim6;
   int _currentCarouselIndex = 0;
   int _currentBannerIndex = 0;
   bool _dismissedHeroAlert = false;
@@ -59,6 +68,14 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
+    // Cache all staggered intervals once — reused across every rebuild
+    _sAnim0 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.00, 0.25, curve: Curves.easeOutCubic));
+    _sAnim1 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.06, 0.32, curve: Curves.easeOutCubic));
+    _sAnim2 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.12, 0.40, curve: Curves.easeOutCubic));
+    _sAnim3 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.20, 0.50, curve: Curves.easeOutCubic));
+    _sAnim4 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.28, 0.58, curve: Curves.easeOutCubic));
+    _sAnim5 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.35, 0.65, curve: Curves.easeOutCubic));
+    _sAnim6 = CurvedAnimation(parent: _staggerController, curve: const Interval(0.44, 0.72, curve: Curves.easeOutCubic));
 
     // Auto-scroll banners every 4 seconds
     _bannerAutoScrollTimer = Timer.periodic(
@@ -85,11 +102,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
 
-  Animation<double> _staggered(double begin, double end) =>
-      CurvedAnimation(
-        parent: _staggerController,
-        curve: Interval(begin, end, curve: Curves.easeOutCubic),
-      );
+  // Remove _staggered() helper — animations are now cached fields above
 
   @override
   Widget build(BuildContext context) {
@@ -135,21 +148,21 @@ class _HomeScreenState extends State<HomeScreen>
                     children: [
                       // Studio Quick Actions
                       _AnimatedSection(
-                        animation: _staggered(0.0, 0.25),
+                        animation: _sAnim0,
                         child: _buildQuickActionGrid(context),
                       ),
                       const SizedBox(height: 12),
 
                       // Studio Earnings & Dues Strip
                       _AnimatedSection(
-                        animation: _staggered(0.06, 0.32),
+                        animation: _sAnim1,
                         child: _buildEarningsStrip(context, overview),
                       ),
                       const SizedBox(height: 14),
 
                       // Promotional Banners Carousel
                       _AnimatedSection(
-                        animation: _staggered(0.12, 0.40),
+                        animation: _sAnim2,
                         child: _buildBannerCarousel(context),
                       ),
                       const SizedBox(height: 18),
@@ -158,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen>
                     if (nearestHeroEvent != null &&
                         !_dismissedHeroAlert) ...[
                       _AnimatedSection(
-                        animation: _staggered(0.20, 0.50),
+                        animation: _sAnim3,
                         child: EventCountdownBanner(
                           event: nearestHeroEvent,
                           onDismiss: () =>
@@ -170,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                     // 5. Coming Up Section Header
                     _AnimatedSection(
-                      animation: _staggered(0.28, 0.58),
+                      animation: _sAnim4,
                       child: _buildSectionHeader(
                         context,
                         title: 'Coming Up',
@@ -187,20 +200,22 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(height: 12),
 
-                    // 6. Upcoming Events Carousel
+                    // 6. Upcoming Events Carousel (shimmer while loading)
                     _AnimatedSection(
-                      animation: _staggered(0.35, 0.65),
-                      child: upcoming.isEmpty
-                          ? _buildEmptyUpcomingState(context)
-                          : _buildUpcomingCarousel(
-                              context, upcoming.take(6).toList()),
+                      animation: _sAnim5,
+                      child: eventsProvider.isLoading
+                          ? _buildUpcomingShimmer()
+                          : upcoming.isEmpty
+                              ? _buildEmptyUpcomingState(context)
+                              : _buildUpcomingCarousel(
+                                  context, upcoming.take(6).toList()),
                     ),
 
                     const SizedBox(height: 30),
 
                     // 7. Done Section Header
                     _AnimatedSection(
-                      animation: _staggered(0.45, 0.75),
+                      animation: _sAnim6,
                       child: _buildSectionHeader(
                         context,
                         title: 'Done',
@@ -218,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                     // 8. Past Events List
                     _AnimatedSection(
-                      animation: _staggered(0.55, 0.85),
+                      animation: _sAnim6,
                       child: past.isEmpty
                           ? StudioCard(
                               borderRadius: 999,
@@ -255,6 +270,23 @@ class _HomeScreenState extends State<HomeScreen>
     ),
   );
 }
+
+  // ================= Loading shimmer for upcoming carousel =================
+  Widget _buildUpcomingShimmer() {
+    return SizedBox(
+      height: 210,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: 3,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (_, _) => const ShimmerCard(
+          rows: 4,
+          height: 210,
+        ),
+      ),
+    );
+  }
 
   // ================= 1. Pastel Liquid Glass Studio Header =================
   Widget _buildStudioHeader(

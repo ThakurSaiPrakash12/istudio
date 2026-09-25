@@ -85,9 +85,9 @@ const memoryUsers = {
     );
     return user ? toDoc(user) : null;
   },
-  findById(id) {
+  findById(id, withPassword = false) {
     const user = users.find((item) => item.id === id);
-    return user ? toDoc(user) : null;
+    return user ? toDoc(user, withPassword) : null;
   },
   create({ username, phone, password }) {
     const user = {

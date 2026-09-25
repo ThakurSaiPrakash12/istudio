@@ -10,6 +10,7 @@ import '../../services/api_service.dart';
 import '../../services/invoice_pdf_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/studio_card.dart';
+import '../../widgets/shimmer_loading.dart';
 import 'invoice_preview_screen.dart';
 import 'invoice_sheets.dart';
 
@@ -158,7 +159,19 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
   Widget build(BuildContext context) {
     final provider = context.watch<InvoicesProvider>();
     if (!provider.isReady) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        physics: const NeverScrollableScrollPhysics(),
+        children: const [
+          ShimmerCard(rows: 3, height: 100),
+          SizedBox(height: 14),
+          ShimmerCard(rows: 4, height: 120),
+          SizedBox(height: 14),
+          ShimmerCard(rows: 4, height: 120),
+          SizedBox(height: 14),
+          ShimmerCard(rows: 4, height: 120),
+        ],
+      );
     }
     final overview = provider.overview;
     final invoices = provider.filtered(_filter);

@@ -12,6 +12,8 @@ import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
+import '../../widgets/fade_slide_in.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   const EventDetailsScreen({
@@ -27,15 +29,44 @@ class EventDetailsScreen extends StatefulWidget {
   State<EventDetailsScreen> createState() => _EventDetailsScreenState();
 }
 
-class _EventDetailsScreenState extends State<EventDetailsScreen> {
+class _EventDetailsScreenState extends State<EventDetailsScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _detailsController;
+  // Pre-cached entrance animations — never recreated on rebuild
+  late final Animation<double> _anim0;
+  late final Animation<double> _anim1;
+  late final Animation<double> _anim2;
+  late final Animation<double> _anim3;
+  late final Animation<double> _anim4;
+  late final Animation<double> _anim5;
+  late final Animation<double> _anim6;
+
   static final _currency = NumberFormat.currency(
     locale: 'en_IN',
     symbol: '\u20b9',
     decimalDigits: 0,
   );
+
+  Animation<double> _interval(double begin, double end) => CurvedAnimation(
+        parent: _detailsController,
+        curve: Interval(begin, end, curve: Curves.easeOutCubic),
+      );
+
   @override
   void initState() {
     super.initState();
+    _detailsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 460),
+    )..forward();
+    // Create all intervals once — reused across rebuilds
+    _anim0 = _interval(0.00, 0.28); // 7-day hero
+    _anim1 = _interval(0.05, 0.34); // event header
+    _anim2 = _interval(0.16, 0.48); // financial summary
+    _anim3 = _interval(0.24, 0.56); // payment history
+    _anim4 = _interval(0.32, 0.64); // expense summary
+    _anim5 = _interval(0.40, 0.76); // work progress
+    _anim6 = _interval(0.52, 0.86); // notes
     if (widget.autoOpenPayment) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showAddPaymentSheet(context, widget.eventId);
@@ -44,11 +75,33 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   @override
+  void dispose() {
+    _detailsController.dispose();
+    super.dispose();
+  }
+
+  Widget _entrance(Animation<double> anim, Widget child) =>
+      FadeSlideIn(animation: anim, child: child);
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<EventsProvider>();
     final event = provider.getById(widget.eventId);
 
     if (event == null) {
+      if (provider.isLoading) {
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: const StudioAppBar(
+            title: 'Loading Shoot...',
+            subtitle: 'Event Details',
+          ),
+          body: const SafeArea(
+            child: EventDetailsShimmer(),
+          ),
+        );
+      }
+
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: const StudioAppBar(
@@ -163,30 +216,33 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 children: [
                   // 7-Day Countdown Alert Hero (if within 7 days)
                   if (event.isWithin7Days)
-                    _build7DayCountdownHero(context, event),
+                    _entrance(
+                      _anim0,
+                      _build7DayCountdownHero(context, event),
+                    ),
 
                   // A. Event Header
-                  _buildEventHeader(context, event),
+                  _entrance(_anim1, _buildEventHeader(context, event)),
                   const SizedBox(height: 16),
 
                   // B. Financial Summary
-                  _buildFinancialSummary(context, event),
+                  _entrance(_anim2, _buildFinancialSummary(context, event)),
                   const SizedBox(height: 16),
 
                   // C. Payment History
-                  _buildPaymentHistory(context, event),
+                  _entrance(_anim3, _buildPaymentHistory(context, event)),
                   const SizedBox(height: 16),
 
                   // D. Expense Summary
-                  _buildExpenseSummary(context, event),
+                  _entrance(_anim4, _buildExpenseSummary(context, event)),
                   const SizedBox(height: 16),
 
                   // E. Work / Deliverables Progress
-                  _buildWorkProgress(context, event),
+                  _entrance(_anim5, _buildWorkProgress(context, event)),
                   const SizedBox(height: 16),
 
                   // F. Event Notes
-                  _buildNotesSection(context, event),
+                  _entrance(_anim6, _buildNotesSection(context, event)),
                 ],
               ),
             ),
@@ -748,12 +804,22 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         const SizedBox(width: 8),
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(
-            value,
-            style: TextStyle(
-              color: valueColor,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(scale: animation, child: child),
+            ),
+            child: Text(
+              value,
+              key: ValueKey(value),
+              style: TextStyle(
+                color: valueColor,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),

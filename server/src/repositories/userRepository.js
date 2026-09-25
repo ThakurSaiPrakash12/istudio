@@ -21,11 +21,13 @@ async function findByUsername(username) {
   });
 }
 
-async function findById(id) {
+async function findById(id, { withPassword = false } = {}) {
   if (memoryUsers.enabled) {
-    return memoryUsers.findById(id);
+    return memoryUsers.findById(id, withPassword);
   }
-  return User.findById(id);
+  const query = User.findById(id);
+  if (withPassword) query.select('+password');
+  return query;
 }
 
 async function createUser({ username, phone, password }) {

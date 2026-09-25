@@ -10,6 +10,7 @@ import '../../widgets/countdown_chip.dart';
 import '../../widgets/payment_proof_preview.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
+import '../../widgets/shimmer_loading.dart';
 import 'create_event_sheet.dart';
 import 'event_details_screen.dart';
 import '../../routes/smooth_page_route.dart';
@@ -169,45 +170,59 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                 ),
                 const SizedBox(height: 6),
                 Expanded(
-                  child: filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.calendar_today_rounded,
-                                  size: 48,
-                                  color: textMuted.withValues(alpha: 0.5)),
-                              const SizedBox(height: 12),
-                               Text(
-                                'No shoots found',
-                                style: TextStyle(
-                                  color: textMain,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: accent,
-                                  foregroundColor: Colors.white,
-                                ),
-                                onPressed: () => CreateEventSheet.show(context),
-                                icon: const Icon(Icons.add, size: 18),
-                                label: const Text('+ New Shoot'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.separated(
+                  child: provider.isLoading
+                      ? ListView(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final event = filtered[index];
-                            return _buildUpcomingEventCard(context, event);
-                          },
-                        ),
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: const [
+                            ShimmerCard(rows: 3, height: 110),
+                            SizedBox(height: 12),
+                            ShimmerCard(rows: 3, height: 110),
+                            SizedBox(height: 12),
+                            ShimmerCard(rows: 3, height: 110),
+                            SizedBox(height: 12),
+                            ShimmerCard(rows: 3, height: 110),
+                          ],
+                        )
+                      : filtered.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.calendar_today_rounded,
+                                      size: 48,
+                                      color: textMuted.withValues(alpha: 0.5)),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No shoots found',
+                                    style: TextStyle(
+                                      color: textMain,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: accent,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: () => CreateEventSheet.show(context),
+                                    icon: const Icon(Icons.add, size: 18),
+                                    label: const Text('+ New Shoot'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final event = filtered[index];
+                                return _buildUpcomingEventCard(context, event);
+                              },
+                            ),
                 ),
               ],
             ),

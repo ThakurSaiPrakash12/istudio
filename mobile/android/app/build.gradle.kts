@@ -40,6 +40,10 @@ android {
     val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
 
     signingConfigs {
+        getByName("debug") {
+            enableV1Signing = true
+            enableV2Signing = true
+        }
         if (!releaseKeystorePath.isNullOrBlank() &&
             !releaseKeystorePassword.isNullOrBlank() &&
             !releaseKeyAlias.isNullOrBlank() &&
@@ -49,6 +53,8 @@ android {
                 storePassword = releaseKeystorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
             }
         }
     }

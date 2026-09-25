@@ -14,6 +14,8 @@ const {
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
   forgotPasswordVerifyUsername,
+  verifyCurrentPassword,
+  changePassword,
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/auth');
 const {
@@ -141,5 +143,28 @@ router.get('/me', requireAuth, me);
 router.patch('/profile', requireAuth, updateProfile);
 router.post('/logo', requireAuth, handleLogoUpload, uploadLogo);
 router.post('/profile-image', requireAuth, handleLogoUpload, uploadLogo);
+router.post(
+  '/verify-password',
+  requireAuth,
+  [
+    body('currentPassword')
+      .notEmpty()
+      .withMessage('Enter your current password'),
+  ],
+  verifyCurrentPassword,
+);
+router.post(
+  '/change-password',
+  requireAuth,
+  [
+    body('currentPassword')
+      .notEmpty()
+      .withMessage('Enter your current password'),
+    body('newPassword')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters'),
+  ],
+  changePassword,
+);
 
 module.exports = router;

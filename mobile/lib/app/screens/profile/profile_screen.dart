@@ -12,6 +12,7 @@ import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
+import '../../widgets/change_password_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -268,6 +269,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _openChangePasswordSheet() async {
+    final success = await ChangePasswordSheet.show(context);
+    if (success == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password updated successfully.'),
+          backgroundColor: AppColors.navy,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -371,6 +384,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 22),
                 if (_editing) _buildForm(isBusy) else _buildDetails(user),
+                const SizedBox(height: 16),
+                _buildSecurityCard(context),
                 const SizedBox(height: 24),
                 StudioButton(
                   label: 'Sign out',
@@ -387,6 +402,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSecurityCard(BuildContext context) {
+    final textMain = context.textMain;
+    final textMuted = context.textMuted;
+    final accent = context.accentColor;
+
+    return StudioCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.shield_outlined, color: accent, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Security & Login',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: textMain,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: _openChangePasswordSheet,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: context.innerBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: context.cardBorder),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lock_reset_rounded, color: accent, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Change Password',
+                          style: TextStyle(
+                            color: textMain,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Verify current password to update',
+                          style: TextStyle(
+                            color: textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: textMuted),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -521,6 +521,86 @@ async function signupVerify(req, res) {
   }
 }
 
+async function verifyCurrentPassword(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const currentPassword = String(req.body.currentPassword || '');
+    const user = await userRepository.findById(req.userId, { withPassword: true });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found.',
+      });
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password);
+    if (!matches) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Current password verified.',
+    });
+  } catch (error) {
+    console.error('verifyCurrentPassword error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to verify password right now.',
+    });
+  }
+}
+
+async function changePassword(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const currentPassword = String(req.body.currentPassword || '');
+    const newPassword = String(req.body.newPassword || '');
+
+    const user = await userRepository.findById(req.userId, { withPassword: true });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found.',
+      });
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password);
+    if (!matches) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect.',
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password cannot be the same as your current password.',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await userRepository.updateUser(user._id || user.id, { password: hashedPassword });
+
+    return res.json({
+      success: true,
+      message: 'Password changed successfully.',
+    });
+  } catch (error) {
+    console.error('changePassword error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to update password right now.',
+    });
+  }
+}
+
 module.exports = {
   signup,
   signupSendOtp,
@@ -534,4 +614,6 @@ module.exports = {
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
   forgotPasswordVerifyUsername,
+  verifyCurrentPassword,
+  changePassword,
 };

@@ -345,6 +345,64 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> verifyCurrentPassword(String currentPassword) async {
+    if (_token == null) {
+      _errorMessage = 'Please sign in to verify your password.';
+      notifyListeners();
+      return false;
+    }
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final ok = await _authService.verifyCurrentPassword(
+        token: _token!,
+        currentPassword: currentPassword,
+      );
+      return ok;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to verify password right now.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (_token == null) {
+      _errorMessage = 'Please sign in to change your password.';
+      notifyListeners();
+      return false;
+    }
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authService.changePassword(
+        token: _token!,
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to change password right now.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> _runAuth(Future<void> Function() action) async {
     _isLoading = true;
     _errorMessage = null;

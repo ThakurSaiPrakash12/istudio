@@ -137,6 +137,33 @@ class AuthService {
     await _api.post('/auth/forgot-password/reset', body);
   }
 
+  Future<bool> verifyCurrentPassword({
+    required String token,
+    required String currentPassword,
+  }) async {
+    final payload = await _api.post(
+      '/auth/verify-password',
+      {'currentPassword': currentPassword},
+      token: token,
+    );
+    return payload['success'] == true;
+  }
+
+  Future<void> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _api.post(
+      '/auth/change-password',
+      {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+      token: token,
+    );
+  }
+
   User _parseUser(Map<String, dynamic> payload) {
     final userJson = payload['user'] as Map<String, dynamic>?;
     if (userJson == null) {
