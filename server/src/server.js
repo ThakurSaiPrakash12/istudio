@@ -18,6 +18,7 @@ const eventRoutes = require('./routes/events');
 const eventChildRoutes = require('./routes/eventChildren');
 
 const app = express();
+app.set('trust proxy', 1);
 const openApiPath = path.join(__dirname, '..', '..', 'openapi.yaml');
 validateRuntimeConfig();
 const port = Number(process.env.PORT) || 5000;
