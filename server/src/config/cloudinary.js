@@ -1,6 +1,7 @@
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -48,7 +49,7 @@ async function uploadToCloudinary(filePath, options = {}) {
       try {
         fs.unlinkSync(filePath);
       } catch (err) {
-        console.warn('Failed to delete temp file:', err.message);
+        logger.warn('Failed to delete Cloudinary temp file', { error: err });
       }
     }
   }
