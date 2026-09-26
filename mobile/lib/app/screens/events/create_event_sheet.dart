@@ -406,7 +406,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                   const SizedBox(height: 12),
                   StudioTextField(
                     label: 'Event Name',
-                    hint: 'e.g. Wedding — Aanya & Rohan',
+                    hint: 'e.g. Wedding — Client Name',
                     controller: _nameController,
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
@@ -470,7 +470,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                   const SizedBox(height: 14),
                   StudioTextField(
                     label: 'Client Name *',
-                    hint: 'e.g. Aanya Sharma',
+                    hint: 'e.g. Client Name',
                     controller: _clientController,
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
@@ -534,7 +534,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                   const SizedBox(height: 14),
                   StudioTextField(
                     label: 'Location / Venue',
-                    hint: 'e.g. Lotus Pavilion, Bangalore',
+                    hint: 'e.g. Grand Ballroom, City Hotel',
                     controller: _locationController,
                   ),
                   const SizedBox(height: 14),

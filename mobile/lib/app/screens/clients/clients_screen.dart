@@ -576,7 +576,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                 const SizedBox(height: 16),
                 StudioTextField(
                   label: 'Full Name *',
-                  hint: 'e.g. Aanya Sharma',
+                  hint: 'e.g. Client Name',
                   controller: nameController,
                 ),
                 const SizedBox(height: 14),
@@ -589,14 +589,14 @@ class _ClientsScreenState extends State<ClientsScreen>
                 const SizedBox(height: 14),
                 StudioTextField(
                   label: 'Email Address',
-                  hint: 'e.g. aanya@example.com',
+                  hint: 'e.g. client@email.com',
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 14),
                 StudioTextField(
                   label: 'Address / Location',
-                  hint: 'e.g. Flat 402, Lotus Residency',
+                  hint: 'e.g. Flat 12, Sunshine Apartments',
                   controller: addressController,
                 ),
                 const SizedBox(height: 14),
