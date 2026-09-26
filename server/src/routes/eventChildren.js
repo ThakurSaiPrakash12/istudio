@@ -7,18 +7,7 @@ const { idempotency } = require('../middleware/idempotency');
 const fs = require('fs');
 
 const router = express.Router();
-router.use((req, res, next) => {
-  const p = req.path;
-  if (
-    p.startsWith('/events') ||
-    p.startsWith('/payments') ||
-    p.startsWith('/expenses') ||
-    p.startsWith('/deliverables')
-  ) {
-    return requireAuth(req, res, next);
-  }
-  return next();
-});
+router.use(requireAuth);
 
 const paymentRules = [
   body('title').trim().isLength({ min: 1, max: 160 }).withMessage('Enter a payment title.'),

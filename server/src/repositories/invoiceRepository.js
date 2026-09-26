@@ -29,9 +29,7 @@ async function findByIdForUser(id, userId) {
     return memoryInvoices.findByIdForUser(id, userId);
   }
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
-  const invoice = await Invoice.findById(id);
-  if (!invoice || invoice.userId.toString() !== String(userId)) return null;
-  return invoice;
+  return Invoice.findOne({ _id: id, userId });
 }
 
 async function nextNumber(userId) {
