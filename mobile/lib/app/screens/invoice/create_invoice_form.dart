@@ -256,7 +256,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
           ],
           StudioTextField(
             label: 'Shoot name',
-            hint: 'e.g. Wedding — Aanya & Rohan',
+            hint: 'e.g. Wedding — Client Name',
             controller: _eventController,
             validator: (value) =>
                 (value == null || value.trim().isEmpty)
@@ -266,7 +266,7 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
           const SizedBox(height: 14),
           StudioTextField(
             label: 'Client name',
-            hint: 'e.g. Aanya Sharma',
+            hint: 'e.g. Client Name',
             controller: _contactController,
             validator: (value) =>
                 (value == null || value.trim().isEmpty)

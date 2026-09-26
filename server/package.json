@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node test/invoice-model.test.js && node test/security.test.js",
+    "test": "node test/invoice-model.test.js && node test/security.test.js && node test/logger.test.js",
     "test:integration": "node test/integration.test.js && node test/hardening.test.js"
   },
   "engines": {

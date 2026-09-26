@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const logger = require('../config/logger');
+const { maskPhone } = logger;
 
 // In-memory store for OTP tracking (for clustered environments, Redis can be used)
 const otpStore = new Map();
@@ -34,10 +36,15 @@ async function dispatchSms(phone, otp) {
         }),
       });
       const data = await response.json();
-      console.log(`[Fast2SMS] Dispatched to ${phone}:`, data);
+      logger.info('Fast2SMS dispatch completed', {
+        phone: maskPhone(phone),
+        ok: Boolean(data && data.return),
+        providerRequestId: data && data.request_id,
+        status: response.status,
+      });
       return true;
     } catch (e) {
-      console.error('[Fast2SMS] Failed to send SMS:', e.message);
+      logger.error('Fast2SMS dispatch failed', { phone: maskPhone(phone), error: e });
       return false;
     }
   }
@@ -68,18 +75,24 @@ async function dispatchSms(phone, otp) {
         },
       );
       const data = await response.json();
-      console.log(`[Twilio] Dispatched to ${phone}:`, data?.sid || data);
+      logger.info('Twilio dispatch completed', {
+        phone: maskPhone(phone),
+        providerSid: data && data.sid,
+        providerStatus: data && data.status,
+      });
       return true;
     } catch (e) {
-      console.error('[Twilio] Failed to send SMS:', e.message);
+      logger.error('Twilio dispatch failed', { phone: maskPhone(phone), error: e });
       return false;
     }
   }
 
-  console.log(`\n======================================================`);
-  console.log(`[SMS DISPATCH] Recipient: +91 ${phone}`);
-  console.log(`[SMS DISPATCH] Studio Verification OTP: [ ${otp} ]`);
-  console.log(`======================================================\n`);
+  logger.warn('SMS provider not configured; OTP was not dispatched', {
+    phone: maskPhone(phone),
+  });
+  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+    logger.debug(`Local OTP for ${maskPhone(phone)}: ${otp}`);
+  }
   return false;
 }
 
