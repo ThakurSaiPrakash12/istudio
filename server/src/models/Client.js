@@ -9,7 +9,7 @@ const clientSchema = new mongoose.Schema({
   notes: { type: String, default: '', trim: true, maxlength: 1000 },
   status: {
     type: String,
-    enum: ['information', 'comingUp', 'completed'],
+    enum: ['information', 'comingUp', 'completed', 'notResponded'],
     default: 'information',
   },
 }, { timestamps: true });

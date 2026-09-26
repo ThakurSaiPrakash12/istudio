@@ -42,9 +42,13 @@ class _SignupFormState extends State<SignupForm> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      HapticFeedback.heavyImpact();
+      return;
+    }
 
     if (_passwordController.text != _confirmController.text) {
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Passwords do not match.')),
       );

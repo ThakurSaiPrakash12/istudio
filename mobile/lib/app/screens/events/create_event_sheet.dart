@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -38,6 +39,8 @@ class CreateEventSheet extends StatefulWidget {
 
 class _CreateEventSheetState extends State<CreateEventSheet> {
   final _formKey = GlobalKey<FormState>();
+  final ScrollController _scrollController = ScrollController();
+  String? _formValidationError;
   bool _isSubmitting = false;
 
   Client? _selectedClient;
@@ -103,6 +106,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
     _totalAmountController.dispose();
     _advanceController.dispose();
     _customEventTypeController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -202,7 +206,22 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) {
+      HapticFeedback.heavyImpact();
+      setState(() {
+        _formValidationError = 'Please fix the highlighted required fields above (e.g. event name or client).';
+      });
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 380),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      return;
+    }
+    setState(() => _formValidationError = null);
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
 
@@ -427,6 +446,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
             child: Form(
               key: _formKey,
               child: ListView(
+                controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 children: [
                   // SECTION 1: Event Information
@@ -764,6 +784,53 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                     ),
                   ),
                   const SizedBox(height: 28),
+                  if (_formValidationError != null) ...[
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: Color(0xFFEF4444), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _formValidationError!,
+                              style: const TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              if (_scrollController.hasClients) {
+                                _scrollController.animateTo(
+                                  0.0,
+                                  duration: const Duration(milliseconds: 380),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              }
+                            },
+                            child: const Text('View',
+                                style: TextStyle(
+                                    color: Color(0xFFEF4444),
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // Save Button
                   StudioButton(
@@ -1088,6 +1155,10 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
       case ClientStatus.completed:
         bg = const Color(0xFF34D399).withValues(alpha: isDark ? 0.22 : 0.14);
         fg = isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857);
+        break;
+      case ClientStatus.notResponded:
+        bg = const Color(0xFF64748B).withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
         break;
     }
 

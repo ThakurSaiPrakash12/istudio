@@ -69,6 +69,14 @@ class _StudioTextFieldState extends State<StudioTextField> {
           decoration: InputDecoration(
             hintText: widget.hint.isNotEmpty ? widget.hint : null,
             isDense: true,
+            errorMaxLines: 3,
+            errorStyle: TextStyle(
+              color: AppColors.isDark(context)
+                  ? const Color(0xFFFF5252)
+                  : const Color(0xFFDC2626),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
             prefixIconConstraints: const BoxConstraints(
               minWidth: 44,
               minHeight: 44,

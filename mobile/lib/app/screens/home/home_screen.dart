@@ -31,6 +31,7 @@ import '../events/upcoming_events_screen.dart';
 import '../profile/profile_screen.dart';
 import '../shell/app_shell.dart';
 import '../../routes/smooth_page_route.dart';
+import '../../utils/launcher_utils.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/animated_financial_text.dart';
 
@@ -1544,7 +1545,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Clients visited within last 3 days',
+                      'Recent client inquiries (active 15 days)',
                       style: TextStyle(
                         color: textMuted,
                         fontSize: 11.5,
@@ -1585,9 +1586,9 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildInformationClientTile(BuildContext context, Client client) {
     final textMain = context.textMain;
     final textMuted = context.textMuted;
-    final accent = context.accentColor;
     final infoColor = context.isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
     final timeAgo = _formatInquiryAge(client.createdAt);
+    final hasPhone = client.phone.trim().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -1664,7 +1665,7 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        client.phone.isNotEmpty ? client.phone : 'Inquiry only',
+                        hasPhone ? client.phone : 'Inquiry only',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1676,28 +1677,36 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
+                FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    elevation: 1,
                   ),
                   onPressed: () {
-                    CreateEventSheet.show(
-                      context,
-                      initialClient: client,
-                    );
+                    if (hasPhone) {
+                      LauncherUtils.makePhoneCall(context, client.phone);
+                    } else {
+                      Navigator.of(context).push(
+                        SmoothPageRoute(
+                          builder: (_) => ClientDetailsScreen(clientId: client.id),
+                        ),
+                      );
+                    }
                   },
-                  child: const Text(
-                    'Book Event',
+                  icon: const Icon(Icons.phone_in_talk_rounded, size: 14),
+                  label: const Text(
+                    'Call',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),

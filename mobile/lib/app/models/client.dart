@@ -9,7 +9,8 @@ import 'package:flutter/foundation.dart';
 enum ClientStatus {
   information,
   comingUp,
-  completed;
+  completed,
+  notResponded;
 
   String get label {
     switch (this) {
@@ -19,6 +20,8 @@ enum ClientStatus {
         return 'Coming Up';
       case ClientStatus.completed:
         return 'Completed';
+      case ClientStatus.notResponded:
+        return 'Not Responded';
     }
   }
 
@@ -26,6 +29,10 @@ enum ClientStatus {
     if (value == null) return ClientStatus.information;
     final lower = value.trim().toLowerCase();
     switch (lower) {
+      case 'notresponded':
+      case 'not_responded':
+      case 'unresponsive':
+        return ClientStatus.notResponded;
       case 'comingup':
       case 'coming_up':
       case 'upcoming':

@@ -14,12 +14,14 @@ import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
 import 'client_details_screen.dart';
 import '../../routes/smooth_page_route.dart';
+import '../../utils/launcher_utils.dart';
 
 enum ClientFilter {
   all,
   information,
   upcoming,
   completed,
+  notResponded,
   paymentDue;
 
   String get label {
@@ -32,6 +34,8 @@ enum ClientFilter {
         return 'Coming Up';
       case ClientFilter.completed:
         return 'Completed';
+      case ClientFilter.notResponded:
+        return 'Not Responded';
       case ClientFilter.paymentDue:
         return 'Due';
     }
@@ -120,6 +124,8 @@ class _ClientsScreenState extends State<ClientsScreen>
                       e.status == EventStatus.completed ||
                       e.startsAt.isBefore(
                           DateTime.now().subtract(const Duration(days: 1)))));
+        case ClientFilter.notResponded:
+          return client.status == ClientStatus.notResponded;
         case ClientFilter.paymentDue:
           return clientEvents.any((e) =>
               e.remainingAmount > 0 || e.status == EventStatus.paymentDue);
@@ -382,22 +388,95 @@ class _ClientsScreenState extends State<ClientsScreen>
                                               _buildStatusPill(client.status, context.isDark),
                                             ],
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            client.phone.isNotEmpty
-                                                ? client.phone
-                                                : (client
-                                                        .email.isNotEmpty
-                                                    ? client.email
-                                                    : 'No contact details'),
-                                            style: TextStyle(
-                                              color: textMuted,
-                                              fontSize: 12,
+                                          const SizedBox(height: 3),
+                                          if (client.phone.isNotEmpty)
+                                            InkWell(
+                                              borderRadius: BorderRadius.circular(6),
+                                              onTap: () => LauncherUtils.makePhoneCall(context, client.phone),
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.phone_outlined,
+                                                      size: 13,
+                                                      color: Color(0xFF10B981),
+                                                    ),
+                                                    const SizedBox(width: 5),
+                                                    Flexible(
+                                                      child: Text(
+                                                        client.phone,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: const TextStyle(
+                                                          color: Color(0xFF10B981),
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          else if (client.email.isNotEmpty)
+                                            InkWell(
+                                              borderRadius: BorderRadius.circular(6),
+                                              onTap: () => LauncherUtils.sendEmail(context, client.email),
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.mail_outline_rounded,
+                                                      size: 13,
+                                                      color: accent,
+                                                    ),
+                                                    const SizedBox(width: 5),
+                                                    Flexible(
+                                                      child: Text(
+                                                        client.email,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: TextStyle(
+                                                          color: accent,
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          else
+                                            Text(
+                                              'No contact details',
+                                              style: TextStyle(
+                                                color: textMuted,
+                                                fontSize: 12,
+                                              ),
                                             ),
-                                          ),
                                         ],
                                       ),
                                     ),
+                                    if (client.phone.isNotEmpty) ...[
+                                      IconButton(
+                                        icon: const Icon(Icons.phone_in_talk_rounded, size: 16),
+                                        color: const Color(0xFF10B981),
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                          padding: const EdgeInsets.all(7),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        tooltip: 'Call ${client.name}',
+                                        onPressed: () => LauncherUtils.makePhoneCall(context, client.phone),
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
                                     Icon(
                                       Icons.chevron_right_rounded,
                                       color: textMuted,
@@ -533,6 +612,7 @@ class _ClientsScreenState extends State<ClientsScreen>
     final addressController = TextEditingController();
     final notesController = TextEditingController();
     ClientStatus selectedStatus = ClientStatus.information;
+    String? sheetError;
 
     showModalBottomSheet(
       context: context,
@@ -588,6 +668,37 @@ class _ClientsScreenState extends State<ClientsScreen>
                       ],
                     ),
                     const SizedBox(height: 16),
+                    if (sheetError != null) ...[
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline_rounded,
+                                color: Color(0xFFEF4444), size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                sheetError!,
+                                style: const TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     StudioTextField(
                       label: 'Full Name *',
                       hint: 'e.g. Client Name',
@@ -680,6 +791,21 @@ class _ClientsScreenState extends State<ClientsScreen>
                             fontSize: 12,
                           ),
                         ),
+                        ChoiceChip(
+                          label: const Text('Not Responded'),
+                          selected: selectedStatus == ClientStatus.notResponded,
+                          onSelected: (val) {
+                            if (val) setSheetState(() => selectedStatus = ClientStatus.notResponded);
+                          },
+                          selectedColor: const Color(0xFF64748B).withValues(alpha: 0.25),
+                          labelStyle: TextStyle(
+                            color: selectedStatus == ClientStatus.notResponded
+                                ? (sheetContext.isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569))
+                                : sheetContext.textMuted,
+                            fontWeight: selectedStatus == ClientStatus.notResponded ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -692,31 +818,20 @@ class _ClientsScreenState extends State<ClientsScreen>
                             phone.replaceAll(RegExp(r'\D'), '');
 
                         if (name.isEmpty) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Please enter client full name'),
-                            ),
-                          );
+                          HapticFeedback.heavyImpact();
+                          setSheetState(() => sheetError = 'Please enter client full name');
                           return;
                         }
 
                         if (phone.isEmpty) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter phone number'),
-                            ),
-                          );
+                          HapticFeedback.heavyImpact();
+                          setSheetState(() => sheetError = 'Please enter phone number');
                           return;
                         }
 
                         if (digitsOnly.length < 10) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Phone number must be at least 10 digits'),
-                            ),
-                          );
+                          HapticFeedback.heavyImpact();
+                          setSheetState(() => sheetError = 'Phone number must be at least 10 digits');
                           return;
                         }
 
@@ -769,6 +884,10 @@ class _ClientsScreenState extends State<ClientsScreen>
       case ClientStatus.completed:
         bg = const Color(0xFF34D399).withValues(alpha: isDark ? 0.22 : 0.14);
         fg = isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857);
+        break;
+      case ClientStatus.notResponded:
+        bg = const Color(0xFF64748B).withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
         break;
     }
 

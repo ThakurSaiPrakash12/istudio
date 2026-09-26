@@ -15,6 +15,7 @@ import '../../widgets/studio_text_field.dart';
 import '../events/event_details_screen.dart';
 import '../events/create_event_sheet.dart';
 import '../../routes/smooth_page_route.dart';
+import '../../utils/launcher_utils.dart';
 
 class ClientDetailsScreen extends StatelessWidget {
   const ClientDetailsScreen({
@@ -203,14 +204,9 @@ class ClientDetailsScreen extends StatelessWidget {
             icon: Icons.phone_outlined,
             label: 'Phone',
             value: client.phone.isNotEmpty ? client.phone : 'Not provided',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Contact ${client.phone}'),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            },
+            onTap: client.phone.isNotEmpty
+                ? () => LauncherUtils.makePhoneCall(context, client.phone)
+                : null,
           ),
           const SizedBox(height: 10),
 
@@ -220,15 +216,57 @@ class ClientDetailsScreen extends StatelessWidget {
             icon: Icons.email_outlined,
             label: 'Email',
             value: client.email.isNotEmpty ? client.email : 'Not provided',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Emailing ${client.email}'),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            },
+            onTap: client.email.isNotEmpty
+                ? () => LauncherUtils.sendEmail(context, client.email)
+                : null,
           ),
+          if (client.phone.isNotEmpty || client.email.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                if (client.phone.isNotEmpty)
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => LauncherUtils.makePhoneCall(context, client.phone),
+                      icon: const Icon(Icons.call_rounded, size: 16),
+                      label: const Text(
+                        'Call Client',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                    ),
+                  ),
+                if (client.phone.isNotEmpty && client.email.isNotEmpty)
+                  const SizedBox(width: 10),
+                if (client.email.isNotEmpty)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: context.accentColor,
+                        side: BorderSide(color: context.accentColor.withValues(alpha: 0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => LauncherUtils.sendEmail(context, client.email),
+                      icon: const Icon(Icons.mail_outline_rounded, size: 16),
+                      label: const Text(
+                        'Send Email',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
 
           // Address Row
           if (client.address.isNotEmpty) ...[
@@ -1101,6 +1139,7 @@ class ClientDetailsScreen extends StatelessWidget {
     final addressController = TextEditingController(text: client.address);
     final notesController = TextEditingController(text: client.notes);
     ClientStatus selectedStatus = client.status;
+    String? formError;
 
     showModalBottomSheet(
       context: context,
@@ -1140,6 +1179,37 @@ class ClientDetailsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (formError != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline_rounded,
+                                color: Color(0xFFEF4444), size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                formError!,
+                                style: const TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text(
                       'Client Status',
@@ -1152,13 +1222,17 @@ class ClientDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 6,
                       children: [
                         ChoiceChip(
                           label: const Text('Information'),
                           selected: selectedStatus == ClientStatus.information,
                           onSelected: (val) {
                             if (val) {
-                              setSheetState(() => selectedStatus = ClientStatus.information);
+                              setSheetState(() {
+                                selectedStatus = ClientStatus.information;
+                                formError = null;
+                              });
                             }
                           },
                         ),
@@ -1167,7 +1241,10 @@ class ClientDetailsScreen extends StatelessWidget {
                           selected: selectedStatus == ClientStatus.comingUp,
                           onSelected: (val) {
                             if (val) {
-                              setSheetState(() => selectedStatus = ClientStatus.comingUp);
+                              setSheetState(() {
+                                selectedStatus = ClientStatus.comingUp;
+                                formError = null;
+                              });
                             }
                           },
                         ),
@@ -1176,7 +1253,22 @@ class ClientDetailsScreen extends StatelessWidget {
                           selected: selectedStatus == ClientStatus.completed,
                           onSelected: (val) {
                             if (val) {
-                              setSheetState(() => selectedStatus = ClientStatus.completed);
+                              setSheetState(() {
+                                selectedStatus = ClientStatus.completed;
+                                formError = null;
+                              });
+                            }
+                          },
+                        ),
+                        ChoiceChip(
+                          label: const Text('Not Responded'),
+                          selected: selectedStatus == ClientStatus.notResponded,
+                          onSelected: (val) {
+                            if (val) {
+                              setSheetState(() {
+                                selectedStatus = ClientStatus.notResponded;
+                                formError = null;
+                              });
                             }
                           },
                         ),
@@ -1217,12 +1309,12 @@ class ClientDetailsScreen extends StatelessWidget {
                         final name = nameController.text.trim();
                         final phone = phoneController.text.trim();
 
-                        if (name.isEmpty || phone.isEmpty) {
-                          ScaffoldMessenger.of(sheetCtx).showSnackBar(
-                            const SnackBar(
-                              content: Text('Name and phone are required.'),
-                            ),
-                          );
+                        if (name.isEmpty) {
+                          setSheetState(() => formError = 'Full name is required.');
+                          return;
+                        }
+                        if (phone.isEmpty) {
+                          setSheetState(() => formError = 'Phone number is required.');
                           return;
                         }
 
@@ -1268,6 +1360,11 @@ class ClientDetailsScreen extends StatelessWidget {
       case ClientStatus.completed:
         bg = (isDark ? const Color(0xFF34D399) : const Color(0xFF059669)).withValues(alpha: 0.16);
         fg = isDark ? const Color(0xFF34D399) : const Color(0xFF059669);
+        border = Border.all(color: fg.withValues(alpha: 0.4));
+        break;
+      case ClientStatus.notResponded:
+        bg = (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)).withValues(alpha: 0.16);
+        fg = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
         border = Border.all(color: fg.withValues(alpha: 0.4));
         break;
     }

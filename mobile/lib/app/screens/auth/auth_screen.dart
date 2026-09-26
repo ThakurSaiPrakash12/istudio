@@ -213,7 +213,48 @@ class _AuthCard extends StatelessWidget {
               context,
             ).textTheme.bodyMedium?.copyWith(color: context.textMuted),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 18),
+          Consumer<AuthProvider>(
+            builder: (context, auth, _) {
+              final authError = auth.errorMessage;
+              if (authError == null || authError.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: Color(0xFFEF4444), size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        authError,
+                        style: const TextStyle(
+                          color: Color(0xFFEF4444),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => auth.clearError(),
+                      child: const Icon(Icons.close_rounded,
+                          color: Color(0xFFEF4444), size: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           SizedBox(
             width: double.infinity,
             child: AnimatedSize(

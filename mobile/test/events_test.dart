@@ -456,11 +456,11 @@ void main() {
       },
     );
 
-    test('EventsProvider properly categorizes client status and applies 3-day TTL', () {
+    test('EventsProvider properly categorizes client status and applies 15-day TTL', () {
       final provider = EventsProvider();
       final now = DateTime.now();
 
-      // Recent inquiry (< 3 days)
+      // Recent inquiry (< 15 days)
       provider.addClient(
         Client(
           id: 'info-recent',
@@ -472,7 +472,7 @@ void main() {
         ),
       );
 
-      // Expired inquiry (> 3 days / 72 hours)
+      // Expired inquiry (>= 15 days -> auto marked as notResponded)
       provider.addClient(
         Client(
           id: 'info-expired',
@@ -480,7 +480,7 @@ void main() {
           phone: '2222222222',
           email: 'expired@example.com',
           status: ClientStatus.information,
-          createdAt: now.subtract(const Duration(days: 4)),
+          createdAt: now.subtract(const Duration(days: 16)),
         ),
       );
 
@@ -506,9 +506,10 @@ void main() {
         ),
       );
 
-      expect(provider.informationClients.length, 2);
       expect(provider.recentInformationClients.length, 1);
       expect(provider.recentInformationClients.first.id, 'info-recent');
+      expect(provider.notRespondedClients.length, 1);
+      expect(provider.notRespondedClients.first.id, 'info-expired');
       expect(provider.comingUpClients.length, 1);
       expect(provider.completedClients.length, 1);
     });
@@ -542,7 +543,7 @@ void main() {
 
         expect(find.text('Information Inquiries'), findsNothing);
 
-        // 2. Add an expired inquiry (> 3 days) -> still should not show
+        // 2. Add an expired inquiry (>= 15 days) -> marked notResponded & does not show
         provider.addClient(
           Client(
             id: 'expired-1',
@@ -550,14 +551,14 @@ void main() {
             phone: '5555555555',
             email: 'oldlead@example.com',
             status: ClientStatus.information,
-            createdAt: now.subtract(const Duration(days: 5)),
+            createdAt: now.subtract(const Duration(days: 16)),
           ),
         );
         await tester.pumpAndSettle();
 
         expect(find.text('Information Inquiries'), findsNothing);
 
-        // 3. Add a fresh inquiry (< 3 days) -> box appears!
+        // 3. Add a fresh inquiry (< 15 days) -> box appears with Call action!
         provider.addClient(
           Client(
             id: 'fresh-1',
@@ -572,7 +573,8 @@ void main() {
 
         expect(find.text('Information Inquiries'), findsOneWidget);
         expect(find.text('Fresh Lead'), findsOneWidget);
-        expect(find.text('Clients visited within last 3 days'), findsOneWidget);
+        expect(find.text('Recent client inquiries (active 15 days)'), findsOneWidget);
+        expect(find.text('Call'), findsOneWidget);
       },
     );
   });

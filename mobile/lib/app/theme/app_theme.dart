@@ -178,11 +178,17 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.4),
+          borderSide: const BorderSide(color: Color(0xFFFF5252), width: 1.4),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.6),
+          borderSide: const BorderSide(color: Color(0xFFFF5252), width: 1.6),
+        ),
+        errorMaxLines: 3,
+        errorStyle: body.bodySmall?.copyWith(
+          color: const Color(0xFFFF5252),
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -364,11 +370,17 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFE11D48), width: 1.4),
+          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.4),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFE11D48), width: 1.6),
+          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.6),
+        ),
+        errorMaxLines: 3,
+        errorStyle: body.bodySmall?.copyWith(
+          color: const Color(0xFFDC2626),
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(

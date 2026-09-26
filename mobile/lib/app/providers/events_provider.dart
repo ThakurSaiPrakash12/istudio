@@ -71,12 +71,16 @@ class EventsProvider extends ChangeNotifier {
           .compareTo(a.createdAt ?? DateTime.now()));
   }
 
-  /// Clients who came for information within the last 3 days (72 hours).
-  /// (After 3 days, they are excluded from the Home Screen Information Box).
+  /// Clients who came for information within the last 15 days.
+  /// After 15 days without booking, they are marked as [ClientStatus.notResponded]
+  /// and automatically stopped from displaying in the inquiries box.
   List<Client> get recentInformationClients {
     final now = DateTime.now();
-    return _clients.where((c) {
-      if (c.status != ClientStatus.information) return false;
+    final toMarkNotResponded = <Client>[];
+    final active = <Client>[];
+
+    for (final c in _clients) {
+      if (c.status != ClientStatus.information) continue;
       DateTime? created = c.createdAt;
       if (created == null && c.id.startsWith('cli-')) {
         final ms = int.tryParse(c.id.substring(4));
@@ -84,16 +88,48 @@ class EventsProvider extends ChangeNotifier {
           created = DateTime.fromMillisecondsSinceEpoch(ms);
         }
       }
-      if (created == null) return false;
+      created ??= DateTime.now();
       final diff = now.difference(created);
-      // Strictly within 3 days (72 hours) and not in the future
-      return diff.inHours < 72 && !diff.isNegative;
-    }).toList()
+
+      if (!diff.isNegative && diff.inDays >= 15) {
+        toMarkNotResponded.add(c);
+      } else {
+        active.add(c);
+      }
+    }
+
+    if (toMarkNotResponded.isNotEmpty) {
+      for (final c in toMarkNotResponded) {
+        _autoMarkNotResponded(c);
+      }
+    }
+
+    return active
       ..sort((a, b) {
         final aTime = a.createdAt ?? DateTime(0);
         final bTime = b.createdAt ?? DateTime(0);
         return bTime.compareTo(aTime);
       });
+  }
+
+  void _autoMarkNotResponded(Client client) {
+    final idx = _clients.indexWhere((c) => c.id == client.id);
+    if (idx != -1 && _clients[idx].status == ClientStatus.information) {
+      final updated = client.copyWith(status: ClientStatus.notResponded);
+      _clients[idx] = updated;
+      try {
+        if (_token != null) {
+          _service.updateClient(_token!, updated).catchError((_) => updated);
+        }
+      } catch (_) {}
+    }
+  }
+
+  /// Clients marked as not responded (inquiry older than 15 days or unresponsive).
+  List<Client> get notRespondedClients {
+    return _clients
+        .where((c) => c.status == ClientStatus.notResponded)
+        .toList();
   }
 
   /// Clients with upcoming scheduled shoots or status comingUp.

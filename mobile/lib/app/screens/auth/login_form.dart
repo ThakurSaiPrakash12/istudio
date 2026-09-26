@@ -35,7 +35,10 @@ class _LoginFormState extends State<LoginForm> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      HapticFeedback.heavyImpact();
+      return;
+    }
     await widget.onSubmit(_phoneController.text, _passwordController.text);
   }
 
