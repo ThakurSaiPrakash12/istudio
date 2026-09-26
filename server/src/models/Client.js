@@ -7,6 +7,11 @@ const clientSchema = new mongoose.Schema({
   email: { type: String, default: '', trim: true, maxlength: 160 },
   address: { type: String, default: '', trim: true, maxlength: 300 },
   notes: { type: String, default: '', trim: true, maxlength: 1000 },
+  status: {
+    type: String,
+    enum: ['information', 'comingUp', 'completed'],
+    default: 'information',
+  },
 }, { timestamps: true });
 
 clientSchema.index({ userId: 1, name: 1 });
@@ -19,6 +24,7 @@ clientSchema.methods.toPublicJSON = function toPublicJSON() {
     email: this.email,
     address: this.address,
     notes: this.notes,
+    status: this.status || 'information',
     createdAt: this.createdAt,
   };
 };

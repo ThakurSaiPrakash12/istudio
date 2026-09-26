@@ -12,9 +12,14 @@ import '../../widgets/studio_button.dart';
 import '../../widgets/studio_text_field.dart';
 
 class CreateEventSheet extends StatefulWidget {
-  const CreateEventSheet({super.key});
+  final Client? initialClient;
 
-  static Future<void> show(BuildContext context) {
+  const CreateEventSheet({
+    super.key,
+    this.initialClient,
+  });
+
+  static Future<void> show(BuildContext context, {Client? initialClient}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -23,7 +28,7 @@ class CreateEventSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (_) => const CreateEventSheet(),
+      builder: (_) => CreateEventSheet(initialClient: initialClient),
     );
   }
 
@@ -34,6 +39,8 @@ class CreateEventSheet extends StatefulWidget {
 class _CreateEventSheetState extends State<CreateEventSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isSubmitting = false;
+
+  Client? _selectedClient;
 
   final _nameController = TextEditingController();
   final _clientController = TextEditingController();
@@ -73,6 +80,11 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialClient != null) {
+      _selectedClient = widget.initialClient;
+      _clientController.text = widget.initialClient!.name;
+      _phoneController.text = widget.initialClient!.phone;
+    }
     _totalAmountController.addListener(_onAmountChanged);
     _advanceController.addListener(_onAmountChanged);
     _clientController.addListener(_onClientNameChanged);
@@ -220,28 +232,44 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
 
       final provider = context.read<EventsProvider>();
 
-      // Auto-link or auto-create client if client does not exist
-      final clientName = _clientController.text.trim();
-      final clientPhone = _phoneController.text.trim();
       String matchedClientId = '';
+      String clientName = '';
 
-      final existing = provider.clients.firstWhere(
-        (c) => c.name.toLowerCase() == clientName.toLowerCase(),
-        orElse: () => const Client(id: '', name: '', phone: '', email: ''),
-      );
+      if (_selectedClient != null) {
+        matchedClientId = _selectedClient!.id;
+        clientName = _selectedClient!.name;
 
-      if (existing.id.isNotEmpty) {
-        matchedClientId = existing.id;
+        // If client was in 'information' stage, auto-promote to 'comingUp'
+        if (_selectedClient!.status == ClientStatus.information) {
+          final updated = _selectedClient!.copyWith(status: ClientStatus.comingUp);
+          provider.updateClient(updated);
+        }
       } else {
-        final newClient = Client(
-          id: 'cli-${DateTime.now().millisecondsSinceEpoch}',
-          name: clientName,
-          phone: clientPhone,
-          email: '',
-          createdAt: DateTime.now(),
+        clientName = _clientController.text.trim();
+        final clientPhone = _phoneController.text.trim();
+
+        final existing = provider.clients.firstWhere(
+          (c) => c.name.toLowerCase() == clientName.toLowerCase(),
+          orElse: () => const Client(id: '', name: '', phone: '', email: ''),
         );
-        final createdClient = await provider.addClient(newClient);
-        matchedClientId = createdClient.id;
+
+        if (existing.id.isNotEmpty) {
+          matchedClientId = existing.id;
+          if (existing.status == ClientStatus.information) {
+            provider.updateClient(existing.copyWith(status: ClientStatus.comingUp));
+          }
+        } else {
+          final newClient = Client(
+            id: 'cli-${DateTime.now().millisecondsSinceEpoch}',
+            name: clientName,
+            phone: clientPhone,
+            email: '',
+            status: ClientStatus.comingUp,
+            createdAt: DateTime.now(),
+          );
+          final createdClient = await provider.addClient(newClient);
+          matchedClientId = createdClient.id;
+        }
       }
 
       final effectiveEventType =
@@ -467,35 +495,130 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                       },
                     ),
                   ],
-                  const SizedBox(height: 14),
-                  StudioTextField(
-                    label: 'Client Name *',
-                    hint: 'e.g. Client Name',
-                    controller: _clientController,
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Please enter the client name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  StudioTextField(
-                    label: 'Client Phone Number *',
-                    hint: 'e.g. 9876543210',
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Please enter client phone number';
-                      }
-                      final digitsOnly = val.replaceAll(RegExp(r'\D'), '');
-                      if (digitsOnly.length < 10) {
-                        return 'Phone number must be at least 10 digits';
-                      }
-                      return null;
-                    },
-                  ),
+                  const SizedBox(height: 18),
+                  // Client Assignment Section
+                  _buildSectionHeader(context, 'Client Assignment'),
+                  const SizedBox(height: 12),
+                  if (_selectedClient != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: isDark ? 0.12 : 0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: accent.withValues(alpha: isDark ? 0.35 : 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  accent.withValues(alpha: 0.4),
+                                  context.cardBorder,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _selectedClient!.name.isNotEmpty
+                                  ? _selectedClient!.name[0].toUpperCase()
+                                  : 'C',
+                              style: TextStyle(
+                                color: textMain,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        _selectedClient!.name,
+                                        style: TextStyle(
+                                          color: textMain,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    _buildStatusPill(_selectedClient!.status, isDark),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _selectedClient!.phone,
+                                  style: TextStyle(
+                                    color: textMuted,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: () => _openClientPicker(context),
+                            child: const Text('Change'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.person_search_rounded, size: 18),
+                      label: const Text('Select Existing Client Profile'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () => _openClientPicker(context),
+                    ),
+                    const SizedBox(height: 12),
+                    StudioTextField(
+                      label: 'Client Name *',
+                      hint: 'e.g. Client Name',
+                      controller: _clientController,
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return 'Please enter the client name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    StudioTextField(
+                      label: 'Client Phone Number *',
+                      hint: 'e.g. 9876543210',
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return 'Please enter client phone number';
+                        }
+                        final digitsOnly = val.replaceAll(RegExp(r'\D'), '');
+                        if (digitsOnly.length < 10) {
+                          return 'Phone number must be at least 10 digits';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   // Date & Time selection row
                   Row(
@@ -724,6 +847,263 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openClientPicker(BuildContext context) {
+    final provider = context.read<EventsProvider>();
+    final clients = provider.clients;
+    final isDark = context.isDark;
+    final textMain = context.textMain;
+    final textMuted = context.textMuted;
+    final accent = context.accentColor;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (pickerContext) {
+        String query = '';
+        return StatefulBuilder(
+          builder: (pickerContext, setModalState) {
+            final filtered = query.trim().isEmpty
+                ? clients
+                : clients.where((c) {
+                    final q = query.toLowerCase();
+                    return c.name.toLowerCase().contains(q) ||
+                        c.phone.contains(q);
+                  }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF16161E) : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: textMuted.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Select Client for Event',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: textMain,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, color: textMuted),
+                          onPressed: () => Navigator.of(pickerContext).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                      autofocus: false,
+                      onChanged: (val) => setModalState(() => query = val),
+                      decoration: InputDecoration(
+                        hintText: 'Search by client name or phone...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        filled: true,
+                        fillColor: context.innerBg,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? Center(
+                            child: Text(
+                              query.isEmpty
+                                  ? 'No clients found'
+                                  : 'No clients match "$query"',
+                              style: TextStyle(color: textMuted),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 8),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final client = filtered[index];
+                              final clientEvents =
+                                  provider.getEventsForClient(client.id,
+                                      clientName: client.name);
+                              final eventCount = clientEvents.length;
+
+                              return InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedClient = client;
+                                    _clientController.text = client.name;
+                                    _phoneController.text = client.phone;
+                                  });
+                                  Navigator.of(pickerContext).pop();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: context.innerBg,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: context.cardBorder
+                                          .withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor:
+                                            accent.withValues(alpha: 0.2),
+                                        child: Text(
+                                          client.name.isNotEmpty
+                                              ? client.name[0].toUpperCase()
+                                              : 'C',
+                                          style: TextStyle(
+                                            color: accent,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    client.name,
+                                                    style: TextStyle(
+                                                      color: textMain,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                _buildStatusPill(
+                                                    client.status, isDark),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${client.phone} • $eventCount ${eventCount == 1 ? 'event' : 'events'}',
+                                              style: TextStyle(
+                                                color: textMuted,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.person_add_rounded, size: 18),
+                      label: const Text('Add as New Client Instead'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _selectedClient = null;
+                        });
+                        Navigator.of(pickerContext).pop();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusPill(ClientStatus status, bool isDark) {
+    Color bg;
+    Color fg;
+    String label = status.label;
+
+    switch (status) {
+      case ClientStatus.information:
+        bg = const Color(0xFFFBBF24).withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309);
+        break;
+      case ClientStatus.comingUp:
+        bg = AppColors.sky.withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFC7D2FE) : AppColors.skyDeep;
+        break;
+      case ClientStatus.completed:
+        bg = const Color(0xFF34D399).withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857);
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: fg,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
         ),
       ),
     );

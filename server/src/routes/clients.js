@@ -12,6 +12,7 @@ const rules = [
   body('email').optional({ checkFalsy: true }).trim().isEmail().isLength({ max: 160 }).withMessage('Enter a valid email address.'),
   body('address').optional().trim().isLength({ max: 300 }).withMessage('Address is too long.'),
   body('notes').optional().trim().isLength({ max: 1000 }).withMessage('Notes are too long.'),
+  body('status').optional().isIn(['information', 'comingUp', 'completed']).withMessage('Invalid client status.'),
 ];
 const updateRules = [
   body('name').optional().trim().isLength({ min: 1, max: 160 }).withMessage('Enter a client name.'),
@@ -19,6 +20,7 @@ const updateRules = [
   body('email').optional({ checkFalsy: true }).trim().isEmail().isLength({ max: 160 }).withMessage('Enter a valid email address.'),
   body('address').optional().trim().isLength({ max: 300 }).withMessage('Address is too long.'),
   body('notes').optional().trim().isLength({ max: 1000 }).withMessage('Notes are too long.'),
+  body('status').optional().isIn(['information', 'comingUp', 'completed']).withMessage('Invalid client status.'),
 ];
 
 router.get('/', controller.listClients);

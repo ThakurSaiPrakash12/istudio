@@ -7,9 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/client.dart';
 import '../../models/invoice.dart';
 import '../../models/studio_event.dart';
 import '../../models/user.dart';
+import '../clients/client_details_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/invoices_provider.dart';
@@ -116,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     final upcoming = eventsProvider.upcomingEvents;
     final past = eventsProvider.pastEvents.take(4).toList();
+    final recentInfoClients = eventsProvider.recentInformationClients;
     final overview = invoicesProvider.overview;
     final unreadAlerts = notifsProvider?.unreadCount ?? 0;
 
@@ -179,6 +182,18 @@ class _HomeScreenState extends State<HomeScreen>
                           event: nearestHeroEvent,
                           onDismiss: () =>
                               setState(() => _dismissedHeroAlert = true),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                    ],
+
+                    // Information Inquiries Box (active within 3 days / 72h TTL)
+                    if (recentInfoClients.isNotEmpty) ...[
+                      _AnimatedSection(
+                        animation: _sAnim3,
+                        child: _buildInformationInquiriesBox(
+                          context,
+                          recentInfoClients,
                         ),
                       ),
                       const SizedBox(height: 22),
@@ -1480,6 +1495,235 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildInformationInquiriesBox(
+    BuildContext context,
+    List<Client> clients,
+  ) {
+    final isDark = context.isDark;
+    final textMain = context.textMain;
+    final textMuted = context.textMuted;
+    final infoColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+
+    return StudioCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: infoColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: infoColor.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Icon(
+                  Icons.info_outline_rounded,
+                  color: infoColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Information Inquiries',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: textMain,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Clients visited within last 3 days',
+                      style: TextStyle(
+                        color: textMuted,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: infoColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: infoColor.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Text(
+                  '${clients.length} New',
+                  style: TextStyle(
+                    color: infoColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Divider(color: context.cardBorder.withValues(alpha: 0.3), height: 1),
+          const SizedBox(height: 10),
+          ...clients.map((client) => _buildInformationClientTile(context, client)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInformationClientTile(BuildContext context, Client client) {
+    final textMain = context.textMain;
+    final textMuted = context.textMuted;
+    final accent = context.accentColor;
+    final infoColor = context.isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+    final timeAgo = _formatInquiryAge(client.createdAt);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: context.innerBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.cardBorder.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            Navigator.of(context).push(
+              SmoothPageRoute(
+                builder: (_) => ClientDetailsScreen(clientId: client.id),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: infoColor.withValues(alpha: 0.18),
+                  child: Text(
+                    client.name.isNotEmpty ? client.name.characters.first.toUpperCase() : 'C',
+                    style: TextStyle(
+                      color: infoColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              client.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: textMain,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: infoColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              timeAgo,
+                              style: TextStyle(
+                                color: infoColor,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        client.phone.isNotEmpty ? client.phone : 'Inquiry only',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textMuted,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () {
+                    CreateEventSheet.show(
+                      context,
+                      initialClient: client,
+                    );
+                  },
+                  child: const Text(
+                    'Book Event',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatInquiryAge(DateTime? dt) {
+    if (dt == null) return 'Recently';
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+
+    if (diff.inMinutes < 60) {
+      if (diff.inMinutes <= 1) return 'Just now';
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return 'Today';
+    } else if (diff.inHours < 48) {
+      return 'Yesterday';
+    } else {
+      return '${diff.inDays}d ago';
+    }
   }
 }
 

@@ -62,6 +62,61 @@ class EventsProvider extends ChangeNotifier {
       ..sort((a, b) => b.startsAt.compareTo(a.startsAt));
   }
 
+  /// Clients who came for information / inquiry.
+  List<Client> get informationClients {
+    return _clients
+        .where((c) => c.status == ClientStatus.information)
+        .toList()
+      ..sort((a, b) => (b.createdAt ?? DateTime.now())
+          .compareTo(a.createdAt ?? DateTime.now()));
+  }
+
+  /// Clients who came for information within the last 3 days (72 hours).
+  /// (After 3 days, they are excluded from the Home Screen Information Box).
+  List<Client> get recentInformationClients {
+    final now = DateTime.now();
+    return _clients.where((c) {
+      if (c.status != ClientStatus.information) return false;
+      DateTime? created = c.createdAt;
+      if (created == null && c.id.startsWith('cli-')) {
+        final ms = int.tryParse(c.id.substring(4));
+        if (ms != null) {
+          created = DateTime.fromMillisecondsSinceEpoch(ms);
+        }
+      }
+      if (created == null) return false;
+      final diff = now.difference(created);
+      // Strictly within 3 days (72 hours) and not in the future
+      return diff.inHours < 72 && !diff.isNegative;
+    }).toList()
+      ..sort((a, b) {
+        final aTime = a.createdAt ?? DateTime(0);
+        final bTime = b.createdAt ?? DateTime(0);
+        return bTime.compareTo(aTime);
+      });
+  }
+
+  /// Clients with upcoming scheduled shoots or status comingUp.
+  List<Client> get comingUpClients {
+    return _clients.where((c) {
+      if (c.status == ClientStatus.comingUp) return true;
+      final clientEvents = getEventsForClient(c.id, clientName: c.name);
+      return clientEvents.any((e) =>
+          e.status == EventStatus.upcoming ||
+          e.status == EventStatus.inProgress);
+    }).toList();
+  }
+
+  /// Clients with completed shoots or status completed.
+  List<Client> get completedClients {
+    return _clients.where((c) {
+      if (c.status == ClientStatus.completed) return true;
+      final clientEvents = getEventsForClient(c.id, clientName: c.name);
+      return clientEvents.isNotEmpty &&
+          clientEvents.every((e) => e.status == EventStatus.completed);
+    }).toList();
+  }
+
   // ================= Event & Client Methods =================
 
   StudioEvent? findById(String id) {
@@ -125,15 +180,21 @@ class EventsProvider extends ChangeNotifier {
   }
 
   Future<Client> addClient(Client client) async {
+    final clientWithDate = client.createdAt == null
+        ? client.copyWith(createdAt: DateTime.now())
+        : client;
     if (_token == null) {
-      _clients.insert(0, client);
+      _clients.insert(0, clientWithDate);
       notifyListeners();
-      return client;
+      return clientWithDate;
     }
-    final created = await _service.createClient(_token!, client);
-    _clients.insert(0, created);
+    final created = await _service.createClient(_token!, clientWithDate);
+    final withFallback = created.createdAt == null
+        ? created.copyWith(createdAt: clientWithDate.createdAt ?? DateTime.now())
+        : created;
+    _clients.insert(0, withFallback);
     notifyListeners();
-    return created;
+    return withFallback;
   }
 
   Future<void> updateClient(Client client) async {

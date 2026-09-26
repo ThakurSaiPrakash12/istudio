@@ -13,6 +13,7 @@ import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
 import '../events/event_details_screen.dart';
+import '../events/create_event_sheet.dart';
 import '../../routes/smooth_page_route.dart';
 
 class ClientDetailsScreen extends StatelessWidget {
@@ -173,13 +174,19 @@ class ClientDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      'Client Contact Profile',
-                      style: TextStyle(
-                        color: textMuted.withValues(alpha: 0.8),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'Client Contact Profile',
+                          style: TextStyle(
+                            color: textMuted.withValues(alpha: 0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildStatusPill(client.status, context.isDark),
+                      ],
                     ),
                   ],
                 ),
@@ -550,6 +557,33 @@ class ClientDetailsScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  CreateEventSheet.show(
+                    context,
+                    initialClient: client,
+                  );
+                },
+                icon: const Icon(Icons.add_rounded, size: 14),
+                label: const Text(
+                  'Book Event',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -557,9 +591,31 @@ class ClientDetailsScreen extends StatelessWidget {
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  'No events booked for this client yet.',
-                  style: TextStyle(color: textMuted, fontSize: 13),
+                child: Column(
+                  children: [
+                    Text(
+                      'No events booked for this client yet.',
+                      style: TextStyle(color: textMuted, fontSize: 13),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: accent,
+                        side: BorderSide(color: accent.withValues(alpha: 0.5)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        CreateEventSheet.show(
+                          context,
+                          initialClient: client,
+                        );
+                      },
+                      icon: const Icon(Icons.calendar_month_outlined, size: 16),
+                      label: const Text('Book Shoot for Client'),
+                    ),
+                  ],
                 ),
               ),
             )
@@ -1044,6 +1100,7 @@ class ClientDetailsScreen extends StatelessWidget {
     final emailController = TextEditingController(text: client.email);
     final addressController = TextEditingController(text: client.address);
     final notesController = TextEditingController(text: client.notes);
+    ClientStatus selectedStatus = client.status;
 
     showModalBottomSheet(
       context: context,
@@ -1052,96 +1109,185 @@ class ClientDetailsScreen extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 24,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Edit Client Profile',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: sheetCtx.textMain,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: sheetCtx.textMuted),
+                          onPressed: () => Navigator.of(sheetCtx).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      'Edit Client Profile',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: sheetContext.textMain,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                      'Client Status',
+                      style: TextStyle(
+                        color: sheetCtx.textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: sheetContext.textMuted),
-                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Information'),
+                          selected: selectedStatus == ClientStatus.information,
+                          onSelected: (val) {
+                            if (val) {
+                              setSheetState(() => selectedStatus = ClientStatus.information);
+                            }
+                          },
+                        ),
+                        ChoiceChip(
+                          label: const Text('Coming Up'),
+                          selected: selectedStatus == ClientStatus.comingUp,
+                          onSelected: (val) {
+                            if (val) {
+                              setSheetState(() => selectedStatus = ClientStatus.comingUp);
+                            }
+                          },
+                        ),
+                        ChoiceChip(
+                          label: const Text('Completed'),
+                          selected: selectedStatus == ClientStatus.completed,
+                          onSelected: (val) {
+                            if (val) {
+                              setSheetState(() => selectedStatus = ClientStatus.completed);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Full Name *',
+                      controller: nameController,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Phone Number *',
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Email Address',
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Address',
+                      controller: addressController,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Notes & Preferences',
+                      controller: notesController,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 20),
+                    StudioButton(
+                      label: 'Save Profile',
+                      onPressed: () {
+                        final name = nameController.text.trim();
+                        final phone = phoneController.text.trim();
+
+                        if (name.isEmpty || phone.isEmpty) {
+                          ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Name and phone are required.'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final updated = client.copyWith(
+                          name: name,
+                          phone: phone,
+                          email: emailController.text.trim(),
+                          address: addressController.text.trim(),
+                          notes: notesController.text.trim(),
+                          status: selectedStatus,
+                        );
+
+                        context.read<EventsProvider>().updateClient(updated);
+                        Navigator.of(sheetCtx).pop();
+                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                StudioTextField(
-                  label: 'Full Name *',
-                  controller: nameController,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Phone Number *',
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Email Address',
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Address',
-                  controller: addressController,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Notes & Preferences',
-                  controller: notesController,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 20),
-                StudioButton(
-                  label: 'Save Profile',
-                  onPressed: () {
-                    final name = nameController.text.trim();
-                    final phone = phoneController.text.trim();
-
-                    if (name.isEmpty || phone.isEmpty) {
-                      ScaffoldMessenger.of(sheetContext).showSnackBar(
-                        const SnackBar(
-                          content: Text('Name and phone are required.'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    final updated = client.copyWith(
-                      name: name,
-                      phone: phone,
-                      email: emailController.text.trim(),
-                      address: addressController.text.trim(),
-                      notes: notesController.text.trim(),
-                    );
-
-                    context.read<EventsProvider>().updateClient(updated);
-                    Navigator.of(sheetContext).pop();
-                  },
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildStatusPill(ClientStatus status, bool isDark) {
+    Color bg;
+    Color fg;
+    Border? border;
+
+    switch (status) {
+      case ClientStatus.information:
+        bg = (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7)).withValues(alpha: 0.16);
+        fg = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+        border = Border.all(color: fg.withValues(alpha: 0.4));
+        break;
+      case ClientStatus.comingUp:
+        bg = (isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706)).withValues(alpha: 0.16);
+        fg = isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
+        border = Border.all(color: fg.withValues(alpha: 0.4));
+        break;
+      case ClientStatus.completed:
+        bg = (isDark ? const Color(0xFF34D399) : const Color(0xFF059669)).withValues(alpha: 0.16);
+        fg = isDark ? const Color(0xFF34D399) : const Color(0xFF059669);
+        border = Border.all(color: fg.withValues(alpha: 0.4));
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: border,
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          color: fg,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
     );
   }
 

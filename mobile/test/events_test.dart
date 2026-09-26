@@ -257,9 +257,9 @@ void main() {
 
         // Verify filter chips
         expect(find.text('All'), findsOneWidget);
-        expect(find.text('Coming Up'), findsOneWidget);
-        expect(find.text('Active'), findsOneWidget);
-        expect(find.text('Done'), findsOneWidget);
+        expect(find.text('Information'), findsWidgets);
+        expect(find.text('Coming Up'), findsWidgets);
+        expect(find.text('Completed'), findsWidgets);
         expect(find.text('Due'), findsOneWidget);
 
         // Test Search by phone
@@ -453,6 +453,126 @@ void main() {
         expect(find.text('Profit (Net)'), findsOneWidget);
 
         notifs.dispose();
+      },
+    );
+
+    test('EventsProvider properly categorizes client status and applies 3-day TTL', () {
+      final provider = EventsProvider();
+      final now = DateTime.now();
+
+      // Recent inquiry (< 3 days)
+      provider.addClient(
+        Client(
+          id: 'info-recent',
+          name: 'Recent Inquiry',
+          phone: '1111111111',
+          email: 'recent@example.com',
+          status: ClientStatus.information,
+          createdAt: now.subtract(const Duration(hours: 24)),
+        ),
+      );
+
+      // Expired inquiry (> 3 days / 72 hours)
+      provider.addClient(
+        Client(
+          id: 'info-expired',
+          name: 'Expired Inquiry',
+          phone: '2222222222',
+          email: 'expired@example.com',
+          status: ClientStatus.information,
+          createdAt: now.subtract(const Duration(days: 4)),
+        ),
+      );
+
+      // Coming Up client
+      provider.addClient(
+        const Client(
+          id: 'client-comingup',
+          name: 'Coming Up Client',
+          phone: '3333333333',
+          email: 'comingup@example.com',
+          status: ClientStatus.comingUp,
+        ),
+      );
+
+      // Completed client
+      provider.addClient(
+        const Client(
+          id: 'client-completed',
+          name: 'Completed Client',
+          phone: '4444444444',
+          email: 'completed@example.com',
+          status: ClientStatus.completed,
+        ),
+      );
+
+      expect(provider.informationClients.length, 2);
+      expect(provider.recentInformationClients.length, 1);
+      expect(provider.recentInformationClients.first.id, 'info-recent');
+      expect(provider.comingUpClients.length, 1);
+      expect(provider.completedClients.length, 1);
+    });
+
+    testWidgets(
+      'HomeScreen shows Information Inquiries box only when recent inquiry clients exist',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        final provider = EventsProvider();
+        final now = DateTime.now();
+
+        // 1. Without any inquiry clients, box should not exist
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => AuthProvider()),
+              ChangeNotifierProvider.value(value: provider),
+              ChangeNotifierProvider(create: (_) => InvoicesProvider()),
+              ChangeNotifierProvider(create: (_) => NotificationsProvider()),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.dark,
+              home: const Scaffold(body: HomeScreen()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Information Inquiries'), findsNothing);
+
+        // 2. Add an expired inquiry (> 3 days) -> still should not show
+        provider.addClient(
+          Client(
+            id: 'expired-1',
+            name: 'Old Lead',
+            phone: '5555555555',
+            email: 'oldlead@example.com',
+            status: ClientStatus.information,
+            createdAt: now.subtract(const Duration(days: 5)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Information Inquiries'), findsNothing);
+
+        // 3. Add a fresh inquiry (< 3 days) -> box appears!
+        provider.addClient(
+          Client(
+            id: 'fresh-1',
+            name: 'Fresh Lead',
+            phone: '9999999999',
+            email: 'freshlead@example.com',
+            status: ClientStatus.information,
+            createdAt: now.subtract(const Duration(hours: 5)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Information Inquiries'), findsOneWidget);
+        expect(find.text('Fresh Lead'), findsOneWidget);
+        expect(find.text('Clients visited within last 3 days'), findsOneWidget);
       },
     );
   });

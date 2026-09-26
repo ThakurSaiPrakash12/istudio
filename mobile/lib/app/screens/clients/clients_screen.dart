@@ -17,21 +17,21 @@ import '../../routes/smooth_page_route.dart';
 
 enum ClientFilter {
   all,
+  information,
   upcoming,
-  active,
-  past,
+  completed,
   paymentDue;
 
   String get label {
     switch (this) {
       case ClientFilter.all:
         return 'All';
+      case ClientFilter.information:
+        return 'Information';
       case ClientFilter.upcoming:
         return 'Coming Up';
-      case ClientFilter.active:
-        return 'Active';
-      case ClientFilter.past:
-        return 'Done';
+      case ClientFilter.completed:
+        return 'Completed';
       case ClientFilter.paymentDue:
         return 'Due';
     }
@@ -104,19 +104,22 @@ class _ClientsScreenState extends State<ClientsScreen>
       switch (_activeFilter) {
         case ClientFilter.all:
           return true;
+        case ClientFilter.information:
+          return client.status == ClientStatus.information;
         case ClientFilter.upcoming:
-          return clientEvents.any((e) =>
-              e.status == EventStatus.upcoming &&
-              !e.startsAt
-                  .isBefore(DateTime.now().subtract(const Duration(days: 1))));
-        case ClientFilter.active:
-          return clientEvents.any((e) => e.status == EventStatus.inProgress);
-        case ClientFilter.past:
-          return clientEvents.isNotEmpty &&
-              clientEvents.every((e) =>
-                  e.status == EventStatus.completed ||
-                  e.startsAt.isBefore(
+          return client.status == ClientStatus.comingUp ||
+              clientEvents.any((e) =>
+                  (e.status == EventStatus.upcoming ||
+                      e.status == EventStatus.inProgress) &&
+                  !e.startsAt.isBefore(
                       DateTime.now().subtract(const Duration(days: 1))));
+        case ClientFilter.completed:
+          return client.status == ClientStatus.completed ||
+              (clientEvents.isNotEmpty &&
+                  clientEvents.every((e) =>
+                      e.status == EventStatus.completed ||
+                      e.startsAt.isBefore(
+                          DateTime.now().subtract(const Duration(days: 1)))));
         case ClientFilter.paymentDue:
           return clientEvents.any((e) =>
               e.remainingAmount > 0 || e.status == EventStatus.paymentDue);
@@ -291,7 +294,7 @@ class _ClientsScreenState extends State<ClientsScreen>
                           ),
                           itemCount: filteredClients.length,
                           separatorBuilder: (_, _) =>
-                              const SizedBox(height: 10),
+                                const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final client = filteredClients[index];
                           final events = provider.getEventsForClient(
@@ -363,13 +366,21 @@ class _ClientsScreenState extends State<ClientsScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            client.name,
-                                            style: TextStyle(
-                                              color: textMain,
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 15,
-                                            ),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  client.name,
+                                                  style: TextStyle(
+                                                    color: textMain,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              _buildStatusPill(client.status, context.isDark),
+                                            ],
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
@@ -521,6 +532,7 @@ class _ClientsScreenState extends State<ClientsScreen>
     final emailController = TextEditingController();
     final addressController = TextEditingController();
     final notesController = TextEditingController();
+    ClientStatus selectedStatus = ClientStatus.information;
 
     showModalBottomSheet(
       context: context,
@@ -530,147 +542,251 @@ class _ClientsScreenState extends State<ClientsScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 24,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle bar
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: sheetContext.textMuted.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'New Client Profile',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: sheetContext.textMain,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                    // Handle bar
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: sheetContext.textMuted.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
                     ),
-                    IconButton(
-                      icon:
-                          Icon(Icons.close, color: sheetContext.textMuted),
-                      onPressed: () =>
-                          Navigator.of(sheetContext).pop(),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'New Client Profile',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: sheetContext.textMain,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        IconButton(
+                          icon:
+                              Icon(Icons.close, color: sheetContext.textMuted),
+                          onPressed: () =>
+                              Navigator.of(sheetContext).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    StudioTextField(
+                      label: 'Full Name *',
+                      hint: 'e.g. Client Name',
+                      controller: nameController,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Phone Number *',
+                      hint: 'e.g. 9876543210',
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Email Address',
+                      hint: 'e.g. client@email.com',
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Address / Location',
+                      hint: 'e.g. Flat 12, Sunshine Apartments',
+                      controller: addressController,
+                    ),
+                    const SizedBox(height: 14),
+                    StudioTextField(
+                      label: 'Notes & Preferences',
+                      hint:
+                          'Special lighting, themes, delivery requests...',
+                      controller: notesController,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Client Status / Stage',
+                      style: TextStyle(
+                        color: sheetContext.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Information (Inquiry / Visit)'),
+                          selected: selectedStatus == ClientStatus.information,
+                          onSelected: (val) {
+                            if (val) setSheetState(() => selectedStatus = ClientStatus.information);
+                          },
+                          selectedColor: const Color(0xFFFBBF24).withValues(alpha: 0.25),
+                          labelStyle: TextStyle(
+                            color: selectedStatus == ClientStatus.information
+                                ? (sheetContext.isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309))
+                                : sheetContext.textMuted,
+                            fontWeight: selectedStatus == ClientStatus.information ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Coming Up (Scheduled)'),
+                          selected: selectedStatus == ClientStatus.comingUp,
+                          onSelected: (val) {
+                            if (val) setSheetState(() => selectedStatus = ClientStatus.comingUp);
+                          },
+                          selectedColor: AppColors.sky.withValues(alpha: 0.25),
+                          labelStyle: TextStyle(
+                            color: selectedStatus == ClientStatus.comingUp
+                                ? AppColors.sky
+                                : sheetContext.textMuted,
+                            fontWeight: selectedStatus == ClientStatus.comingUp ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Completed (Past Client)'),
+                          selected: selectedStatus == ClientStatus.completed,
+                          onSelected: (val) {
+                            if (val) setSheetState(() => selectedStatus = ClientStatus.completed);
+                          },
+                          selectedColor: const Color(0xFF34D399).withValues(alpha: 0.25),
+                          labelStyle: TextStyle(
+                            color: selectedStatus == ClientStatus.completed
+                                ? (sheetContext.isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857))
+                                : sheetContext.textMuted,
+                            fontWeight: selectedStatus == ClientStatus.completed ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    StudioButton(
+                      label: 'Create Client',
+                      onPressed: () {
+                        final name = nameController.text.trim();
+                        final phone = phoneController.text.trim();
+                        final digitsOnly =
+                            phone.replaceAll(RegExp(r'\D'), '');
+
+                        if (name.isEmpty) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Please enter client full name'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (phone.isEmpty) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please enter phone number'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (digitsOnly.length < 10) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Phone number must be at least 10 digits'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final newClient = Client(
+                          id: 'cli-${DateTime.now().millisecondsSinceEpoch}',
+                          name: name,
+                          phone: phone,
+                          email: emailController.text.trim(),
+                          address: addressController.text.trim(),
+                          notes: notesController.text.trim(),
+                          status: selectedStatus,
+                          createdAt: DateTime.now(),
+                        );
+
+                        context.read<EventsProvider>().addClient(newClient);
+                        Navigator.of(sheetContext).pop();
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Client "${newClient.name}" created.'),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                StudioTextField(
-                  label: 'Full Name *',
-                  hint: 'e.g. Client Name',
-                  controller: nameController,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Phone Number *',
-                  hint: 'e.g. 9876543210',
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Email Address',
-                  hint: 'e.g. client@email.com',
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Address / Location',
-                  hint: 'e.g. Flat 12, Sunshine Apartments',
-                  controller: addressController,
-                ),
-                const SizedBox(height: 14),
-                StudioTextField(
-                  label: 'Notes & Preferences',
-                  hint:
-                      'Special lighting, themes, delivery requests...',
-                  controller: notesController,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 20),
-                StudioButton(
-                  label: 'Create Client',
-                  onPressed: () {
-                    final name = nameController.text.trim();
-                    final phone = phoneController.text.trim();
-                    final digitsOnly =
-                        phone.replaceAll(RegExp(r'\D'), '');
-
-                    if (name.isEmpty) {
-                      ScaffoldMessenger.of(sheetContext).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text('Please enter client full name'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    if (phone.isEmpty) {
-                      ScaffoldMessenger.of(sheetContext).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please enter phone number'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    if (digitsOnly.length < 10) {
-                      ScaffoldMessenger.of(sheetContext).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Phone number must be at least 10 digits'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    final newClient = Client(
-                      id: 'cli-${DateTime.now().millisecondsSinceEpoch}',
-                      name: name,
-                      phone: phone,
-                      email: emailController.text.trim(),
-                      address: addressController.text.trim(),
-                      notes: notesController.text.trim(),
-                      createdAt: DateTime.now(),
-                    );
-
-                    context.read<EventsProvider>().addClient(newClient);
-                    Navigator.of(sheetContext).pop();
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Client "${newClient.name}" created.'),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildStatusPill(ClientStatus status, bool isDark) {
+    Color bg;
+    Color fg;
+    String label = status.label;
+
+    switch (status) {
+      case ClientStatus.information:
+        bg = const Color(0xFFFBBF24).withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309);
+        break;
+      case ClientStatus.comingUp:
+        bg = AppColors.sky.withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFC7D2FE) : AppColors.skyDeep;
+        break;
+      case ClientStatus.completed:
+        bg = const Color(0xFF34D399).withValues(alpha: isDark ? 0.22 : 0.14);
+        fg = isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857);
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: fg,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
     );
   }
 }

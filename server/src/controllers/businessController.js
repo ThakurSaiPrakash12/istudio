@@ -23,7 +23,7 @@ function fields(body, names) {
     .map((name) => [name, body[name]]));
 }
 
-const clientFields = ['name', 'phone', 'email', 'address', 'notes'];
+const clientFields = ['name', 'phone', 'email', 'address', 'notes', 'status'];
 const eventFields = ['clientId', 'title', 'eventType', 'startsAt', 'startTime', 'endTime', 'location', 'status', 'totalAmount', 'notes'];
 const paymentFields = ['title', 'amount', 'paidAt', 'method', 'reference', 'proofUrl'];
 const expenseFields = ['title', 'amount', 'category', 'incurredAt'];
