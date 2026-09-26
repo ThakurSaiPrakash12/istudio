@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_motion.dart';
 import '../../widgets/auth_background.dart';
 import '../calendar/calendar_screen.dart';
 import '../clients/clients_screen.dart';
@@ -48,6 +49,7 @@ class _AppShellState extends State<AppShell> {
     final isDark = context.isDark;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final animationsDisabled = AppMotion.areAnimationsDisabled(context);
 
     return AppShellScope(
       switchTab: _switchTab,
@@ -57,19 +59,35 @@ class _AppShellState extends State<AppShell> {
           resizeToAvoidBottomInset: false,
           body: Stack(
             children: [
-              // Persistent Kept-Alive Tab Stack with silky smooth cross-fade
+              // GPU-optimized Kept-Alive Tab Stack with directional slide & scale page transition
               for (int i = 0; i < _pages.length; i++)
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: i != _index,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 240),
-                      curve: Curves.easeInOutCubic,
-                      opacity: i == _index ? 1.0 : 0.0,
-                      child: TickerMode(
-                        enabled: i == _index,
-                        child: _pages[i],
-                      ),
+                    child: RepaintBoundary(
+                      child: animationsDisabled
+                          ? (i == _index ? _pages[i] : const SizedBox.shrink())
+                          : AnimatedSlide(
+                              duration: AppMotion.medium,
+                              curve: AppMotion.fluid,
+                              offset: i == _index
+                                  ? Offset.zero
+                                  : Offset(i > _index ? 0.05 : -0.05, 0.0),
+                              child: AnimatedScale(
+                                duration: AppMotion.medium,
+                                curve: AppMotion.fluid,
+                                scale: i == _index ? 1.0 : 0.985,
+                                child: AnimatedOpacity(
+                                  duration: AppMotion.standard,
+                                  curve: Curves.easeInOutCubic,
+                                  opacity: i == _index ? 1.0 : 0.0,
+                                  child: TickerMode(
+                                    enabled: i == _index,
+                                    child: _pages[i],
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                 ),

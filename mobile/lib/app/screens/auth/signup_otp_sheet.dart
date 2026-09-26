@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/pin_particle_field.dart';
 import '../../widgets/studio_button.dart';
 
 class SignupOtpSheet extends StatefulWidget {
@@ -51,6 +51,8 @@ class SignupOtpSheet extends StatefulWidget {
 }
 
 class _SignupOtpSheetState extends State<SignupOtpSheet> {
+  final GlobalKey<PinParticleFieldState> _pinFieldKey =
+      GlobalKey<PinParticleFieldState>();
   final List<TextEditingController> _otpControllers =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
@@ -79,10 +81,7 @@ class _SignupOtpSheetState extends State<SignupOtpSheet> {
               textColor: Colors.white,
               onPressed: () {
                 final otp = widget.initialDebugOtp!;
-                for (int i = 0; i < 6 && i < otp.length; i++) {
-                  _otpControllers[i].text = otp[i];
-                }
-                _handleVerify();
+                _pinFieldKey.currentState?.setDigitsWithCascade(otp);
               },
             ),
           ),
@@ -142,10 +141,7 @@ class _SignupOtpSheetState extends State<SignupOtpSheet> {
               label: 'Auto-fill',
               textColor: Colors.white,
               onPressed: () {
-                for (int i = 0; i < 6 && i < debugOtp.length; i++) {
-                  _otpControllers[i].text = debugOtp[i];
-                }
-                _handleVerify();
+                _pinFieldKey.currentState?.setDigitsWithCascade(debugOtp);
               },
             ),
           ),
@@ -190,29 +186,6 @@ class _SignupOtpSheetState extends State<SignupOtpSheet> {
         setState(() =>
             _errorMessage = auth.errorMessage ?? 'Unable to complete verification.');
       }
-    }
-  }
-
-  void _onOtpChanged(int index, String value) {
-    if (value.length > 1) {
-      final digits = value.replaceAll(RegExp(r'\D'), '');
-      for (int i = 0; i < 6 && i < digits.length; i++) {
-        _otpControllers[i].text = digits[i];
-      }
-      if (digits.length >= 6) {
-        _otpFocusNodes[5].unfocus();
-        _handleVerify();
-      } else {
-        _otpFocusNodes[digits.length].requestFocus();
-      }
-      return;
-    }
-
-    if (value.isNotEmpty && index < 5) {
-      _otpFocusNodes[index + 1].requestFocus();
-    }
-    if (_otpControllers.every((c) => c.text.isNotEmpty)) {
-      _handleVerify();
     }
   }
 
@@ -325,63 +298,18 @@ class _SignupOtpSheetState extends State<SignupOtpSheet> {
             const SizedBox(height: 16),
           ],
 
-          // 6 PIN boxes
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(6, (index) {
-              return SizedBox(
-                width: 44,
-                height: 52,
-                child: KeyboardListener(
-                  focusNode: FocusNode(),
-                  onKeyEvent: (event) {
-                    if (event is KeyDownEvent &&
-                        event.logicalKey == LogicalKeyboardKey.backspace &&
-                        _otpControllers[index].text.isEmpty &&
-                        index > 0) {
-                      _otpFocusNodes[index - 1].requestFocus();
-                    }
-                  },
-                  child: TextField(
-                    controller: _otpControllers[index],
-                    focusNode: _otpFocusNodes[index],
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    maxLength: 1,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : AppColors.lightTextMain,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      counterText: '',
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.glassInnerDark
-                          : AppColors.lightInputFill,
-                      contentPadding: EdgeInsets.zero,
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.glassBorderDark
-                              : AppColors.lightBorder,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: AppColors.sky,
-                          width: 1.8,
-                        ),
-                      ),
-                    ),
-                    onChanged: (val) => _onOtpChanged(index, val),
-                  ),
-                ),
-              );
-            }),
+          // 6 PIN boxes with particle burst on every pin entry
+          PinParticleField(
+            key: _pinFieldKey,
+            controllers: _otpControllers,
+            focusNodes: _otpFocusNodes,
+            isDark: isDark,
+            onChanged: () {
+              if (_errorMessage != null) {
+                setState(() => _errorMessage = null);
+              }
+            },
+            onCompleted: (_) => _handleVerify(),
           ),
           const SizedBox(height: 20),
 

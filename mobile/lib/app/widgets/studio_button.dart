@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 
 class StudioButton extends StatefulWidget {
   const StudioButton({
@@ -32,6 +33,7 @@ class _StudioButtonState extends State<StudioButton> {
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null && !widget.isLoading;
     final isDark = AppColors.isDark(context);
+    final animationsDisabled = AppMotion.areAnimationsDisabled(context);
 
     final radius = BorderRadius.circular(999);
 
@@ -76,24 +78,25 @@ class _StudioButtonState extends State<StudioButton> {
       button: true,
       enabled: enabled,
       label: widget.label,
-      child: GestureDetector(
-        onTapDown: enabled
-            ? (_) {
-                HapticFeedback.lightImpact();
-                setState(() => _pressed = true);
-              }
-            : null,
-        onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: enabled ? widget.onPressed : null,
-        child: AnimatedScale(
-          scale: _pressed ? 0.95 : 1.0,
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOutBack,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 180),
-            opacity: enabled ? 1.0 : 0.5,
-            child: Container(
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTapDown: enabled
+              ? (_) {
+                  HapticFeedback.lightImpact();
+                  setState(() => _pressed = true);
+                }
+              : null,
+          onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+          onTapCancel: () => setState(() => _pressed = false),
+          onTap: enabled ? widget.onPressed : null,
+          child: AnimatedScale(
+            scale: (animationsDisabled || !_pressed) ? 1.0 : 0.95,
+            duration: AppMotion.fast,
+            curve: AppMotion.spring,
+            child: AnimatedOpacity(
+              duration: AppMotion.fast,
+              opacity: enabled ? 1.0 : 0.5,
+              child: Container(
               width: double.infinity,
               height: widget.height,
               decoration: decoration,
@@ -162,6 +165,7 @@ class _StudioButtonState extends State<StudioButton> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
