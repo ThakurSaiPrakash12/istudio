@@ -3,8 +3,10 @@
 .env.*
 *.env
 server/.env
+mobile/.env
 !.env.example
 !server/.env.example
+!mobile/.env.example
 
 # Node backend
 node_modules/

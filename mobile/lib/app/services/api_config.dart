@@ -1,13 +1,10 @@
 class ApiConfig {
   const ApiConfig._();
 
-  /// Deployed backend origin. Edit this when the host changes.
-  /// Trailing slashes and `/api` are stripped automatically.
-  static const String backendUrl = 'https://istudio-1-txuo.onrender.com';
-
-  /// Optional local override:
-  /// `flutter run --dart-define=API_BASE_URL=http://192.168.1.9:5000/api`
-  static const String _override = String.fromEnvironment('API_BASE_URL');
+  /// Backend URL injected at build time via --dart-define-from-file=.env
+  /// Run with: flutter run --dart-define-from-file=.env
+  /// Never hardcode this value — keep it in mobile/.env (git-ignored).
+  static const String _backendUrl = String.fromEnvironment('API_BASE_URL');
 
   static String _strip(String value) {
     var url = value.trim();
@@ -23,8 +20,13 @@ class ApiConfig {
     return url;
   }
 
-  static String get origin =>
-      _strip(_override.isNotEmpty ? _override : backendUrl);
+  static String get origin {
+    assert(
+      _backendUrl.isNotEmpty,
+      'API_BASE_URL is not set. Run with: flutter run --dart-define-from-file=.env',
+    );
+    return _strip(_backendUrl);
+  }
 
   static String get baseUrl => '$origin/api';
 
