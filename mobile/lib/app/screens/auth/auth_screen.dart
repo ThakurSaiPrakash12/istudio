@@ -8,6 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/auth_background.dart';
 import '../../widgets/auth_mode_toggle.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/studio_logo.dart';
 import 'login_form.dart';
 import 'signup_form.dart';
@@ -79,6 +80,14 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    final auth = context.read<AuthProvider>();
+    final success = await auth.signInWithGoogle();
+    if (!success && mounted && auth.errorMessage != null) {
+      _showError(auth.errorMessage);
+    }
+  }
+
   void _showError(String? message) {
     if (message == null || !mounted) return;
     ScaffoldMessenger.of(
@@ -137,6 +146,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 isLoading: isLoading,
                                 onLogin: _handleLogin,
                                 onSignup: _handleSignup,
+                                onGoogleSignIn: _handleGoogleSignIn,
                               ),
                             ],
                           ),
@@ -160,6 +170,7 @@ class _AuthCard extends StatelessWidget {
     required this.isLoading,
     required this.onLogin,
     required this.onSignup,
+    required this.onGoogleSignIn,
   });
 
   final bool isLogin;
@@ -171,6 +182,7 @@ class _AuthCard extends StatelessWidget {
     required String password,
   })
   onSignup;
+  final VoidCallback onGoogleSignIn;
 
   @override
   Widget build(BuildContext context) {
@@ -287,6 +299,40 @@ class _AuthCard extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: Divider(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  thickness: 1,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'or',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: context.textMuted,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Divider(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  thickness: 1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          GoogleSignInButton(
+            isLoading: isLoading,
+            label: isLogin ? 'Sign in with Google' : 'Sign up with Google',
+            onPressed: isLoading ? null : onGoogleSignIn,
           ),
         ],
       ),

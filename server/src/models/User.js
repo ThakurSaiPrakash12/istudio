@@ -10,15 +10,26 @@ const userSchema = new mongoose.Schema(
       maxlength: 24,
       unique: true,
     },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
     phone: {
       type: String,
-      required: true,
+      required: function () {
+        return !this.googleId;
+      },
       unique: true,
+      sparse: true,
       match: /^\d{10}$/,
     },
     password: {
       type: String,
-      required: true,
+      required: function () {
+        return !this.googleId;
+      },
       minlength: 8,
       select: false,
     },
@@ -55,6 +66,7 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     website: this.website || '',
     specialties: this.specialties || '',
     logoUrl: this.logoUrl || '',
+    googleId: this.googleId || '',
   };
 };
 

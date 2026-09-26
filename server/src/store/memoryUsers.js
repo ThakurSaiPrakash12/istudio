@@ -49,6 +49,7 @@ function publicFields(user) {
     website: user.website || '',
     specialties: user.specialties || '',
     logoUrl: user.logoUrl || '',
+    googleId: user.googleId || '',
   };
 }
 
@@ -56,7 +57,8 @@ function toDoc(user, withPassword = false) {
   return {
     _id: user.id,
     username: user.username,
-    phone: user.phone,
+    phone: user.phone || '',
+    googleId: user.googleId || null,
     password: withPassword ? user.password : undefined,
     studioName: user.studioName || '',
     ownerName: user.ownerName || user.username,
@@ -77,12 +79,26 @@ function toDoc(user, withPassword = false) {
 const memoryUsers = {
   enabled: false,
   findByPhone(phone, withPassword = false) {
+    if (!phone) return null;
     const user = users.find((item) => item.phone === phone);
     return user ? toDoc(user, withPassword) : null;
   },
   findByUsername(username) {
+    if (!username) return null;
     const user = users.find(
-      (item) => item.username.toLowerCase() === username.toLowerCase(),
+      (item) => item.username && item.username.toLowerCase() === username.toLowerCase(),
+    );
+    return user ? toDoc(user) : null;
+  },
+  findByGoogleId(googleId) {
+    if (!googleId) return null;
+    const user = users.find((item) => item.googleId === googleId);
+    return user ? toDoc(user) : null;
+  },
+  findByEmail(email) {
+    if (!email) return null;
+    const user = users.find(
+      (item) => item.email && item.email.toLowerCase() === email.toLowerCase(),
     );
     return user ? toDoc(user) : null;
   },
@@ -90,22 +106,23 @@ const memoryUsers = {
     const user = users.find((item) => item.id === id);
     return user ? toDoc(user, withPassword) : null;
   },
-  create({ username, phone, password }) {
+  create(data) {
     const user = {
       id: randomUUID(),
-      username,
-      phone,
-      password,
-      studioName: '',
-      ownerName: username,
-      email: '',
-      city: '',
-      address: '',
-      about: '',
-      instagram: '',
-      website: '',
-      specialties: '',
-      logoUrl: '',
+      username: data.username,
+      phone: data.phone || '',
+      password: data.password || '',
+      googleId: data.googleId || null,
+      studioName: data.studioName || '',
+      ownerName: data.ownerName || data.username,
+      email: data.email || '',
+      city: data.city || '',
+      address: data.address || '',
+      about: data.about || '',
+      instagram: data.instagram || '',
+      website: data.website || '',
+      specialties: data.specialties || '',
+      logoUrl: data.logoUrl || '',
     };
     users.push(user);
     saveUsersToDisk(users);

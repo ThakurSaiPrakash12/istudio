@@ -14,6 +14,7 @@ class User {
     this.website = '',
     this.specialties = '',
     this.logoUrl = '',
+    this.googleId = '',
   });
 
   final String id;
@@ -30,6 +31,7 @@ class User {
   final String website;
   final String specialties;
   final String logoUrl;
+  final String googleId;
 
   String get displayStudioName =>
       studioName.isNotEmpty ? studioName : 'Your studio';
@@ -52,6 +54,7 @@ class User {
       website: json['website'] as String? ?? '',
       specialties: json['specialties'] as String? ?? '',
       logoUrl: json['logoUrl'] as String? ?? '',
+      googleId: json['googleId'] as String? ?? '',
     );
   }
 
@@ -71,6 +74,7 @@ class User {
       'website': website,
       'specialties': specialties,
       'logoUrl': logoUrl,
+      'googleId': googleId,
     };
   }
 
@@ -87,6 +91,7 @@ class User {
     String? website,
     String? specialties,
     String? logoUrl,
+    String? googleId,
   }) {
     return User(
       id: id,
@@ -103,6 +108,7 @@ class User {
       website: website ?? this.website,
       specialties: specialties ?? this.specialties,
       logoUrl: logoUrl ?? this.logoUrl,
+      googleId: googleId ?? this.googleId,
     );
   }
 }

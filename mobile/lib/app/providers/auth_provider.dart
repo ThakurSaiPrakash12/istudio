@@ -5,17 +5,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/google_auth_service.dart';
 import '../services/secure_vault_service.dart';
 import '../utils/validators.dart';
 
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({AuthService? authService, SecureVaultService? vault})
-      : _authService = authService ?? AuthService(),
+  AuthProvider({
+    AuthService? authService,
+    GoogleAuthService? googleAuthService,
+    SecureVaultService? vault,
+  })  : _authService = authService ?? AuthService(),
+        _googleAuthService = googleAuthService ?? GoogleAuthService(),
         _vault = vault ?? SecureVaultService.instance {
     ApiService.onUnauthorized = handleUnauthorized;
   }
 
   final AuthService _authService;
+  final GoogleAuthService _googleAuthService;
   final SecureVaultService _vault;
 
   User? _user;
@@ -98,6 +104,38 @@ class AuthProvider extends ChangeNotifier {
       );
       await _persistSession(result);
     });
+  }
+
+  Future<bool> signInWithGoogle() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final googleResult = await _googleAuthService.signIn();
+      if (googleResult == null) {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final result = await _authService.loginWithGoogle(
+        idToken: googleResult.idToken,
+        accessToken: googleResult.accessToken,
+      );
+
+      await _persistSession(result);
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Google sign-in could not be completed. Please try again.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> signup({

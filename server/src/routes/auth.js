@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 
 const {
   login,
+  googleAuth,
   me,
   signup,
   signupSendOtp,
@@ -76,6 +77,11 @@ router.post(
     body('password').notEmpty().withMessage('Enter your password'),
   ],
   login,
+);
+
+router.post(
+  '/google',
+  googleAuth,
 );
 
 router.post(

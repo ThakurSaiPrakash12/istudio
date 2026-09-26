@@ -63,6 +63,20 @@ class AuthService {
     return _parseAuth(payload);
   }
 
+  Future<AuthResult> loginWithGoogle({
+    required String idToken,
+    String? accessToken,
+  }) async {
+    final body = <String, dynamic>{
+      'idToken': idToken,
+    };
+    if (accessToken != null) {
+      body['accessToken'] = accessToken;
+    }
+    final payload = await _api.post('/auth/google', body);
+    return _parseAuth(payload);
+  }
+
   Future<User> me(String token) async {
     final payload = await _api.get('/auth/me', token: token);
     return _parseUser(payload);

@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 
 const userRepository = require('../repositories/userRepository');
 const otpService = require('../services/otpService');
+const googleAuthService = require('../services/googleAuthService');
 const { uploadToCloudinary } = require('../config/cloudinary');
 const logger = require('../config/logger');
 
@@ -611,11 +612,101 @@ async function changePassword(req, res) {
   }
 }
 
+async function googleAuth(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const idToken = req.body.idToken || req.body.token || req.body.credential;
+    const accessToken = req.body.accessToken;
+
+    if (!idToken && !accessToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google authorization token is required.',
+      });
+    }
+
+    let profile;
+    try {
+      profile = await googleAuthService.verifyGoogleToken({ idToken, accessToken });
+    } catch (verifyErr) {
+      logger.warn('Google token verification failed', { error: verifyErr.message });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired Google authorization token.',
+      });
+    }
+
+    if (!profile || !profile.googleId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Could not retrieve Google profile information.',
+      });
+    }
+
+    // 1. Check if user already exists by googleId
+    let user = await userRepository.findByGoogleId(profile.googleId);
+
+    // 2. If not found by googleId, check if email matches an existing account
+    if (!user && profile.email) {
+      user = await userRepository.findByEmail(profile.email);
+      if (user) {
+        // Link googleId to this user account
+        user = await userRepository.updateUser(user._id || user.id, {
+          googleId: profile.googleId,
+          ...(profile.picture && !user.logoUrl ? { logoUrl: profile.picture } : {}),
+          ...(profile.name && !user.ownerName ? { ownerName: profile.name } : {}),
+        });
+      }
+    }
+
+    // 3. If still no user, create a new user profile
+    if (!user) {
+      let baseUsername = (profile.name || profile.email.split('@')[0] || 'user')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '_')
+        .slice(0, 16);
+      if (baseUsername.length < 3) baseUsername = `user_${baseUsername}`;
+
+      let candidateUsername = baseUsername;
+      let existing = await userRepository.findByUsername(candidateUsername);
+      let suffix = 1;
+      while (existing && suffix < 100) {
+        candidateUsername = `${baseUsername.slice(0, 14)}_${Math.floor(1000 + Math.random() * 9000)}`;
+        existing = await userRepository.findByUsername(candidateUsername);
+        suffix++;
+      }
+
+      user = await userRepository.createUser({
+        username: candidateUsername,
+        googleId: profile.googleId,
+        email: profile.email || '',
+        ownerName: profile.name || candidateUsername,
+        logoUrl: profile.picture || '',
+        phone: '',
+      });
+    }
+
+    return res.json({
+      success: true,
+      token: signToken(user),
+      user: user.toPublicJSON(),
+    });
+  } catch (error) {
+    logCaught(req, 'Google auth error', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to authenticate with Google right now.',
+    });
+  }
+}
+
 module.exports = {
   signup,
   signupSendOtp,
   signupVerify,
   login,
+  googleAuth,
   me,
   updateProfile,
   uploadLogo,

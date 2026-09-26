@@ -30,11 +30,38 @@ async function findById(id, { withPassword = false } = {}) {
   return query;
 }
 
-async function createUser({ username, phone, password }) {
+async function findByGoogleId(googleId) {
+  if (!googleId) return null;
   if (memoryUsers.enabled) {
-    return memoryUsers.create({ username, phone, password });
+    return memoryUsers.findByGoogleId(googleId);
   }
-  return User.create({ username, phone, password, ownerName: username });
+  return User.findOne({ googleId });
+}
+
+async function findByEmail(email) {
+  if (!email) return null;
+  if (memoryUsers.enabled) {
+    return memoryUsers.findByEmail(email);
+  }
+  return User.findOne({
+    email: { $regex: new RegExp(`^${escapeRegex(email)}$`, 'i') },
+  });
+}
+
+async function createUser(data) {
+  const { username, phone = '', password = '', googleId = null, email = '', ownerName = '', logoUrl = '' } = data;
+  if (memoryUsers.enabled) {
+    return memoryUsers.create({ username, phone, password, googleId, email, ownerName: ownerName || username, logoUrl });
+  }
+  return User.create({
+    username,
+    phone: phone || undefined,
+    password: password || undefined,
+    googleId: googleId || undefined,
+    email: email || '',
+    ownerName: ownerName || username,
+    logoUrl: logoUrl || '',
+  });
 }
 
 async function updateUser(id, fields) {
@@ -51,6 +78,8 @@ function escapeRegex(value) {
 module.exports = {
   findByPhone,
   findByUsername,
+  findByGoogleId,
+  findByEmail,
   findById,
   createUser,
   updateUser,
