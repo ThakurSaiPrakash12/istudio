@@ -18,7 +18,7 @@ void main() {
   testWidgets('shows the login screen', (WidgetTester tester) async {
     await pumpAuth(tester);
 
-    expect(find.textContaining('iSTUDIO'), findsWidgets);
+    expect(find.textContaining('CLIENTS HUB'), findsWidgets);
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Phone number'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);

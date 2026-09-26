@@ -12,6 +12,7 @@ import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
+import '../../widgets/uiverse_search_bar.dart';
 import 'client_details_screen.dart';
 import '../../routes/smooth_page_route.dart';
 import '../../utils/launcher_utils.dart';
@@ -151,46 +152,15 @@ class _ClientsScreenState extends State<ClientsScreen>
                 ],
               ),
 
-              // Search Bar
+              // Animated Uiverse Search Bar
               FadeTransition(
                 opacity: _staggered(0.0, 0.30),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: context.cardBg,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: context.cardBorder.withValues(alpha: 0.30),
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(color: textMain, fontSize: 14),
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Search by name or phone...',
-                        hintStyle: TextStyle(
-                          color: textMuted.withValues(alpha: 0.7),
-                          fontSize: 13,
-                        ),
-                        prefixIcon: Icon(Icons.search_rounded,
-                            color: accent, size: 20),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.clear,
-                                    color: textMuted, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                      ),
-                    ),
+                  child: UiverseSearchBar(
+                    controller: _searchController,
+                    hintText: 'Search by name or phone...',
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
               ),

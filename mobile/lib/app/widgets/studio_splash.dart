@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
 import 'auth_background.dart';
 import 'studio_logo.dart';
+import 'uiverse_loader.dart';
 
 class StudioSplash extends StatefulWidget {
   const StudioSplash({super.key});
@@ -53,14 +53,7 @@ class _StudioSplashState extends State<StudioSplash>
                 ),
               ),
               const SizedBox(height: 28),
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  valueColor: AlwaysStoppedAnimation<Color>(context.accentColor),
-                ),
-              ),
+              const UiverseLoader(),
             ],
           ),
         ),

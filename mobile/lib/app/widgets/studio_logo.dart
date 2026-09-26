@@ -19,7 +19,7 @@ class StudioLogo extends StatelessWidget {
 
     return Semantics(
       header: true,
-      label: 'iStudio',
+      label: 'Clients Hub',
       child: Column(
         children: [
           Hero(
@@ -67,7 +67,7 @@ class StudioLogo extends StatelessWidget {
           ),
           SizedBox(height: compact ? 10 : 16),
           Text(
-            'iSTUDIO',
+            'CLIENTS HUB',
             style: GoogleFonts.plusJakartaSans(
               color: textMain,
               fontSize: compact ? 22 : 30,
