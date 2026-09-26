@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
+const logger = require('../config/logger');
 
 const dataDir = path.join(__dirname, '..', '..', 'data');
 const dataFile = path.join(dataDir, 'users.json');
@@ -15,7 +16,7 @@ function loadUsersFromDisk() {
       return JSON.parse(content);
     }
   } catch (e) {
-    console.warn('Could not read users.json from disk:', e.message);
+    logger.warn('Could not read users.json from disk', { error: e });
   }
   return [];
 }
@@ -27,7 +28,7 @@ function saveUsersToDisk(usersList) {
     }
     fs.writeFileSync(dataFile, JSON.stringify(usersList, null, 2), 'utf8');
   } catch (e) {
-    console.warn('Could not save users.json to disk:', e.message);
+    logger.warn('Could not save users.json to disk', { error: e });
   }
 }
 

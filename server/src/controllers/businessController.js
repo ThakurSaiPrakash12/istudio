@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const repository = require('../repositories/businessRepository');
 const { uploadToCloudinary } = require('../config/cloudinary');
+const logger = require('../config/logger');
 
 function validationError(req, res) {
   const { validationResult } = require('express-validator');
@@ -158,7 +159,7 @@ async function uploadPaymentProof(req, res) {
     });
     return res.json({ success: true, payment: updated.toPublicJSON() });
   } catch (error) {
-    console.error('Payment proof upload error:', error.message);
+    logger.error('Payment proof upload error', logger.fromRequest(req, error));
     return res.status(500).json({ success: false, message: 'Unable to upload payment proof.' });
   }
 }

@@ -1,14 +1,17 @@
 const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const { validateRuntimeConfig, parseCorsOrigins } = require('./config/runtime');
 const { checkCloudinaryReadiness } = require('./config/cloudinary');
-
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const logger = require('./config/logger');
+const { requestLogger } = require('./middleware/requestLogger');
 
 const { connectDb } = require('./config/db');
 const authRoutes = require('./routes/auth');
@@ -35,6 +38,7 @@ const authRateLimit = rateLimit({
 });
 
 app.use(helmet());
+app.use(requestLogger);
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.has(origin)) return callback(null, true);
@@ -103,11 +107,12 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api', eventChildRoutes);
 
-app.use((error, _req, res, _next) => {
+app.use((error, req, res, _next) => {
   if (error.message === 'Origin is not allowed.') {
+    logger.warn('CORS origin rejected', { requestId: req.requestId, origin: req.headers.origin });
     return res.status(403).json({ success: false, message: 'Origin is not allowed.' });
   }
-  console.error('Request error:', error.message);
+  logger.error('Unhandled request error', logger.fromRequest(req, error));
   return res.status(500).json({ success: false, message: 'Unable to process the request.' });
 });
 
@@ -119,15 +124,26 @@ app.use((req, res) => {
 });
 
 async function start() {
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled promise rejection', reason instanceof Error ? reason : { error: reason });
+  });
+  process.on('uncaughtException', (error) => {
+    logger.error('Uncaught exception', error);
+    process.exit(1);
+  });
+
   try {
     validateRuntimeConfig();
     await connectDb();
     app.listen(port, '0.0.0.0', () => {
-      console.log(`Lumen API listening on http://localhost:${port}`);
-      console.log(`Phone / LAN access: http://192.168.1.9:${port}`);
+      logger.info('API listening', {
+        port,
+        env: process.env.NODE_ENV || 'development',
+        logLevel: logger.level,
+      });
     });
   } catch (error) {
-    console.error(error.message);
+    logger.error('Failed to start API', error);
     process.exit(1);
   }
 }

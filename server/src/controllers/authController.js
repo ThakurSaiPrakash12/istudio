@@ -5,6 +5,16 @@ const { validationResult } = require('express-validator');
 const userRepository = require('../repositories/userRepository');
 const otpService = require('../services/otpService');
 const { uploadToCloudinary } = require('../config/cloudinary');
+const logger = require('../config/logger');
+
+function logCaught(req, message, error) {
+  const meta = logger.fromRequest(req, error);
+  if ((error && error.statusCode) && error.statusCode < 500) {
+    logger.warn(message, meta);
+    return;
+  }
+  logger.error(message, meta);
+}
 
 function normalizePhone(value = '') {
   let digits = String(value).replace(/\D/g, '');
@@ -76,7 +86,7 @@ async function signup(req, res) {
       user: user.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    logCaught(req, 'Signup error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to create your account right now.',
@@ -113,7 +123,7 @@ async function login(req, res) {
       user: user.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logCaught(req, 'Login error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to sign in right now.',
@@ -136,7 +146,7 @@ async function me(req, res) {
       user: user.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Session error:', error);
+    logCaught(req, 'Session error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to restore your session.',
@@ -227,7 +237,7 @@ async function updateProfile(req, res) {
       user: user.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    logCaught(req, 'Update profile error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to update your profile right now.',
@@ -276,7 +286,7 @@ async function uploadLogo(req, res) {
       user: user.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Logo upload error:', error);
+    logCaught(req, 'Logo upload error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to upload your profile image right now.',
@@ -300,7 +310,7 @@ async function forgotPasswordSendOtp(req, res) {
     const result = await otpService.generateAndSendOtp(phone);
     return res.json(result);
   } catch (error) {
-    console.error('forgotPasswordSendOtp error:', error);
+    logCaught(req, 'forgotPasswordSendOtp error', error);
     const status = error.statusCode || 500;
     return res.status(status).json({
       success: false,
@@ -319,7 +329,7 @@ async function forgotPasswordVerifyOtp(req, res) {
     const result = await otpService.verifyOtpAndIssueResetToken(phone, otp);
     return res.json(result);
   } catch (error) {
-    console.error('forgotPasswordVerifyOtp error:', error);
+    logCaught(req, 'forgotPasswordVerifyOtp error', error);
     const status = error.statusCode || 400;
     return res.status(status).json({
       success: false,
@@ -365,7 +375,7 @@ async function forgotPasswordVerifyUsername(req, res) {
       resetToken,
     });
   } catch (error) {
-    console.error('forgotPasswordVerifyUsername error:', error);
+    logCaught(req, 'forgotPasswordVerifyUsername error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to verify username right now.',
@@ -427,7 +437,7 @@ async function forgotPasswordReset(req, res) {
       message: 'Password reset successfully. You can now sign in with your new password.',
     });
   } catch (error) {
-    console.error('forgotPasswordReset error:', error);
+    logCaught(req, 'forgotPasswordReset error', error);
     const status = error.statusCode || 500;
     return res.status(status).json({
       success: false,
@@ -462,7 +472,7 @@ async function signupSendOtp(req, res) {
     const result = await otpService.generateAndSendOtp(phone);
     return res.json(result);
   } catch (error) {
-    console.error('signupSendOtp error:', error);
+    logCaught(req, 'signupSendOtp error', error);
     const status = error.statusCode || 500;
     return res.status(status).json({
       success: false,
@@ -512,7 +522,7 @@ async function signupVerify(req, res) {
       user: user.toPublicJSON(),
     });
   } catch (error) {
-    console.error('signupVerify error:', error);
+    logCaught(req, 'signupVerify error', error);
     const status = error.statusCode || 400;
     return res.status(status).json({
       success: false,
@@ -547,7 +557,7 @@ async function verifyCurrentPassword(req, res) {
       message: 'Current password verified.',
     });
   } catch (error) {
-    console.error('verifyCurrentPassword error:', error);
+    logCaught(req, 'verifyCurrentPassword error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to verify password right now.',
@@ -593,7 +603,7 @@ async function changePassword(req, res) {
       message: 'Password changed successfully.',
     });
   } catch (error) {
-    console.error('changePassword error:', error);
+    logCaught(req, 'changePassword error', error);
     return res.status(500).json({
       success: false,
       message: 'Unable to update password right now.',

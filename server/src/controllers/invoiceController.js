@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const { normalizePhone } = require('./authController');
 const { invoiceTotals } = require('../models/Invoice');
 const invoiceRepository = require('../repositories/invoiceRepository');
+const logger = require('../config/logger');
 
 function sendValidationError(req, res) {
   const errors = validationResult(req);
@@ -67,7 +68,7 @@ async function listInvoices(req, res) {
       nextNumber: await invoiceRepository.nextNumber(req.userId),
     });
   } catch (error) {
-    console.error('List invoices error:', error);
+    logger.error('List invoices error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to load invoices right now.',
@@ -92,7 +93,7 @@ async function getInvoice(req, res) {
       invoice: invoice.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Get invoice error:', error);
+    logger.error('Get invoice error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to load that invoice.',
@@ -174,7 +175,7 @@ async function createInvoice(req, res) {
         message: 'An invoice with that number already exists.',
       });
     }
-    console.error('Create invoice error:', error);
+    logger.error('Create invoice error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to create the invoice right now.',
@@ -259,7 +260,7 @@ async function updateInvoice(req, res) {
       invoice: invoice.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Update invoice error:', error);
+    logger.error('Update invoice error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to update the invoice right now.',
@@ -284,7 +285,7 @@ async function deleteInvoice(req, res) {
       message: 'Invoice deleted.',
     });
   } catch (error) {
-    console.error('Delete invoice error:', error);
+    logger.error('Delete invoice error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to delete the invoice right now.',
@@ -310,7 +311,7 @@ async function markPaid(req, res) {
       invoice: updated.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Mark paid error:', error);
+    logger.error('Mark paid error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to mark this invoice as paid.',
@@ -350,7 +351,7 @@ async function markPartial(req, res) {
       invoice: updated.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Mark partial error:', error);
+    logger.error('Mark partial error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to record that payment.',
@@ -386,7 +387,7 @@ async function extendDueDate(req, res) {
       invoice: invoice.toPublicJSON(),
     });
   } catch (error) {
-    console.error('Extend due date error:', error);
+    logger.error('Extend due date error', logger.fromRequest(req, error));
     return res.status(500).json({
       success: false,
       message: 'Unable to extend the due date.',

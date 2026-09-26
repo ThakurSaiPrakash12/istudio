@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const memoryUsers = require('../store/memoryUsers');
+const logger = require('./logger');
 
 function hasRealMongoUri() {
   const uri = process.env.MONGODB_URI || '';
@@ -17,16 +18,20 @@ async function connectDb() {
       throw new Error('MONGODB_URI is required in production.');
     }
     memoryUsers.enabled = true;
-    console.warn(
-      '⚠️  [DB] MongoDB URI is not set. Using IN-MEMORY store — data will NOT persist between restarts.',
-    );
+    logger.warn('MongoDB URI is not set; using in-memory store. Data will not persist between restarts.');
     return;
   }
 
   mongoose.set('strictQuery', true);
   await mongoose.connect(process.env.MONGODB_URI);
   const dbName = mongoose.connection.db.databaseName;
-  console.log(`✅ [MONGODB] Connected to database: "${dbName}"`);
+  mongoose.connection.on('error', (error) => {
+    logger.error('MongoDB connection error', error);
+  });
+  mongoose.connection.on('disconnected', () => {
+    logger.warn('MongoDB disconnected');
+  });
+  logger.info('MongoDB connected', { database: dbName });
 }
 
 module.exports = { connectDb };
