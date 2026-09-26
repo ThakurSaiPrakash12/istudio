@@ -4,7 +4,10 @@ class ApiConfig {
   /// Backend URL injected at build time via --dart-define-from-file=.env
   /// Run with: flutter run --dart-define-from-file=.env
   /// Never hardcode this value — keep it in mobile/.env (git-ignored).
-  static const String _backendUrl = String.fromEnvironment('API_BASE_URL');
+  static const String _backendUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://istudio-1-txuo.onrender.com',
+  );
 
   static String _strip(String value) {
     var url = value.trim();
@@ -21,11 +24,10 @@ class ApiConfig {
   }
 
   static String get origin {
-    assert(
-      _backendUrl.isNotEmpty,
-      'API_BASE_URL is not set. Run with: flutter run --dart-define-from-file=.env',
-    );
-    return _strip(_backendUrl);
+    final url = _backendUrl.isNotEmpty
+        ? _backendUrl
+        : 'https://istudio-1-txuo.onrender.com';
+    return _strip(url);
   }
 
   static String get baseUrl => '$origin/api';

@@ -89,7 +89,7 @@ class ApiService {
   static Future<void> Function()? onUnauthorized;
 
   final http.Client _client;
-  static const Duration _timeout = Duration(seconds: 20);
+  static const Duration _timeout = Duration(seconds: 45);
 
   Map<String, String> _headers({String? token}) {
     return {

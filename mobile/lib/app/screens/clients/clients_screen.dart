@@ -454,10 +454,17 @@ class _ClientsScreenState extends State<ClientsScreen>
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                // Pill-shaped stats row
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 8),
+                                // Pill-shaped stats row / status alert
+                                if (client.status == ClientStatus.notResponded)
+                                  _buildNotRespondedCardRow(context, client)
+                                else if (client.status == ClientStatus.information && events.isEmpty)
+                                  _buildInquiryCardRow(context)
+                                else if (events.isEmpty)
+                                  _buildEmptyEventsCardRow(context)
+                                else
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: context.innerBg,
                                     borderRadius:
@@ -588,199 +595,259 @@ class _ClientsScreenState extends State<ClientsScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: context.cardBg,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.90,
+      ),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 24,
-                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Handle bar
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: sheetContext.textMuted.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            final textMain = sheetContext.textMain;
+            final textMuted = sheetContext.textMuted;
+            final accent = sheetContext.accentColor;
+
+            return SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Fixed Modal Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 14, 12),
+                    child: Column(
                       children: [
-                        Text(
-                          'New Client Profile',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: sheetContext.textMain,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: textMuted.withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
                           ),
                         ),
-                        IconButton(
-                          icon:
-                              Icon(Icons.close, color: sheetContext.textMuted),
-                          onPressed: () =>
-                              Navigator.of(sheetContext).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (sheetError != null) ...[
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFEF4444).withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
+                        const SizedBox(height: 12),
+                        Row(
                           children: [
-                            const Icon(Icons.error_outline_rounded,
-                                color: Color(0xFFEF4444), size: 18),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                sheetError!,
-                                style: const TextStyle(
-                                  color: Color(0xFFEF4444),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: accent.withValues(alpha: 0.35),
                                 ),
                               ),
+                              child: Icon(
+                                Icons.person_add_alt_1_rounded,
+                                color: accent,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'New Client Profile',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: textMain,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Inquiry lead, upcoming shoot, or past client',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: textMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.close_rounded, color: textMuted),
+                              onPressed: () => Navigator.of(sheetContext).pop(),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-                    StudioTextField(
-                      label: 'Full Name *',
-                      hint: 'e.g. Client Name',
-                      controller: nameController,
-                    ),
-                    const SizedBox(height: 14),
-                    StudioTextField(
-                      label: 'Phone Number *',
-                      hint: 'e.g. 9876543210',
-                      controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 14),
-                    StudioTextField(
-                      label: 'Email Address',
-                      hint: 'e.g. client@email.com',
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 14),
-                    StudioTextField(
-                      label: 'Address / Location',
-                      hint: 'e.g. Flat 12, Sunshine Apartments',
-                      controller: addressController,
-                    ),
-                    const SizedBox(height: 14),
-                    StudioTextField(
-                      label: 'Notes & Preferences',
-                      hint:
-                          'Special lighting, themes, delivery requests...',
-                      controller: notesController,
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Client Status / Stage',
-                      style: TextStyle(
-                        color: sheetContext.textMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Information (Inquiry / Visit)'),
-                          selected: selectedStatus == ClientStatus.information,
-                          onSelected: (val) {
-                            if (val) setSheetState(() => selectedStatus = ClientStatus.information);
-                          },
-                          selectedColor: const Color(0xFFFBBF24).withValues(alpha: 0.25),
-                          labelStyle: TextStyle(
-                            color: selectedStatus == ClientStatus.information
-                                ? (sheetContext.isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309))
-                                : sheetContext.textMuted,
-                            fontWeight: selectedStatus == ClientStatus.information ? FontWeight.w700 : FontWeight.w500,
-                            fontSize: 12,
-                          ),
-                        ),
-                        ChoiceChip(
-                          label: const Text('Coming Up (Scheduled)'),
-                          selected: selectedStatus == ClientStatus.comingUp,
-                          onSelected: (val) {
-                            if (val) setSheetState(() => selectedStatus = ClientStatus.comingUp);
-                          },
-                          selectedColor: AppColors.sky.withValues(alpha: 0.25),
-                          labelStyle: TextStyle(
-                            color: selectedStatus == ClientStatus.comingUp
-                                ? AppColors.sky
-                                : sheetContext.textMuted,
-                            fontWeight: selectedStatus == ClientStatus.comingUp ? FontWeight.w700 : FontWeight.w500,
-                            fontSize: 12,
-                          ),
-                        ),
-                        ChoiceChip(
-                          label: const Text('Completed (Past Client)'),
-                          selected: selectedStatus == ClientStatus.completed,
-                          onSelected: (val) {
-                            if (val) setSheetState(() => selectedStatus = ClientStatus.completed);
-                          },
-                          selectedColor: const Color(0xFF34D399).withValues(alpha: 0.25),
-                          labelStyle: TextStyle(
-                            color: selectedStatus == ClientStatus.completed
-                                ? (sheetContext.isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857))
-                                : sheetContext.textMuted,
-                            fontWeight: selectedStatus == ClientStatus.completed ? FontWeight.w700 : FontWeight.w500,
-                            fontSize: 12,
-                          ),
-                        ),
-                        ChoiceChip(
-                          label: const Text('Not Responded'),
-                          selected: selectedStatus == ClientStatus.notResponded,
-                          onSelected: (val) {
-                            if (val) setSheetState(() => selectedStatus = ClientStatus.notResponded);
-                          },
-                          selectedColor: const Color(0xFF64748B).withValues(alpha: 0.25),
-                          labelStyle: TextStyle(
-                            color: selectedStatus == ClientStatus.notResponded
-                                ? (sheetContext.isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569))
-                                : sheetContext.textMuted,
-                            fontWeight: selectedStatus == ClientStatus.notResponded ? FontWeight.w700 : FontWeight.w500,
-                            fontSize: 12,
-                          ),
-                        ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    StudioButton(
-                      label: 'Create Client',
+                  ),
+                  Divider(
+                    color: sheetContext.cardBorder.withValues(alpha: 0.35),
+                    height: 1,
+                  ),
+
+                  // Scrollable Body with fields
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (sheetError != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444).withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline_rounded,
+                                      color: Color(0xFFEF4444), size: 18),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      sheetError!,
+                                      style: const TextStyle(
+                                        color: Color(0xFFEF4444),
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+
+                          // Status Selector Section
+                          Text(
+                            'Client Stage / Category',
+                            style: TextStyle(
+                              color: textMuted,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 42,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              children: [
+                                _buildAddClientStatusChip(
+                                  sheetContext,
+                                  status: ClientStatus.information,
+                                  label: 'Inquiry',
+                                  icon: Icons.chat_bubble_outline_rounded,
+                                  color: const Color(0xFFFBBF24),
+                                  isSelected: selectedStatus == ClientStatus.information,
+                                  onTap: () => setSheetState(() => selectedStatus = ClientStatus.information),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildAddClientStatusChip(
+                                  sheetContext,
+                                  status: ClientStatus.comingUp,
+                                  label: 'Coming Up',
+                                  icon: Icons.calendar_today_rounded,
+                                  color: AppColors.sky,
+                                  isSelected: selectedStatus == ClientStatus.comingUp,
+                                  onTap: () => setSheetState(() => selectedStatus = ClientStatus.comingUp),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildAddClientStatusChip(
+                                  sheetContext,
+                                  status: ClientStatus.completed,
+                                  label: 'Completed',
+                                  icon: Icons.task_alt_rounded,
+                                  color: const Color(0xFF34D399),
+                                  isSelected: selectedStatus == ClientStatus.completed,
+                                  onTap: () => setSheetState(() => selectedStatus = ClientStatus.completed),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildAddClientStatusChip(
+                                  sheetContext,
+                                  status: ClientStatus.notResponded,
+                                  label: 'Not Responded',
+                                  icon: Icons.schedule_send_rounded,
+                                  color: const Color(0xFF64748B),
+                                  isSelected: selectedStatus == ClientStatus.notResponded,
+                                  onTap: () => setSheetState(() => selectedStatus = ClientStatus.notResponded),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          StudioTextField(
+                            label: 'Full Name *',
+                            hint: 'e.g. Aditi Sharma',
+                            prefixIcon: Icons.person_outline_rounded,
+                            controller: nameController,
+                          ),
+                          const SizedBox(height: 14),
+                          StudioTextField(
+                            label: 'Phone Number *',
+                            hint: 'e.g. 9876543210',
+                            prefixIcon: Icons.phone_outlined,
+                            controller: phoneController,
+                            keyboardType: TextInputType.phone,
+                          ),
+                          const SizedBox(height: 14),
+                          StudioTextField(
+                            label: 'Email Address',
+                            hint: 'e.g. aditi@example.com',
+                            prefixIcon: Icons.email_outlined,
+                            controller: emailController,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 14),
+                          StudioTextField(
+                            label: 'Address / Location',
+                            hint: 'e.g. Jubilee Hills, Hyderabad',
+                            prefixIcon: Icons.location_on_outlined,
+                            controller: addressController,
+                          ),
+                          const SizedBox(height: 14),
+                          StudioTextField(
+                            label: 'Notes & Preferences',
+                            hint: 'Photography preferences, package requests, budget...',
+                            prefixIcon: Icons.notes_rounded,
+                            controller: notesController,
+                            maxLines: 3,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Fixed Bottom Action Button
+                  Container(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      12,
+                      20,
+                      MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sheetContext.cardBg,
+                      border: Border(
+                        top: BorderSide(
+                          color: sheetContext.cardBorder.withValues(alpha: 0.35),
+                        ),
+                      ),
+                    ),
+                    child: StudioButton(
+                      label: 'Save Client Profile',
                       onPressed: () {
                         final name = nameController.text.trim();
                         final phone = phoneController.text.trim();
@@ -822,18 +889,210 @@ class _ClientsScreenState extends State<ClientsScreen>
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                                'Client "${newClient.name}" created.'),
+                                'Client "${newClient.name}" created successfully.'),
                           ),
                         );
                       },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildAddClientStatusChip(
+    BuildContext context, {
+    required ClientStatus status,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final isDark = context.isDark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color.withValues(alpha: isDark ? 0.25 : 0.16)
+                : context.innerBg,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isSelected
+                  ? color
+                  : context.cardBorder.withValues(alpha: 0.4),
+              width: isSelected ? 1.6 : 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? color : context.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected
+                      ? (isDark ? Colors.white : color)
+                      : context.textMain,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotRespondedCardRow(BuildContext context, Client client) {
+    final isDark = context.isDark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF64748B).withValues(alpha: isDark ? 0.20 : 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: const Color(0xFF64748B).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.schedule_send_rounded,
+            size: 14,
+            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              'No response after 15 days',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF38BDF8).withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
+              ),
+            ),
+            child: const Text(
+              'Follow Up',
+              style: TextStyle(
+                color: Color(0xFF38BDF8),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInquiryCardRow(BuildContext context) {
+    final isDark = context.isDark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBBF24).withValues(alpha: isDark ? 0.16 : 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: const Color(0xFFFBBF24).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 13,
+            color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              'Inquiry lead · Event not booked yet',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFBBF24).withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              'Active',
+              style: TextStyle(
+                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyEventsCardRow(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.innerBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.event_busy_outlined, size: 13, color: context.textMuted),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'No events scheduled yet',
+              style: TextStyle(
+                color: context.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -80,6 +80,29 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
     'Others',
   ];
 
+  IconData _getCategoryIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'wedding':
+        return Icons.favorite_rounded;
+      case 'pre-wedding':
+        return Icons.photo_camera_front_rounded;
+      case 'maternity':
+        return Icons.child_care_rounded;
+      case 'newborn':
+        return Icons.baby_changing_station_rounded;
+      case 'portrait':
+        return Icons.portrait_rounded;
+      case 'fashion':
+        return Icons.style_rounded;
+      case 'commercial':
+        return Icons.business_center_rounded;
+      case 'event':
+        return Icons.celebration_rounded;
+      default:
+        return Icons.category_rounded;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -465,40 +488,97 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Event Category / Type',
+                    'Event Category',
                     style: TextStyle(
                       color: textMuted,
-                      fontSize: 14,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _eventTypes.map((type) {
-                      final selected = _eventType == type;
-                      return ChoiceChip(
-                        label: Text(type),
-                        selected: selected,
-                        onSelected: (val) {
-                          if (val) setState(() => _eventType = type);
-                        },
-                        selectedColor: accent.withValues(alpha: 0.28),
-                        backgroundColor: context.cardBg,
-                        side: BorderSide(
-                          color: selected
-                              ? accent
-                              : context.cardBorder.withValues(alpha: 0.4),
-                        ),
-                        labelStyle: TextStyle(
-                          color: selected ? accent : textMain,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
-                      );
-                    }).toList(),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 48,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _eventTypes.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final type = _eventTypes[index];
+                        final selected = _eventType == type;
+                        final icon = _getCategoryIcon(type);
+
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(999),
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              setState(() => _eventType = type);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? accent.withValues(
+                                        alpha: context.isDark ? 0.24 : 0.14)
+                                    : (context.isDark
+                                        ? const Color(0xFF1E293B)
+                                            .withValues(alpha: 0.6)
+                                        : const Color(0xFFF1F5F9)),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: selected
+                                      ? accent
+                                      : (context.isDark
+                                          ? const Color(0xFF334155)
+                                              .withValues(alpha: 0.6)
+                                          : const Color(0xFFE2E8F0)),
+                                  width: selected ? 1.6 : 1.0,
+                                ),
+                                boxShadow: selected
+                                    ? [
+                                        BoxShadow(
+                                          color: accent.withValues(alpha: 0.28),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    icon,
+                                    size: 16,
+                                    color: selected ? accent : textMuted,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    type,
+                                    style: TextStyle(
+                                      color: selected
+                                          ? (context.isDark
+                                              ? Colors.white
+                                              : accent)
+                                          : textMain,
+                                      fontWeight: selected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   if (_eventType == 'Others') ...[
                     const SizedBox(height: 10),
@@ -996,7 +1076,7 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                         filled: true,
                         fillColor: context.innerBg,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(28),
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.symmetric(

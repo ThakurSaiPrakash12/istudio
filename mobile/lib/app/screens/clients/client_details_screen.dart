@@ -94,6 +94,11 @@ class ClientDetailsScreen extends StatelessWidget {
                   _buildContactCard(context, client),
                   const SizedBox(height: 16),
 
+                  if (client.status == ClientStatus.notResponded) ...[
+                    _buildNotRespondedAlert(context, client),
+                    const SizedBox(height: 16),
+                  ],
+
                   // B. Financial Summary
                   _buildFinancialSummary(
                     context,
@@ -317,6 +322,69 @@ class ClientDetailsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildNotRespondedAlert(BuildContext context, Client client) {
+    final isDark = context.isDark;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: (isDark ? const Color(0xFF64748B) : const Color(0xFF475569)).withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.schedule_send_rounded,
+            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Client Marked as Not Responded',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: context.textMain,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This client visited for inquiry but has not responded for over 15 days. Reach out to follow up or adjust their status.',
+                  style: TextStyle(
+                    color: context.textMuted,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+                if (client.phone.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    ),
+                    onPressed: () => LauncherUtils.makePhoneCall(context, client.phone),
+                    icon: const Icon(Icons.phone_in_talk_rounded, size: 14),
+                    label: const Text('Call to Follow Up', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInfoRow(
     BuildContext context, {
     required IconData icon,
@@ -402,7 +470,23 @@ class ClientDetailsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              if (hasRemaining)
+              if (totalValue == 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: textMuted.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'No Bookings',
+                    style: TextStyle(
+                      color: textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else if (hasRemaining)
                 Flexible(
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -452,45 +536,78 @@ class ClientDetailsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: context.innerBg,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: context.cardBorder.withValues(alpha: 0.35),
+          if (totalValue == 0)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+              decoration: BoxDecoration(
+                color: context.innerBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: context.cardBorder.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 30,
+                      color: textMuted.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No event packages or billing recorded yet.',
+                      style: TextStyle(
+                        color: textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.innerBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: context.cardBorder.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                children: [
+                  _buildFinanceRow(
+                    context,
+                    label: 'Total Event Value',
+                    value: _currency.format(totalValue),
+                    valueColor: textMain,
+                  ),
+                  Divider(color: context.cardBorder.withValues(alpha: 0.3), height: 16),
+                  _buildFinanceRow(
+                    context,
+                    label: 'Total Received',
+                    value: _currency.format(totalReceived),
+                    valueColor: accent,
+                  ),
+                  Divider(color: context.cardBorder.withValues(alpha: 0.3), height: 16),
+                  _buildFinanceRow(
+                    context,
+                    label: 'Total Remaining',
+                    value: _currency.format(totalRemaining),
+                    valueColor: hasRemaining
+                        ? (context.isDark
+                            ? const Color(0xFFE8B86D)
+                            : const Color(0xFFD97706))
+                        : textMuted,
+                    subtitle: hasRemaining ? 'Pending client settlement' : 'Fully paid',
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                _buildFinanceRow(
-                  context,
-                  label: 'Total Event Value',
-                  value: _currency.format(totalValue),
-                  valueColor: textMain,
-                ),
-                Divider(color: context.cardBorder.withValues(alpha: 0.3), height: 16),
-                _buildFinanceRow(
-                  context,
-                  label: 'Total Received',
-                  value: _currency.format(totalReceived),
-                  valueColor: accent,
-                ),
-                Divider(color: context.cardBorder.withValues(alpha: 0.3), height: 16),
-                _buildFinanceRow(
-                  context,
-                  label: 'Total Remaining',
-                  value: _currency.format(totalRemaining),
-                  valueColor: hasRemaining
-                      ? (context.isDark
-                          ? const Color(0xFFE8B86D)
-                          : const Color(0xFFD97706))
-                      : textMuted,
-                  subtitle: hasRemaining ? 'Pending client settlement' : 'Fully paid',
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
