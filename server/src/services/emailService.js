@@ -6,6 +6,46 @@ dns.setDefaultResultOrder('ipv4first');
 
 let transporter = null;
 
+const RESEND_API_URL = 'https://api.resend.com/emails';
+const HTTP_SEND_TIMEOUT_MS = 15000;
+
+function resendConfigured() {
+  return Boolean(String(process.env.RESEND_API_KEY || '').trim());
+}
+
+async function sendWithResend({ from, to, replyTo, subject, text, html }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), HTTP_SEND_TIMEOUT_MS);
+  const payload = {
+    from,
+    to: [to],
+    subject,
+    text,
+    html,
+  };
+  if (replyTo) payload.reply_to = replyTo;
+
+  try {
+    const response = await fetch(RESEND_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = body.message || body.name || `HTTP ${response.status}`;
+      throw new Error(`Resend API request failed: ${detail}`);
+    }
+    return { sent: true, messageId: body.id };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function getTransporter() {
   if (transporter) return transporter;
 
@@ -165,29 +205,37 @@ function renderOtpEmailHtml({ otp, username }) {
 }
 
 async function sendVerificationEmail({ to, otp, username = '' }) {
-  const mailTransporter = getTransporter();
   const subject = `Your Verification Code: ${otp} - Clients Hub`;
-  const from = process.env.EMAIL_FROM || '"Clients Hub Studio" <no-reply@clientshub.com>';
+  const from = process.env.RESEND_FROM || process.env.EMAIL_FROM || '"Clients Hub Studio" <no-reply@clientshub.com>';
   const text = `Hello${username ? ' ' + username : ''},\n\nYour Clients Hub verification code is: ${otp}\nThis code is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
   const html = renderOtpEmailHtml({ otp, username });
 
-  if (!mailTransporter) {
-    logger.error('[EmailService] SMTP is not configured; verification email was not sent', {
-      to,
-    });
-    const error = new Error('Email delivery is unavailable. Please try again later.');
-    error.statusCode = 503;
-    throw error;
-  }
-
   try {
-    const SEND_TIMEOUT_MS = 15000;
+    if (resendConfigured()) {
+      const result = await sendWithResend({ from, to, subject, text, html });
+      logger.info('[EmailService] Verification email sent successfully via Resend', {
+        to,
+        messageId: result.messageId,
+      });
+      return result;
+    }
+
+    const mailTransporter = getTransporter();
+    if (!mailTransporter) {
+      logger.error('[EmailService] No email provider is configured; verification email was not sent', {
+        to,
+      });
+      const error = new Error('Email delivery is unavailable. Please try again later.');
+      error.statusCode = 503;
+      throw error;
+    }
+
     const sendPromise = mailTransporter.sendMail({ from, to, subject, text, html });
     let timeout;
     const timeoutPromise = new Promise((_, reject) => {
       timeout = setTimeout(
         () => reject(new Error('SMTP send timed out after 15s')),
-        SEND_TIMEOUT_MS,
+        HTTP_SEND_TIMEOUT_MS,
       );
     });
     const info = await Promise.race([sendPromise, timeoutPromise]).finally(() =>
@@ -210,12 +258,7 @@ async function sendVerificationEmail({ to, otp, username = '' }) {
 }
 
 async function sendDeletionRequestNotification({ requestId, email, phone, createdAt }) {
-  const mailTransporter = getTransporter();
-  if (!mailTransporter) {
-    return { sent: false, reason: 'smtp_not_configured' };
-  }
-
-  const from = process.env.EMAIL_FROM || '"Clients Hub Studio" <no-reply@clientshub.com>';
+  const from = process.env.RESEND_FROM || process.env.EMAIL_FROM || '"Clients Hub Studio" <no-reply@clientshub.com>';
   const subject = `Data deletion request ${requestId} - Clients Hub`;
   const text = [
     'A data deletion request was submitted.',
@@ -228,6 +271,21 @@ async function sendDeletionRequestNotification({ requestId, email, phone, create
   ].join('\n');
 
   try {
+    if (resendConfigured()) {
+      return await sendWithResend({
+        from,
+        to: 'istudio2512@gmail.com',
+        replyTo: email,
+        subject,
+        text,
+      });
+    }
+
+    const mailTransporter = getTransporter();
+    if (!mailTransporter) {
+      return { sent: false, reason: 'email_provider_not_configured' };
+    }
+
     const info = await mailTransporter.sendMail({
       from,
       to: 'istudio2512@gmail.com',

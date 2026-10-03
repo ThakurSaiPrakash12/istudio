@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node test/logger.test.js && node test/authorization.test.js && node test/googleAuth.test.js && node test/dataSecurity.test.js && node test/emailAuthAndPlainPhone.test.js && node --test test/playReviewAccount.test.js test/deleteDataPage.test.js"
+    "test": "node test/logger.test.js && node test/authorization.test.js && node test/googleAuth.test.js && node test/dataSecurity.test.js && node test/emailAuthAndPlainPhone.test.js && node --test test/emailService.test.js test/playReviewAccount.test.js test/deleteDataPage.test.js"
   },
   "engines": {
     "node": ">=18"
