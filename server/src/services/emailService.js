@@ -1,16 +1,22 @@
 const nodemailer = require('nodemailer');
 const dns = require('node:dns');
+const { google } = require('googleapis');
+const { OAuth2Client } = require('google-auth-library');
 const logger = require('../config/logger');
 
 dns.setDefaultResultOrder('ipv4first');
 
 let transporter = null;
 
-const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const HTTP_SEND_TIMEOUT_MS = 15000;
 
-function brevoConfigured() {
-  return Boolean(String(process.env.BREVO_API_KEY || '').trim());
+function gmailApiConfigured() {
+  return Boolean(
+    String(process.env.GOOGLE_CLIENT_ID || '').trim() &&
+      String(process.env.GOOGLE_CLIENT_SECRET || '').trim() &&
+      String(process.env.GMAIL_REFRESH_TOKEN || '').trim() &&
+      String(process.env.GMAIL_USER || '').trim(),
+  );
 }
 
 function configuredFromAddress() {
@@ -29,46 +35,58 @@ function configuredFromAddress() {
   return `${name} <${email}>`;
 }
 
-function brevoSender(from) {
-  const parsed = from.match(/^(?:"([^"]+)"|([^<]+))\s*<([^<>]+)>$/);
-  const fallbackName = parsed ? (parsed[1] || parsed[2]).trim() : '';
-  const fallbackEmail = parsed ? parsed[3].trim() : from.trim();
-  const email = String(process.env.BREVO_FROM_EMAIL || fallbackEmail).trim();
-  const name = String(process.env.BREVO_FROM_NAME || fallbackName).trim();
-  return name ? { name, email } : { email };
+function encodeMimeMessage({ from, to, replyTo, subject, text, html }) {
+  const boundary = `=_ClientsHub_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const headers = [
+    `From: ${from}`,
+    `To: ${to}`,
+    ...(replyTo ? [`Reply-To: ${replyTo}`] : []),
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+  ];
+  const mime = [
+    ...headers,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    text,
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    html,
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
+
+  return Buffer.from(mime, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
-async function sendWithBrevo({ from, to, replyTo, subject, text, html }) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), HTTP_SEND_TIMEOUT_MS);
-  const payload = {
-    sender: brevoSender(from),
-    to: [{ email: to }],
-    subject,
-    textContent: text,
-    htmlContent: html,
-  };
-  if (replyTo) payload.replyTo = { email: replyTo };
+async function sendWithGmailApi({ from, to, replyTo, subject, text, html }) {
+  const oauth2Client = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+  );
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+  });
 
-  try {
-    const response = await fetch(BREVO_API_URL, {
-      method: 'POST',
-      headers: {
-        'api-key': process.env.BREVO_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const detail = body.message || body.name || `HTTP ${response.status}`;
-      throw new Error(`Brevo API request failed: ${detail}`);
-    }
-    return { sent: true, messageId: body.messageId };
-  } finally {
-    clearTimeout(timeout);
-  }
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const response = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: {
+      raw: encodeMimeMessage({ from, to, replyTo, subject, text, html: html || '' }),
+    },
+  });
+
+  return { sent: true, messageId: response.data.id };
 }
 
 function getTransporter() {
@@ -236,9 +254,9 @@ async function sendVerificationEmail({ to, otp, username = '' }) {
   const html = renderOtpEmailHtml({ otp, username });
 
   try {
-    if (brevoConfigured()) {
-      const result = await sendWithBrevo({ from, to, subject, text, html });
-      logger.info('[EmailService] Verification email sent successfully via Brevo', {
+    if (gmailApiConfigured()) {
+      const result = await sendWithGmailApi({ from, to, subject, text, html });
+      logger.info('[EmailService] Verification email sent successfully via Gmail API', {
         to,
         messageId: result.messageId,
       });
@@ -296,8 +314,8 @@ async function sendDeletionRequestNotification({ requestId, email, phone, create
   ].join('\n');
 
   try {
-    if (brevoConfigured()) {
-      return await sendWithBrevo({
+    if (gmailApiConfigured()) {
+      return await sendWithGmailApi({
         from,
         to: 'istudio2512@gmail.com',
         replyTo: email,

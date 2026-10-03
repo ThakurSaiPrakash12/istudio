@@ -22,15 +22,21 @@ The API listens on `http://localhost:5000`.
 
 ### Transactional email on Render
 
-Render Free blocks outbound SMTP ports, so configure Brevo's HTTPS transactional email API instead of Gmail SMTP:
+Render Free blocks outbound SMTP ports. For free Gmail-based sending, use the Gmail API over HTTPS:
 
 ```env
-BREVO_API_KEY=xkeysib-...
-BREVO_FROM_NAME=Clients Hub
-BREVO_FROM_EMAIL=your-verified-sender@gmail.com
+GMAIL_USER=your-gmail-address@gmail.com
+GMAIL_REFRESH_TOKEN=your-oauth-refresh-token
 ```
 
-Verify the sender address in Brevo before deploying. When `BREVO_API_KEY` is present, the API sends verification and data-deletion emails through Brevo over HTTPS. SMTP remains available as a local fallback when the Brevo key is absent.
+The refresh token is created locally with:
+
+```bash
+cd server
+node scripts/get-gmail-refresh-token.js
+```
+
+The OAuth client must allow `http://localhost:3000/oauth2callback` as a redirect URI, and the consent flow must grant the `gmail.send` scope. Keep the refresh token private. The original SMTP path remains available as a fallback when Gmail API OAuth is not configured.
 
 ## Google Play review account
 

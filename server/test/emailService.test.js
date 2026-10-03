@@ -2,37 +2,49 @@
 
 const assert = require('node:assert/strict');
 const { test, afterEach } = require('node:test');
+const { google } = require('googleapis');
 
 const emailService = require('../src/services/emailService');
 
-const originalFetch = global.fetch;
-const originalApiKey = process.env.BREVO_API_KEY;
-const originalFromEmail = process.env.BREVO_FROM_EMAIL;
-const originalFromName = process.env.BREVO_FROM_NAME;
+const originalGmail = google.gmail;
+const originalClientId = process.env.GOOGLE_CLIENT_ID;
+const originalClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const originalRefreshToken = process.env.GMAIL_REFRESH_TOKEN;
+const originalUser = process.env.GMAIL_USER;
+const originalFrom = process.env.EMAIL_FROM;
 
 afterEach(() => {
-  global.fetch = originalFetch;
-  if (originalApiKey === undefined) delete process.env.BREVO_API_KEY;
-  else process.env.BREVO_API_KEY = originalApiKey;
-  if (originalFromEmail === undefined) delete process.env.BREVO_FROM_EMAIL;
-  else process.env.BREVO_FROM_EMAIL = originalFromEmail;
-  if (originalFromName === undefined) delete process.env.BREVO_FROM_NAME;
-  else process.env.BREVO_FROM_NAME = originalFromName;
+  google.gmail = originalGmail;
+  for (const [key, value] of [
+    ['GOOGLE_CLIENT_ID', originalClientId],
+    ['GOOGLE_CLIENT_SECRET', originalClientSecret],
+    ['GMAIL_REFRESH_TOKEN', originalRefreshToken],
+    ['GMAIL_USER', originalUser],
+    ['EMAIL_FROM', originalFrom],
+  ]) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
-test('sends verification email through Brevo over HTTPS when configured', async () => {
-  process.env.BREVO_API_KEY = 'xkeysib-test-key';
-  process.env.BREVO_FROM_EMAIL = 'verified@example.com';
-  process.env.BREVO_FROM_NAME = 'Clients Hub';
+test('sends verification email through Gmail API when OAuth is configured', async () => {
+  process.env.GOOGLE_CLIENT_ID = 'client-id';
+  process.env.GOOGLE_CLIENT_SECRET = 'client-secret';
+  process.env.GMAIL_REFRESH_TOKEN = 'refresh-token';
+  process.env.GMAIL_USER = 'sender@gmail.com';
+  process.env.EMAIL_FROM = 'Clients Hub <sender@gmail.com>';
+
   let request;
-  global.fetch = async (url, options) => {
-    request = { url, options };
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({ messageId: 'brevo-message-123' }),
-    };
-  };
+  google.gmail = () => ({
+    users: {
+      messages: {
+        send: async (options) => {
+          request = options;
+          return { data: { id: 'gmail-message-123' } };
+        },
+      },
+    },
+  });
 
   const result = await emailService.sendVerificationEmail({
     to: 'person@example.com',
@@ -40,16 +52,12 @@ test('sends verification email through Brevo over HTTPS when configured', async 
     username: 'Demo User',
   });
 
-  assert.deepEqual(result, { sent: true, messageId: 'brevo-message-123' });
-  assert.equal(request.url, 'https://api.brevo.com/v3/smtp/email');
-  assert.equal(request.options.method, 'POST');
-  assert.equal(request.options.headers['api-key'], 'xkeysib-test-key');
-  const body = JSON.parse(request.options.body);
-  assert.deepEqual(body.sender, {
-    name: 'Clients Hub',
-    email: 'verified@example.com',
-  });
-  assert.deepEqual(body.to, [{ email: 'person@example.com' }]);
-  assert.match(body.textContent, /123456/);
-  assert.match(body.htmlContent, /123456/);
+  assert.deepEqual(result, { sent: true, messageId: 'gmail-message-123' });
+  assert.equal(request.userId, 'me');
+  assert.equal(typeof request.requestBody.raw, 'string');
+  const mime = Buffer.from(request.requestBody.raw, 'base64url').toString('utf8');
+  assert.match(mime, /From: Clients Hub <sender@gmail.com>/);
+  assert.match(mime, /To: person@example.com/);
+  assert.match(mime, /123456/);
+  assert.match(mime, /Demo User/);
 });
