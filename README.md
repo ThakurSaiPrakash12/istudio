@@ -22,14 +22,15 @@ The API listens on `http://localhost:5000`.
 
 ### Transactional email on Render
 
-Render Free blocks outbound SMTP ports, so configure an HTTPS email provider such as Resend instead of Gmail SMTP:
+Render Free blocks outbound SMTP ports, so configure Brevo's HTTPS transactional email API instead of Gmail SMTP:
 
 ```env
-RESEND_API_KEY=re_...
-RESEND_FROM="Clients Hub <onboarding@your-verified-domain.com>"
+BREVO_API_KEY=xkeysib-...
+BREVO_FROM_NAME=Clients Hub
+BREVO_FROM_EMAIL=your-verified-sender@gmail.com
 ```
 
-Verify the sender domain or address in Resend before deploying. When `RESEND_API_KEY` is present, the API sends verification and data-deletion emails through Resend over HTTPS. SMTP remains available as a local fallback when the Resend key is absent.
+Verify the sender address in Brevo before deploying. When `BREVO_API_KEY` is present, the API sends verification and data-deletion emails through Brevo over HTTPS. SMTP remains available as a local fallback when the Brevo key is absent.
 
 ## Google Play review account
 

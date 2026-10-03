@@ -6,30 +6,55 @@ dns.setDefaultResultOrder('ipv4first');
 
 let transporter = null;
 
-const RESEND_API_URL = 'https://api.resend.com/emails';
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const HTTP_SEND_TIMEOUT_MS = 15000;
 
-function resendConfigured() {
-  return Boolean(String(process.env.RESEND_API_KEY || '').trim());
+function brevoConfigured() {
+  return Boolean(String(process.env.BREVO_API_KEY || '').trim());
 }
 
-async function sendWithResend({ from, to, replyTo, subject, text, html }) {
+function configuredFromAddress() {
+  const configured = String(
+    process.env.EMAIL_FROM ||
+      'Clients Hub Studio <no-reply@clientshub.com>',
+  ).trim();
+
+  // Render values are sometimes pasted with one extra pair of quotes.
+  const unwrapped = configured.replace(/^("|')(.*)\1$/, '$2').trim();
+  const displayName = unwrapped.match(/^(?:"([^"]+)"|([^<]+))\s*<([^<>]+)>$/);
+  if (!displayName) return unwrapped;
+
+  const name = (displayName[1] || displayName[2]).trim();
+  const email = displayName[3].trim();
+  return `${name} <${email}>`;
+}
+
+function brevoSender(from) {
+  const parsed = from.match(/^(?:"([^"]+)"|([^<]+))\s*<([^<>]+)>$/);
+  const fallbackName = parsed ? (parsed[1] || parsed[2]).trim() : '';
+  const fallbackEmail = parsed ? parsed[3].trim() : from.trim();
+  const email = String(process.env.BREVO_FROM_EMAIL || fallbackEmail).trim();
+  const name = String(process.env.BREVO_FROM_NAME || fallbackName).trim();
+  return name ? { name, email } : { email };
+}
+
+async function sendWithBrevo({ from, to, replyTo, subject, text, html }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), HTTP_SEND_TIMEOUT_MS);
   const payload = {
-    from,
-    to: [to],
+    sender: brevoSender(from),
+    to: [{ email: to }],
     subject,
-    text,
-    html,
+    textContent: text,
+    htmlContent: html,
   };
-  if (replyTo) payload.reply_to = replyTo;
+  if (replyTo) payload.replyTo = { email: replyTo };
 
   try {
-    const response = await fetch(RESEND_API_URL, {
+    const response = await fetch(BREVO_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'api-key': process.env.BREVO_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -38,9 +63,9 @@ async function sendWithResend({ from, to, replyTo, subject, text, html }) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
       const detail = body.message || body.name || `HTTP ${response.status}`;
-      throw new Error(`Resend API request failed: ${detail}`);
+      throw new Error(`Brevo API request failed: ${detail}`);
     }
-    return { sent: true, messageId: body.id };
+    return { sent: true, messageId: body.messageId };
   } finally {
     clearTimeout(timeout);
   }
@@ -206,14 +231,14 @@ function renderOtpEmailHtml({ otp, username }) {
 
 async function sendVerificationEmail({ to, otp, username = '' }) {
   const subject = `Your Verification Code: ${otp} - Clients Hub`;
-  const from = process.env.RESEND_FROM || process.env.EMAIL_FROM || '"Clients Hub Studio" <no-reply@clientshub.com>';
+  const from = configuredFromAddress();
   const text = `Hello${username ? ' ' + username : ''},\n\nYour Clients Hub verification code is: ${otp}\nThis code is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
   const html = renderOtpEmailHtml({ otp, username });
 
   try {
-    if (resendConfigured()) {
-      const result = await sendWithResend({ from, to, subject, text, html });
-      logger.info('[EmailService] Verification email sent successfully via Resend', {
+    if (brevoConfigured()) {
+      const result = await sendWithBrevo({ from, to, subject, text, html });
+      logger.info('[EmailService] Verification email sent successfully via Brevo', {
         to,
         messageId: result.messageId,
       });
@@ -258,7 +283,7 @@ async function sendVerificationEmail({ to, otp, username = '' }) {
 }
 
 async function sendDeletionRequestNotification({ requestId, email, phone, createdAt }) {
-  const from = process.env.RESEND_FROM || process.env.EMAIL_FROM || '"Clients Hub Studio" <no-reply@clientshub.com>';
+  const from = configuredFromAddress();
   const subject = `Data deletion request ${requestId} - Clients Hub`;
   const text = [
     'A data deletion request was submitted.',
@@ -271,8 +296,8 @@ async function sendDeletionRequestNotification({ requestId, email, phone, create
   ].join('\n');
 
   try {
-    if (resendConfigured()) {
-      return await sendWithResend({
+    if (brevoConfigured()) {
+      return await sendWithBrevo({
         from,
         to: 'istudio2512@gmail.com',
         replyTo: email,
