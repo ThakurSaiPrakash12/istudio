@@ -11,6 +11,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
+import '../../widgets/event_status_badge.dart';
 import '../../widgets/studio_text_field.dart';
 import '../events/event_details_screen.dart';
 import '../events/create_event_sheet.dart';
@@ -787,7 +788,6 @@ class ClientDetailsScreen extends StatelessWidget {
 
   Widget _buildClientEventCard(BuildContext context, StudioEvent event) {
     final dateStr = DateFormat('d MMM yyyy').format(event.startsAt);
-    final statusColor = AppColors.statusColor(context, event.status);
     final textMain = context.textMain;
     final textMuted = context.textMuted;
 
@@ -846,21 +846,7 @@ class ClientDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        event.status.label,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                    EventStatusBadge(event: event, compact: true),
                     const SizedBox(width: 6),
                     Tooltip(
                       message: 'Add Payment',

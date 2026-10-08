@@ -18,6 +18,8 @@ class User {
     this.paymentQrUrl = '',
     this.googleId = '',
     this.needsPasswordSetup = false,
+    this.latitude,
+    this.longitude,
   });
 
   final String id;
@@ -38,6 +40,8 @@ class User {
   final String paymentQrUrl;
   final String googleId;
   final bool needsPasswordSetup;
+  final double? latitude;
+  final double? longitude;
 
   bool get hasCategories => categories.isNotEmpty;
 
@@ -90,6 +94,8 @@ class User {
       paymentQrUrl: json['paymentQrUrl'] as String? ?? '',
       googleId: json['googleId'] as String? ?? '',
       needsPasswordSetup: json['needsPasswordSetup'] as bool? ?? false,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -113,6 +119,8 @@ class User {
       'paymentQrUrl': paymentQrUrl,
       'googleId': googleId,
       'needsPasswordSetup': needsPasswordSetup,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -133,6 +141,8 @@ class User {
     String? paymentQrUrl,
     String? googleId,
     bool? needsPasswordSetup,
+    double? latitude,
+    double? longitude,
   }) {
     return User(
       id: id,
@@ -153,6 +163,8 @@ class User {
       paymentQrUrl: paymentQrUrl ?? this.paymentQrUrl,
       googleId: googleId ?? this.googleId,
       needsPasswordSetup: needsPasswordSetup ?? this.needsPasswordSetup,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 }

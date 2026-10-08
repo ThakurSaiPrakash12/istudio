@@ -10,6 +10,7 @@ import '../../providers/events_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
+import '../../widgets/location_search_field.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_text_field.dart';
@@ -56,6 +57,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
   late EventStatus _status;
   String? _clientId;
   late String _clientName;
+  double? _eventLatitude;
+  double? _eventLongitude;
   bool _saving = false;
 
   @override
@@ -88,6 +91,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
     _status = e.status;
     _clientId = e.clientId;
     _clientName = e.clientName;
+    _eventLatitude = e.latitude;
+    _eventLongitude = e.longitude;
   }
 
   @override
@@ -176,6 +181,10 @@ class _EditEventScreenState extends State<EditEventScreen> {
       startTime: _startTime.format(context),
       endTime: _endTime.format(context),
       location: _locationController.text.trim(),
+      latitude: _eventLatitude,
+      longitude: _eventLongitude,
+      clearLocationCoordinates:
+          _eventLatitude == null || _eventLongitude == null,
       totalAmount: double.parse(_amountController.text.trim()),
       status: _status,
       notes: _notesController.text.trim(),
@@ -288,9 +297,19 @@ class _EditEventScreenState extends State<EditEventScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    StudioTextField(
+                    LocationSearchField(
                       label: 'Location / Venue',
                       controller: _locationController,
+                      initialLatitude: _eventLatitude,
+                      initialLongitude: _eventLongitude,
+                      onLocationSelected: (place) {
+                        _eventLatitude = place.latitude;
+                        _eventLongitude = place.longitude;
+                      },
+                      onCoordinatesCleared: () {
+                        _eventLatitude = null;
+                        _eventLongitude = null;
+                      },
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Please enter a location'
                           : null,

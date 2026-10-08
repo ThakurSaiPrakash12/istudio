@@ -157,6 +157,22 @@ class AppColors {
     }
   }
 
+  static Color eventDisplayStatusColor(BuildContext context, String displayStatus) {
+    switch (displayStatus) {
+      case 'Completed':
+        return pastelMint;
+      case 'Upcoming':
+      case 'Today':
+      case 'Past · In Progress':
+        return sky;
+      case 'Past / Needs Update':
+        return pastelPeach;
+      case 'Cancelled':
+      default:
+        return pastelRose;
+    }
+  }
+
   static Color urgencyCritical(BuildContext context) =>
       pastelRose;
 

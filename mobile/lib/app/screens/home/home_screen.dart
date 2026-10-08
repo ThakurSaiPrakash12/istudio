@@ -126,20 +126,25 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   static bool _profileCompletionSnackbarShown = false;
+  static bool _locationSnackbarShown = false;
 
   void _checkProfileCompletionPrompt() {
     if (!mounted || _profileCompletionSnackbarShown) return;
     final user = context.read<AuthProvider>().user;
     if (user == null) return;
 
-    // Do not affect users who already have categories
-    if (user.categories.isNotEmpty) return;
+    // Users who already have categories — skip category prompt, check location
+    if (user.categories.isNotEmpty) {
+      _profileCompletionSnackbarShown = true; // prevent re-entry
+      _checkStudioLocationPrompt(user);
+      return;
+    }
 
     _profileCompletionSnackbarShown = true;
     AppSnackBar.info(
       context,
       'Select your photographer roles & categories to complete your profile.',
-      duration: const Duration(seconds: 6),
+      duration: const Duration(seconds: 10),
       actionLabel: 'Complete Profile',
       onAction: () async {
         final selected = await CategorySelectorSheet.show(
@@ -155,6 +160,30 @@ class _HomeScreenState extends State<HomeScreen>
             AppSnackBar.success(context, 'Profile categories saved.');
           }
         }
+      },
+    );
+
+    // Schedule location prompt after the categories snackbar
+    Future.delayed(const Duration(seconds: 11), () {
+      if (mounted) _checkStudioLocationPrompt(user);
+    });
+  }
+
+  void _checkStudioLocationPrompt(User user) {
+    if (!mounted || _locationSnackbarShown) return;
+    if (user.latitude != null && user.longitude != null) return;
+    _locationSnackbarShown = true;
+    AppSnackBar.info(
+      context,
+      'Add your studio location so photographers can find you nearby.',
+      duration: const Duration(seconds: 10),
+      actionLabel: 'Set Location',
+      onAction: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const ProfileScreen(initialEditing: true),
+          ),
+        );
       },
     );
   }

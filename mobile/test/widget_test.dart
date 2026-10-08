@@ -18,9 +18,8 @@ void main() {
   testWidgets('shows the login screen', (WidgetTester tester) async {
     await pumpAuth(tester);
 
-    // Brand name is present (CLIENTS and H U B are separate Text widgets in the logo)
-    expect(find.textContaining('CLIENTS'), findsWidgets);
-    expect(find.textContaining('H U B'), findsWidgets);
+    // Brand name is present in auth screen
+    expect(find.textContaining('Clients Hub'), findsWidgets);
     // Login form fields
     expect(find.text('Email or username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);

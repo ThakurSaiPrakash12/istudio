@@ -16,10 +16,13 @@ const { app } = require('../src/server');
 
 describe('Photographer Categories & Search API', () => {
   let userToken;
+  let userNearToken;
   let userA;
   let userNear;
   let userFar;
   let userNoCoords;
+  const userNearLatitude = 17.4319;
+  const userNearLongitude = 78.4073;
 
   before(async () => {
     userA = memoryUsers.create({
@@ -43,8 +46,8 @@ describe('Photographer Categories & Search API', () => {
       studioName: 'Candid Lens Studio',
       address: 'Hyderabad, Jubilee Hills',
       city: 'Hyderabad',
-      latitude: 17.4319,
-      longitude: 78.4073,
+      latitude: userNearLatitude,
+      longitude: userNearLongitude,
       categories: ['Candid photographer', 'Cinematic Vidiographer'],
     });
 
@@ -77,6 +80,11 @@ describe('Photographer Categories & Search API', () => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
+    userNearToken = jwt.sign(
+      { id: userNear._id, username: userNear.username, email: userNear.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
   });
 
   it('searches photographers by location and category', async () => {
@@ -95,6 +103,17 @@ describe('Photographer Categories & Search API', () => {
   });
 
   it('calculates real lat/lng distance and sorts nearest first', async () => {
+    const profileRes = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${userNearToken}`)
+      .send({
+        latitude: userNearLatitude,
+        longitude: userNearLongitude,
+      });
+    assert.equal(profileRes.status, 200);
+    assert.equal(profileRes.body.user.latitude, userNearLatitude);
+    assert.equal(profileRes.body.user.longitude, userNearLongitude);
+
     const res = await request(app)
       .get('/api/photographers/nearby')
       .set('Authorization', `Bearer ${userToken}`)
@@ -112,6 +131,8 @@ describe('Photographer Categories & Search API', () => {
     const far = res.body.photographers.find((p) => p.username === 'far_studio');
     const noCoords = res.body.photographers.find((p) => p.username === 'no_coords_studio');
 
+    assert.equal(near.latitude, userNearLatitude);
+    assert.equal(near.longitude, userNearLongitude);
     assert.ok(typeof near.distanceKm === 'number');
     assert.ok(typeof far.distanceKm === 'number');
     assert.ok(near.distanceKm < far.distanceKm, 'Near photographer must have smaller distance');

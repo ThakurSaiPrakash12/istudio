@@ -188,6 +188,36 @@ void main() {
       expect(event.payments[1].hasProof, isFalse);
     });
 
+    test('event coordinates serialize, restore, and can be cleared', () {
+      final event = StudioEvent(
+        id: 'event-location-test',
+        title: 'Location Test',
+        clientName: 'Test Client',
+        eventType: 'Wedding',
+        startsAt: DateTime(2026, 10, 9),
+        location: 'Selected venue',
+        latitude: 17.385,
+        longitude: 78.4867,
+        status: EventStatus.upcoming,
+        totalAmount: 1000,
+      );
+
+      final restored = StudioEvent.fromJson(event.toJson());
+      expect(restored.latitude, event.latitude);
+      expect(restored.longitude, event.longitude);
+
+      final moved = event.copyWith(
+        latitude: 17.4,
+        longitude: 78.5,
+      );
+      expect(moved.latitude, 17.4);
+      expect(moved.longitude, 78.5);
+
+      final cleared = moved.copyWith(clearLocationCoordinates: true);
+      expect(cleared.latitude, isNull);
+      expect(cleared.longitude, isNull);
+    });
+
     test(
       'EventsProvider manages Clients and multi-event client aggregations',
       () {
@@ -350,7 +380,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Coming Up'), findsOneWidget);
+        expect(find.text('Upcoming Shoot'), findsOneWidget);
         expect(find.text('Done'), findsWidgets);
         expect(find.text('See all'), findsNWidgets(2));
       },

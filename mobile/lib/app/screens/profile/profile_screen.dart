@@ -16,6 +16,7 @@ import '../../utils/photographer_categories.dart';
 import '../../utils/validators.dart';
 import '../../widgets/avatar_crop_screen.dart';
 import '../../widgets/category_selector_sheet.dart';
+import '../../widgets/location_search_field.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
@@ -24,14 +25,16 @@ import '../../widgets/change_password_sheet.dart';
 import '../legal/legal_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.initialEditing = false});
+
+  final bool initialEditing;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _editing = false;
+  late bool _editing;
   bool _isUploadingImage = false;
   bool _isUploadingQr = false;
   final _formKey = GlobalKey<FormState>();
@@ -47,7 +50,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController _youtube;
   late final TextEditingController _website;
   late final TextEditingController _specialties;
+  late final TextEditingController _locationSearch;
   List<String> _selectedCategories = [];
+  double? _studioLatitude;
+  double? _studioLongitude;
 
   Timer? _usernameDebounce;
   bool _isCheckingUsername = false;
@@ -57,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _editing = widget.initialEditing;
     final user = context.read<AuthProvider>().user;
     _studioName = TextEditingController(text: user?.studioName ?? '');
     _ownerName = TextEditingController(text: user?.ownerName ?? '');
@@ -70,7 +77,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _youtube = TextEditingController(text: user?.youtube ?? '');
     _website = TextEditingController(text: user?.website ?? '');
     _specialties = TextEditingController(text: user?.specialties ?? '');
+    _locationSearch = TextEditingController(
+      text: user?.address.isNotEmpty == true
+          ? user!.address
+          : (user?.city.isNotEmpty == true ? user!.city : ''),
+    );
     _selectedCategories = List<String>.from(user?.categories ?? []);
+    _studioLatitude = user?.latitude;
+    _studioLongitude = user?.longitude;
   }
 
   @override
@@ -87,6 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _youtube.dispose();
     _website.dispose();
     _specialties.dispose();
+    _locationSearch.dispose();
     _usernameDebounce?.cancel();
     super.dispose();
   }
@@ -105,7 +120,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _youtube.text = user.youtube;
     _website.text = user.website;
     _specialties.text = user.specialties;
+    _locationSearch.text = user.address.isNotEmpty
+        ? user.address
+        : (user.city.isNotEmpty ? user.city : '');
     _selectedCategories = List<String>.from(user.categories);
+    _studioLatitude = user.latitude;
+    _studioLongitude = user.longitude;
     _isUsernameAvailable = null;
     _usernameErrorText = null;
   }
@@ -381,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     final auth = context.read<AuthProvider>();
-    final success = await auth.updateProfile({
+    final payload = <String, dynamic>{
       'studioName': _studioName.text.trim(),
       'ownerName': _ownerName.text.trim(),
       'username': _username.text.trim(),
@@ -394,7 +414,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'website': _website.text.trim(),
       'specialties': _specialties.text.trim(),
       'categories': _selectedCategories,
-    });
+    };
+    if (_studioLatitude != null) payload['latitude'] = _studioLatitude;
+    if (_studioLongitude != null) payload['longitude'] = _studioLongitude;
+    final success = await auth.updateProfile(payload);
     if (!mounted) return;
     if (success) {
       setState(() => _editing = false);
@@ -1262,6 +1285,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             helperText: 'To change your email, use Change Email in Account Settings.',
           ),
           const SizedBox(height: 14),
+          // Studio Location — geocodes venue to lat/lng automatically
+          LocationSearchField(
+            label: 'Studio Location',
+            hint: 'Search studio address or venue…',
+            controller: _locationSearch,
+            initialLatitude: _studioLatitude,
+            initialLongitude: _studioLongitude,
+            onLocationSelected: (result) {
+              setState(() {
+                _studioLatitude = result.latitude;
+                _studioLongitude = result.longitude;
+                // Auto-fill city if empty
+                if (_city.text.trim().isEmpty && result.city != null) {
+                  _city.text = result.city!;
+                }
+                // Auto-fill address if empty
+                if (_address.text.trim().isEmpty) {
+                  _address.text = result.displayName;
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 14),
           StudioTextField(
             label: 'City',
             hint: 'Where the studio is based',
@@ -1277,9 +1323,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             hint: 'Street, floor, landmark',
             controller: _address,
             prefixIcon: Icons.place_outlined,
-            validator: (value) => (value == null || value.trim().isEmpty)
-                ? 'Enter your studio address'
-                : null,
           ),
           const SizedBox(height: 14),
           StudioTextField(

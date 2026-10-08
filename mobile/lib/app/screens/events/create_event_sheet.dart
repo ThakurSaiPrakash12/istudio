@@ -10,8 +10,10 @@ import '../../models/client.dart';
 import '../../models/studio_event.dart';
 import '../../providers/events_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/location_search_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
+import '../../widgets/location_search_field.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_text_field.dart';
 
@@ -52,6 +54,8 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
   final _clientController = TextEditingController();
   final _phoneController = TextEditingController();
   final _locationController = TextEditingController();
+  double? _eventLatitude;
+  double? _eventLongitude;
   final _notesController = TextEditingController();
   final _totalAmountController = TextEditingController();
   final _advanceController = TextEditingController();
@@ -332,6 +336,20 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
           ? _customEventTypeController.text.trim()
           : _eventType;
 
+      final locText = _locationController.text.trim();
+      double? lat = _eventLatitude;
+      double? lng = _eventLongitude;
+      if ((lat == null || lng == null) && locText.isNotEmpty) {
+        try {
+          final geocoded =
+              await LocationSearchService().geocodeLocation(locText);
+          if (geocoded != null) {
+            lat = geocoded.latitude;
+            lng = geocoded.longitude;
+          }
+        } catch (_) {}
+      }
+
       final newEvent = StudioEvent(
         id: 'evt-${DateTime.now().millisecondsSinceEpoch}',
         title: _nameController.text.trim(),
@@ -339,9 +357,9 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
         clientId: matchedClientId,
         clientName: clientName,
         status: EventStatus.upcoming,
-        location: _locationController.text.trim().isEmpty
-            ? 'Studio / On Location'
-            : _locationController.text.trim(),
+        location: locText.isEmpty ? 'Studio / On Location' : locText,
+        latitude: lat,
+        longitude: lng,
         startsAt: startsAt,
         startTime: formattedStartTime,
         endTime: formattedEndTime,
@@ -802,9 +820,20 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  StudioTextField(
+                  LocationSearchField(
                     label: 'Location / Venue',
                     controller: _locationController,
+                    hint: 'Search venue (e.g. Taj Falaknuma Palace)...',
+                    initialLatitude: _eventLatitude,
+                    initialLongitude: _eventLongitude,
+                    onLocationSelected: (place) {
+                      _eventLatitude = place.latitude;
+                      _eventLongitude = place.longitude;
+                    },
+                    onCoordinatesCleared: () {
+                      _eventLatitude = null;
+                      _eventLongitude = null;
+                    },
                   ),
                   const SizedBox(height: 14),
                   StudioTextField(

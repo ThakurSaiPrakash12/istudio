@@ -24,7 +24,7 @@ class PhotographerCategories {
     'Traditional Vidiographer',
     'Candid photographer',
     'Cinematic Vidiographer',
-    'Led screen s',
+    'Led screens',
     'Drones',
     'Internet Live',
     'Traditional photographer taker',
@@ -39,12 +39,12 @@ class PhotographerCategories {
 
   /// Normalized operator role labels for display and selection
   static const List<String> formattedOperatorRoles = [
-    'Operators: Photographer',
-    'Operators: Vidiography',
-    'Operators: candid photographer',
-    'Operators: Candid Vidiographer',
-    'Operators: Video Editor',
-    'Operators: Album Designer',  
+    'Photographer',
+    'Vidiography',
+    'Candid photographer',
+    'Candid Vidiographer',
+    'Video Editor',
+    'Album Designer',  
   ];
 
   /// Master list of all predefined categories

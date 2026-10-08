@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/countdown_chip.dart';
 import '../../widgets/payment_proof_preview.dart';
 import '../../widgets/studio_app_bar.dart';
+import '../../widgets/event_status_badge.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/shimmer_loading.dart';
 import 'create_event_sheet.dart';
@@ -316,7 +317,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen>
                   hoursLeft: event.hoursUntilStart,
                 )
               else
-                Flexible(child: _buildStatusBadge(context, event.status)),
+                Flexible(child: EventStatusBadge(event: event)),
             ],
           ),
           const SizedBox(height: 12),
@@ -435,27 +436,6 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen>
           end: Offset.zero,
         ).animate(anim),
         child: cardWidget,
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(BuildContext context, EventStatus status) {
-    final color = AppColors.statusColor(context, status);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }

@@ -39,7 +39,6 @@ enum ClientStatus {
         return ClientStatus.comingUp;
       case 'completed':
       case 'past':
-      case 'done':
         return ClientStatus.completed;
       case 'information':
       case 'info':

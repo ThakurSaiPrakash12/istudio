@@ -11,6 +11,7 @@ import '../../utils/photographer_categories.dart';
 import '../../utils/validators.dart';
 import '../../widgets/avatar_crop_screen.dart';
 import '../../widgets/category_selector_sheet.dart';
+import '../../widgets/location_search_field.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
@@ -38,6 +39,9 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
   late final TextEditingController _instagram;
   late final TextEditingController _youtube;
   late final TextEditingController _website;
+  late final TextEditingController _locationSearch;
+  double? _studioLatitude;
+  double? _studioLongitude;
   bool _uploadingLogo = false;
   List<String> _selectedCategories = [];
 
@@ -57,7 +61,14 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
     _instagram = TextEditingController(text: user?.instagram ?? '');
     _youtube = TextEditingController(text: user?.youtube ?? '');
     _website = TextEditingController(text: user?.website ?? '');
+    _locationSearch = TextEditingController(
+      text: user?.address.isNotEmpty == true
+          ? user!.address
+          : (user?.city.isNotEmpty == true ? user!.city : ''),
+    );
     _selectedCategories = List<String>.from(user?.categories ?? []);
+    _studioLatitude = user?.latitude;
+    _studioLongitude = user?.longitude;
   }
 
   @override
@@ -75,6 +86,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       _instagram,
       _youtube,
       _website,
+      _locationSearch,
     ]) {
       c.dispose();
     }
@@ -159,7 +171,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       return;
     }
     final auth = context.read<AuthProvider>();
-    final ok = await auth.updateProfile({
+    final payload = <String, dynamic>{
       'studioName': _studioName.text.trim(),
       'ownerName': _ownerName.text.trim(),
       'phone': _phone.text.trim(),
@@ -171,7 +183,10 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       'youtube': _youtube.text.trim(),
       'website': _website.text.trim(),
       'categories': _selectedCategories,
-    });
+    };
+    if (_studioLatitude != null) payload['latitude'] = _studioLatitude;
+    if (_studioLongitude != null) payload['longitude'] = _studioLongitude;
+    final ok = await auth.updateProfile(payload);
     if (!mounted) return;
     if (ok) {
       AppSnackBar.success(context, 'Welcome aboard! Your studio is ready.');
@@ -372,6 +387,27 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
                           prefixIcon: Icons.mail_outline_rounded,
                           suffixIcon: const Icon(Icons.lock_outline_rounded, size: 18),
                           helperText: 'Registered account email (cannot be edited here)',
+                        ),
+                        const SizedBox(height: 14),
+                        // Studio Location — geocodes venue to lat/lng automatically
+                        LocationSearchField(
+                          label: 'Studio Location',
+                          hint: 'Search studio address or venue…',
+                          controller: _locationSearch,
+                          initialLatitude: _studioLatitude,
+                          initialLongitude: _studioLongitude,
+                          onLocationSelected: (result) {
+                            setState(() {
+                              _studioLatitude = result.latitude;
+                              _studioLongitude = result.longitude;
+                              if (result.city != null && result.city!.isNotEmpty) {
+                                _city.text = result.city!;
+                              }
+                              if (_address.text.trim().isEmpty) {
+                                _address.text = result.displayName;
+                              }
+                            });
+                          },
                         ),
                         const SizedBox(height: 14),
                         StudioTextField(

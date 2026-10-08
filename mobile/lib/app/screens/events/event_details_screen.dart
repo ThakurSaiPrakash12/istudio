@@ -5,7 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/invoice.dart';
 import '../../models/studio_event.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../routes/smooth_page_route.dart';
 import '../../services/api_service.dart';
@@ -19,10 +21,11 @@ import '../../widgets/fade_slide_in.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/animated_financial_text.dart';
 import 'edit_event_screen.dart';
+import '../../widgets/event_status_badge.dart';
 import '../photographers/nearby_photographers_screen.dart';
-import '../invoice/create_invoice_form.dart';
 import '../invoice/invoice_preview_screen.dart';
 import '../../providers/invoices_provider.dart';
+import '../../services/invoice_pdf_service.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   const EventDetailsScreen({
@@ -51,6 +54,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
   late final Animation<double> _anim4;
   late final Animation<double> _anim5;
   late final Animation<double> _anim6;
+  late final Animation<double> _anim7;
 
   static final _currency = NumberFormat.currency(
     locale: 'en_IN',
@@ -78,6 +82,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
     _anim4 = _interval(0.32, 0.64); // expense summary
     _anim5 = _interval(0.40, 0.76); // work progress
     _anim6 = _interval(0.52, 0.86); // notes
+    _anim7 = _interval(0.60, 0.94); // event invoice
     if (widget.autoOpenPayment) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showAddPaymentSheet(context, widget.eventId);
@@ -272,6 +277,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
 
                   // F. Event Notes
                   _entrance(_anim6, _buildNotesSection(context, event)),
+                  const SizedBox(height: 16),
+
+                  // G. Event Invoice (auto-generated)
+                  _entrance(_anim7, _buildEventInvoiceSection(context, event)),
                 ],
               ),
             ),
@@ -498,7 +507,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                   ],
                 ),
               ),
-              _buildStatusBadge(context, event.status),
+              EventStatusBadge(event: event),
             ],
           ),
           const SizedBox(height: 16),
@@ -569,7 +578,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                 ),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -590,7 +602,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                         color: context.accentColor.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.search_rounded, size: 16, color: context.accentColor),
+                      child: Icon(
+                        Icons.search_rounded,
+                        size: 16,
+                        color: context.accentColor,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -611,64 +627,21 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                                 : 'Search photographers near this event',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: context.textMuted, fontSize: 11),
+                            style: TextStyle(
+                              color: context.textMuted,
+                              fontSize: 11,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 14, color: context.accentColor),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: context.accentColor,
+                    ),
                   ],
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(BuildContext context, EventStatus status) {
-    final color = AppColors.statusColor(context, status);
-    IconData icon;
-    switch (status) {
-      case EventStatus.completed:
-        icon = Icons.check_circle_outline_rounded;
-        break;
-      case EventStatus.inProgress:
-        icon = Icons.timelapse_rounded;
-        break;
-      case EventStatus.paymentDue:
-        icon = Icons.error_outline_rounded;
-        break;
-      case EventStatus.upcoming:
-        icon = Icons.schedule_rounded;
-        break;
-      case EventStatus.cancelled:
-        icon = Icons.cancel_outlined;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: context.isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              status.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -1092,7 +1065,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _buildPaymentReceiptBadge(context, event.id, p.id),
+                              _buildPaymentReceiptBadge(
+                                context,
+                                event.id,
+                                p.id,
+                              ),
                               const SizedBox(width: 8),
                               InkWell(
                                 onTap: () => p.hasProof
@@ -1126,7 +1103,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                                       Icon(
                                         p.hasProof
                                             ? Icons.attachment_rounded
-                                            : Icons.add_photo_alternate_outlined,
+                                            : Icons
+                                                  .add_photo_alternate_outlined,
                                         size: 11,
                                         color: context.accentColor,
                                       ),
@@ -2692,136 +2670,638 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
     );
   }
 
-  // ================= Dialogs / Sheets =================
+  // ================= G. Event Invoice =================
+  Widget _buildEventInvoiceSection(BuildContext context, StudioEvent event) {
+    final invoicesProvider = context.watch<InvoicesProvider?>();
+    if (invoicesProvider == null) return const SizedBox.shrink();
 
-  /// Shows a bottom-sheet prompt after every payment so users can immediately
-  /// generate and share an invoice for the event.
-  void _promptAutoInvoice(BuildContext ctx, String eventId, double paymentAmount) {
-    if (!ctx.mounted) return;
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!ctx.mounted) return;
-      showModalBottomSheet(
-        context: ctx,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder: (sheetCtx) {
-          return Container(
-            decoration: BoxDecoration(
-              color: sheetCtx.cardBg,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-              border: Border.all(color: sheetCtx.cardBorder, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 24,
-                  offset: const Offset(0, -6),
+    final invoices = invoicesProvider.getInvoicesForEvent(
+      event.id,
+      eventName: event.title,
+    );
+    // The most recent (first) invoice represents the latest payment state.
+    final invoice = invoices.isNotEmpty ? invoices.first : null;
+
+    final accent = context.accentColor;
+    final textMain = context.textMain;
+    final textMuted = context.textMuted;
+
+    return StudioCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ---- Header row ----
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-            padding: EdgeInsets.only(
-              left: 24, right: 24, top: 20,
-              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 28,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
-                    decoration: BoxDecoration(
-                      color: sheetCtx.textMuted.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(10),
+                child: Icon(
+                  Icons.receipt_long_rounded,
+                  color: accent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Event Invoice',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: textMain,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (invoice != null)
+                      Text(
+                        '${invoice.number} · ${DateFormat('d MMM yyyy').format(invoice.issuedOn)}',
+                        style: TextStyle(color: textMuted, fontSize: 12),
+                      )
+                    else
+                      Text(
+                        'Auto-generated from event data',
+                        style: TextStyle(color: textMuted, fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+              if (invoice != null) _buildInvoiceStatusChip(context, invoice),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (invoice == null) ...[
+            // No invoice yet — show generate button
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.innerBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: context.cardBorder),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.receipt_outlined,
+                    size: 32,
+                    color: textMuted.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No invoice yet',
+                    style: TextStyle(
+                      color: textMain,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: sheetCtx.accentColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Generate an invoice for this event to share with your client.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          _generateAndPreviewInvoice(context, event),
+                      icon: const Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 16,
+                        color: Colors.white,
                       ),
-                      child: Icon(Icons.receipt_long_rounded, color: sheetCtx.accentColor, size: 24),
+                      label: const Text(
+                        'Generate Invoice',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accent,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // Invoice details card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.innerBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: context.cardBorder),
+              ),
+              child: Column(
+                children: [
+                  // Client info row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'BILLED TO',
+                              style: TextStyle(
+                                color: textMuted,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              invoice.contactName.isNotEmpty
+                                  ? invoice.contactName
+                                  : event.clientName,
+                              style: TextStyle(
+                                color: textMain,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (invoice.phone.isNotEmpty)
+                              Text(
+                                invoice.phone,
+                                style: TextStyle(
+                                  color: textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            if (invoice.address.isNotEmpty)
+                              Text(
+                                invoice.address,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'Create Invoice?',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: sheetCtx.textMain,
+                            'DUE DATE',
+                            style: TextStyle(
+                              color: textMuted,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            DateFormat('d MMM yyyy').format(invoice.dueDate),
+                            style: TextStyle(
+                              color: textMain,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Divider(color: context.cardBorder, height: 20),
+                  // Line items
+                  ...invoice.deliverables.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.collections_outlined,
+                            size: 14,
+                            color: accent,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: TextStyle(
+                                color: textMain,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                           Text(
-                            'Payment of ₹${paymentAmount.toInt()} recorded. Generate an invoice for this event to share with your client.',
-                            style: TextStyle(fontSize: 13, color: sheetCtx.textMuted, height: 1.4),
+                            _currency.format(item.cost),
+                            style: TextStyle(
+                              color: textMain,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
                     ),
+                  ),
+                  Divider(color: context.cardBorder, height: 16),
+                  // Totals
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          color: textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _currency.format(invoice.total),
+                        style: TextStyle(
+                          color: textMain,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Received',
+                        style: TextStyle(
+                          color: textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _currency.format(invoice.amountReceived),
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (invoice.pendingAmount > 0.01) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Balance Due',
+                          style: TextStyle(
+                            color: context.isDark
+                                ? const Color(0xFFE8B86D)
+                                : const Color(0xFFB57200),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          _currency.format(invoice.pendingAmount),
+                          style: TextStyle(
+                            color: context.isDark
+                                ? const Color(0xFFE8B86D)
+                                : const Color(0xFFB57200),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
+                  if (invoice.upiId.isNotEmpty) ...[
+                    Divider(color: context.cardBorder, height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 14,
+                          color: textMuted,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'UPI: ${invoice.upiId}',
+                          style: TextStyle(color: textMuted, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _shareInvoice(context, invoice),
+                    icon: Icon(
+                      Icons.ios_share_rounded,
+                      size: 16,
+                      color: accent,
+                    ),
+                    label: Text(
+                      'Share PDF',
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: accent.withValues(alpha: 0.45)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(sheetCtx).pop(),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: sheetCtx.cardBorder),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: Text('Later', style: TextStyle(color: sheetCtx.textMuted)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _previewInvoice(context, invoice),
+                    icon: Icon(
+                      Icons.visibility_outlined,
+                      size: 16,
+                      color: textMuted,
+                    ),
+                    label: Text(
+                      'Preview',
+                      style: TextStyle(
+                        color: textMain,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(sheetCtx).pop();
-                          // Navigate to invoice creation for this event
-                          final event = ctx.read<EventsProvider>().findById(eventId);
-                          if (event != null && ctx.mounted) {
-                            Navigator.of(ctx).push(
-                              MaterialPageRoute(
-                                builder: (_) => _EventInvoiceShortcut(
-                                  eventId: eventId,
-                                  eventTitle: event.title,
-                                  clientName: event.clientName,
-                                  amount: paymentAmount,
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.receipt_long_rounded, size: 18, color: Colors.white),
-                        label: const Text('Create Invoice', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: sheetCtx.accentColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 0,
-                        ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: context.cardBorder),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          );
-        },
-      );
-    });
+            // Regenerate hint for past invoices
+            if (invoices.length > 1) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () =>
+                      _showInvoiceHistory(context, event, invoices),
+                  icon: Icon(Icons.history_rounded, size: 14, color: textMuted),
+                  label: Text(
+                    'View all ${invoices.length} invoices',
+                    style: TextStyle(color: textMuted, fontSize: 12),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
   }
+
+  Widget _buildInvoiceStatusChip(BuildContext context, Invoice invoice) {
+    final Color chipColor;
+    final String label;
+    switch (invoice.status) {
+      case InvoiceStatus.paid:
+        chipColor = const Color(0xFF10B981);
+        label = 'Paid ✓';
+        break;
+      case InvoiceStatus.partial:
+        chipColor = const Color(0xFFF59E0B);
+        label = 'Part Paid';
+        break;
+      case InvoiceStatus.overdue:
+        chipColor = const Color(0xFFEF4444);
+        label = 'Overdue';
+        break;
+      default:
+        chipColor = context.accentColor;
+        label = 'Pending';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: chipColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: chipColor.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: chipColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generateAndPreviewInvoice(
+    BuildContext context,
+    StudioEvent event,
+  ) async {
+    final invoicesProvider = context.read<InvoicesProvider?>();
+    if (invoicesProvider == null) return;
+    try {
+      final client = context.read<EventsProvider>().getClientById(
+        event.clientId ?? '',
+      );
+      final invoice = await invoicesProvider.ensureInvoiceForEvent(
+        event,
+        client: client,
+      );
+      if (!context.mounted) return;
+      await InvoicePreviewScreen.open(context, invoice: invoice);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackBar.error(context, 'Could not generate invoice.');
+    }
+  }
+
+  Future<void> _shareInvoice(BuildContext context, Invoice invoice) async {
+    try {
+      final studio = context.read<AuthProvider?>()?.user;
+      await InvoicePdfService.shareInvoice(invoice: invoice, studio: studio);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackBar.error(context, 'Could not share invoice PDF.');
+    }
+  }
+
+  void _previewInvoice(BuildContext context, Invoice invoice) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => InvoicePreviewScreen(invoice: invoice)),
+    );
+  }
+
+  void _showInvoiceHistory(
+    BuildContext context,
+    StudioEvent event,
+    List<Invoice> invoices,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: sheetCtx.textMuted.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Invoice History',
+                style: GoogleFonts.plusJakartaSans(
+                  color: sheetCtx.textMain,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                event.title,
+                style: TextStyle(color: sheetCtx.textMuted, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(sheetCtx).size.height * 0.5,
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: invoices.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, index) {
+                    final inv = invoices[index];
+                    return InkWell(
+                      onTap: () {
+                        Navigator.of(sheetCtx).pop();
+                        _previewInvoice(context, inv);
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: sheetCtx.innerBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: sheetCtx.cardBorder),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.receipt_rounded,
+                              color: sheetCtx.accentColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    inv.number,
+                                    style: TextStyle(
+                                      color: sheetCtx.textMain,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    DateFormat(
+                                      'd MMM yyyy',
+                                    ).format(inv.issuedOn),
+                                    style: TextStyle(
+                                      color: sheetCtx.textMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              _currency.format(inv.total),
+                              style: TextStyle(
+                                color: sheetCtx.accentColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                              color: sheetCtx.textMuted,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ================= Dialogs / Sheets =================
 
   void _showAddPaymentSheet(BuildContext context, String eventId) {
     final titleController = TextEditingController(text: 'Payment');
@@ -3326,14 +3806,29 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                                     duration: const Duration(seconds: 4),
                                   );
                                 } else {
-                                  // Refresh invoices to show newly generated payment receipt immediately
-                                  modalContext.read<InvoicesProvider?>()?.loadInvoices();
+                                  // Auto-generate/update the event invoice silently
+                                  final invProv = modalContext
+                                      .read<InvoicesProvider?>();
+                                  if (invProv != null) {
+                                    final evp = modalContext
+                                        .read<EventsProvider>();
+                                    final updatedEvent = evp.findById(eventId);
+                                    if (updatedEvent != null) {
+                                      final client = evp.getClientById(
+                                        updatedEvent.clientId ?? '',
+                                      );
+                                      invProv
+                                          .ensureInvoiceForEvent(
+                                            updatedEvent,
+                                            client: client,
+                                          )
+                                          .ignore();
+                                    }
+                                  }
                                   AppSnackBar.success(
                                     context,
                                     'Payment of ₹${amount.toInt()} recorded!',
                                   );
-                                  // Auto-invoice prompt after each payment
-                                  _promptAutoInvoice(context, eventId, amount);
                                 }
                               } catch (e) {
                                 if (sheetContext.mounted) {
@@ -3669,7 +4164,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                               color: danger,
                               isLoading: isDeleting,
                               icon: Icons.delete_outline_rounded,
-                              label: isDeleting ? 'Deleting...' : 'Delete Proof',
+                              label: isDeleting
+                                  ? 'Deleting...'
+                                  : 'Delete Proof',
                               onPressed: isBusy ? null : deleteProof,
                             ),
                           ),
@@ -3704,9 +4201,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
         backgroundColor: color.withValues(alpha: 0.06),
         side: BorderSide(color: color.withValues(alpha: 0.45)),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       onPressed: onPressed,
       icon: isLoading
@@ -3718,10 +4213,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
           : Icon(icon, size: 18),
       label: FittedBox(
         fit: BoxFit.scaleDown,
-        child: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
     );
   }
@@ -4096,100 +4588,4 @@ class _WorkflowStage {
 
   final String name;
   final List<DeliverableTask> tasks;
-}
-
-/// A lightweight screen that hosts the invoice creation form pre-navigated
-/// after the user records a payment, enabling quick invoice generation from
-/// any event.
-class _EventInvoiceShortcut extends StatelessWidget {
-  const _EventInvoiceShortcut({
-    required this.eventId,
-    required this.eventTitle,
-    required this.clientName,
-    required this.amount,
-  });
-
-  final String eventId;
-  final String eventTitle;
-  final String clientName;
-  final double amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            StudioAppBar(
-              title: 'New Invoice',
-              subtitle: 'For $eventTitle',
-              leading: IconButton(
-                tooltip: 'Back',
-                icon: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: context.textMain,
-                  size: 20,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            Expanded(
-              child: _EventInvoiceFormWrapper(
-                eventTitle: eventTitle,
-                clientName: clientName,
-                amount: amount,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EventInvoiceFormWrapper extends StatefulWidget {
-  const _EventInvoiceFormWrapper({
-    required this.eventTitle,
-    required this.clientName,
-    required this.amount,
-  });
-
-  final String eventTitle;
-  final String clientName;
-  final double amount;
-
-  @override
-  State<_EventInvoiceFormWrapper> createState() =>
-      _EventInvoiceFormWrapperState();
-}
-
-class _EventInvoiceFormWrapperState extends State<_EventInvoiceFormWrapper> {
-  final _formKey = GlobalKey<CreateInvoiceFormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Pre-fill the form with event data
-      _formKey.currentState?.prefill(
-        event: widget.eventTitle,
-        contact: widget.clientName,
-        amount: widget.amount,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CreateInvoiceForm(
-      key: _formKey,
-      onSaved: (_) {
-        if (mounted) {
-          AppSnackBar.success(context, 'Invoice created and saved!');
-          Navigator.of(context).pop();
-        }
-      },
-    );
-  }
 }

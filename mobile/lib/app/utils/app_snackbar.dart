@@ -13,25 +13,27 @@ class AppSnackBar {
   static const Color _errorColor = Color(0xFFDC2626);
   static const Color _infoColor = Color(0xFF334155);
 
+  static const Duration _defaultDuration = Duration(seconds: 10);
+
   static OverlayEntry? _overlayEntry;
   static Timer? _overlayTimer;
 
   static void success(
     BuildContext context,
     String message, {
-    Duration duration = const Duration(seconds: 10),
+    Duration duration = _defaultDuration,
   }) => show(context, message, type: SnackType.success, duration: duration);
 
   static void error(
     BuildContext context,
     String message, {
-    Duration? duration,
+    Duration duration = _defaultDuration,
   }) => show(context, message, type: SnackType.error, duration: duration);
 
   static void info(
     BuildContext context,
     String message, {
-    Duration? duration = const Duration(seconds: 2),
+    Duration duration = _defaultDuration,
     IconData? icon,
     String? actionLabel,
     VoidCallback? onAction,
@@ -71,7 +73,7 @@ class AppSnackBar {
     BuildContext context,
     String message, {
     SnackType type = SnackType.info,
-    Duration? duration = const Duration(seconds: 2),
+    Duration duration = _defaultDuration,
     IconData? icon,
     String? actionLabel,
     VoidCallback? onAction,
@@ -105,7 +107,7 @@ class AppSnackBar {
         SnackBar(
           behavior: SnackBarBehavior.floating,
           backgroundColor: bg,
-          duration: duration ?? const Duration(days: 365),
+          duration: duration,
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -147,9 +149,7 @@ class AppSnackBar {
     );
     _overlayEntry = entry;
     overlay.insert(entry);
-    if (duration != null) {
-      _overlayTimer = Timer(duration, _removeOverlay);
-    }
+    _overlayTimer = Timer(duration ?? _defaultDuration, _removeOverlay);
   }
 
   static void _removeOverlay() {

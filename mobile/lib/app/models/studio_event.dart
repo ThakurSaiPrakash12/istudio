@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 enum EventStatus {
   upcoming,
   inProgress,
@@ -353,6 +355,73 @@ class StudioEvent {
     }
   }
 
+  /// Effective human-readable status considering both the event's lifecycle status
+  /// and its scheduled date relative to [relativeTo] (defaults to current date).
+  ///
+  /// Classification rules:
+  /// - Cancelled → Cancelled
+  /// - Future event date → Upcoming
+  /// - Today → Today
+  /// - Past date + Completed → Completed
+  /// - Past date + In Progress → Past · In Progress
+  /// - Past date + Upcoming/stale status → Past / Needs Update, never Upcoming
+  String effectiveStatusLabel([DateTime? relativeTo]) {
+    if (status == EventStatus.cancelled) {
+      return 'Cancelled';
+    }
+
+    final now = relativeTo ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final eventDay = DateTime(startsAt.year, startsAt.month, startsAt.day);
+
+    if (eventDay.isAfter(today)) {
+      return 'Upcoming';
+    }
+
+    if (eventDay.isAtSameMomentAs(today)) {
+      return 'Today';
+    }
+
+    // Past date (eventDay.isBefore(today))
+    if (status == EventStatus.completed) {
+      return 'Completed';
+    }
+    if (status == EventStatus.inProgress) {
+      return 'Past · In Progress';
+    }
+    return 'Past / Needs Update';
+  }
+
+  /// Reusable convenience getter for effective display status.
+  String get displayStatus => effectiveStatusLabel();
+
+  /// Status badge color corresponding to effective display status.
+  Color effectiveStatusColor(BuildContext context, [DateTime? relativeTo]) =>
+      AppColors.eventDisplayStatusColor(
+        context,
+        effectiveStatusLabel(relativeTo),
+      );
+
+  /// Status badge icon corresponding to effective display status.
+  IconData effectiveStatusIcon([DateTime? relativeTo]) {
+    final label = effectiveStatusLabel(relativeTo);
+    switch (label) {
+      case 'Completed':
+        return Icons.check_circle_rounded;
+      case 'Upcoming':
+        return Icons.schedule_rounded;
+      case 'Today':
+        return Icons.today_rounded;
+      case 'Past · In Progress':
+        return Icons.timelapse_rounded;
+      case 'Past / Needs Update':
+        return Icons.history_rounded;
+      case 'Cancelled':
+      default:
+        return Icons.cancel_outlined;
+    }
+  }
+
   bool get isPast =>
       status == EventStatus.completed ||
       startsAt.isBefore(DateTime.now().subtract(const Duration(days: 1)));
@@ -369,6 +438,7 @@ class StudioEvent {
     String? location,
     double? latitude,
     double? longitude,
+    bool clearLocationCoordinates = false,
     EventStatus? status,
     double? totalAmount,
     double? amountReceived,
@@ -387,8 +457,8 @@ class StudioEvent {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       location: location ?? this.location,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
+      latitude: clearLocationCoordinates ? null : latitude ?? this.latitude,
+      longitude: clearLocationCoordinates ? null : longitude ?? this.longitude,
       status: status ?? this.status,
       totalAmount: totalAmount ?? this.totalAmount,
       amountReceived: amountReceived ?? this.amountReceived,

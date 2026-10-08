@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/payment_proof_preview.dart';
+import '../../widgets/event_status_badge.dart';
 import 'event_details_screen.dart';
 import '../../routes/smooth_page_route.dart';
 
@@ -247,8 +248,7 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
     final dateStr = DateFormat('d MMM yyyy').format(event.startsAt);
     final textMain = context.textMain;
     final textMuted = context.textMuted;
-    final isCompleted = event.status == EventStatus.completed;
-    final statusColor = AppColors.statusColor(context, event.status);
+    final statusColor = event.effectiveStatusColor(context);
 
     return StudioCard(
       padding: const EdgeInsets.all(16),
@@ -305,44 +305,7 @@ class _PastEventsScreenState extends State<PastEventsScreen> {
               ),
               const SizedBox(width: 6),
               Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: statusColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isCompleted
-                            ? Icons.check_circle_rounded
-                            : Icons.schedule_rounded,
-                        color: statusColor,
-                        size: 12,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          event.status.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: EventStatusBadge(event: event),
               ),
             ],
           ),
