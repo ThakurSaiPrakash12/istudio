@@ -46,7 +46,7 @@ async function searchNearbyPhotographers(req, res) {
 
     const users = await userRepository.searchPhotographers({
       userId: req.userId,
-      location,
+      location: hasOriginCoords ? '' : location,
       query,
       category,
       limit,

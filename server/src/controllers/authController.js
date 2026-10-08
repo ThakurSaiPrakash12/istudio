@@ -363,6 +363,15 @@ async function updateProfile(req, res) {
       }
     }
 
+    if (req.body.latitude !== undefined) {
+      const lat = Number(req.body.latitude);
+      fields.latitude = !isNaN(lat) ? lat : null;
+    }
+    if (req.body.longitude !== undefined) {
+      const lng = Number(req.body.longitude);
+      fields.longitude = !isNaN(lng) ? lng : null;
+    }
+
     // Username change — check availability
     if (req.body.username !== undefined) {
       const newUsername = String(req.body.username || "").trim();
