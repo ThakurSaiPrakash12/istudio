@@ -36,9 +36,23 @@ class InvoiceService {
             .toList(),
         'upiId': invoice.upiId,
         'amountReceived': invoice.amountReceived,
+        if (invoice.eventId.isNotEmpty) 'eventId': invoice.eventId,
+        if (invoice.paymentId.isNotEmpty) 'paymentId': invoice.paymentId,
       },
       token: token,
       idempotencyKey: invoice.id,
+    );
+    return _readInvoice(payload);
+  }
+
+  Future<Invoice> autoGenerateForEvent({
+    required String token,
+    required String eventId,
+  }) async {
+    final payload = await _api.post(
+      '/events/$eventId/auto-invoice',
+      const {},
+      token: token,
     );
     return _readInvoice(payload);
   }

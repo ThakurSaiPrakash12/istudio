@@ -102,11 +102,69 @@ function nestedCreate(kind, fieldsList, req, res) {
   for (const key of ['paidAt', 'incurredAt']) {
     if (body[key] !== undefined) body[key] = dateValue(body[key]);
   }
-  return repository[`create${kind}`](req.params.eventId, req.userId, body).then((item) => {
+  return repository[`create${kind}`](req.params.eventId, req.userId, body).then(async (item) => {
     if (!item) return res.status(404).json({ success: false, message: 'Event not found.' });
     if (item.overpayment) return res.status(400).json({ success: false, message: 'Payment cannot exceed the event total.' });
     const singular = kind.toLowerCase();
-    return res.status(201).json({ success: true, [singular]: item.toPublicJSON() });
+
+    let generatedInvoice = null;
+    if (kind === 'Payment') {
+      try {
+        const paymentIdStr = item._id ? item._id.toString() : null;
+        const invoiceRepo = require('../repositories/invoiceRepository');
+        if (paymentIdStr) {
+          const existingReceipt = await invoiceRepo.findByPaymentId(paymentIdStr, req.userId);
+          if (existingReceipt) {
+            generatedInvoice = existingReceipt;
+          }
+        }
+        if (!generatedInvoice) {
+          const event = await repository.findEventForUser(req.params.eventId, req.userId);
+          if (event) {
+            let clientName = 'Client';
+            let clientPhone = '9999999999';
+            let clientAddress = event.location || 'Studio';
+            if (event.clientId) {
+              const client = await repository.findClientForUser(event.clientId, req.userId);
+              if (client) {
+                clientName = client.name || clientName;
+                clientPhone = client.phone || clientPhone;
+                clientAddress = client.address || clientAddress;
+              }
+            }
+            const userRepo = require('../repositories/userRepository');
+            const user = await userRepo.findById(req.userId);
+            const userPhone = user && user.phone ? user.phone : '9999999999';
+
+            const eventDeliverables = await repository.listDeliverables(event._id, req.userId);
+            const deliverables = (eventDeliverables && eventDeliverables.length > 0)
+              ? eventDeliverables.map((d) => ({ name: d.title, cost: Math.max(1, Math.round(event.totalAmount / eventDeliverables.length)) }))
+              : [{ name: `${event.title} (${event.eventType})`, cost: event.totalAmount || item.amount || 1 }];
+
+            generatedInvoice = await invoiceRepo.createInvoice({
+              userId: req.userId,
+              eventId: event._id.toString(),
+              paymentId: paymentIdStr,
+              eventName: event.title,
+              contactName: clientName,
+              phone: clientPhone.length === 10 ? clientPhone : userPhone,
+              address: clientAddress,
+              dueDate: event.startsAt || new Date(),
+              issuedOn: item.paidAt || new Date(),
+              deliverables,
+              amountReceived: event.paymentTotal || item.amount || 0,
+              documentType: 'receipt',
+            });
+          }
+        }
+      } catch (_) {}
+    }
+
+    const payload = { success: true, [singular]: item.toPublicJSON() };
+    if (generatedInvoice) {
+      payload.invoice = generatedInvoice.toPublicJSON ? generatedInvoice.toPublicJSON() : generatedInvoice;
+    }
+    return res.status(201).json(payload);
   });
 }
 function nestedUpdate(kind, fieldsList, req, res) {
@@ -195,6 +253,71 @@ async function getDeliverable(req, res) {
   return res.json({ success: true, deliverable: item.toPublicJSON() });
 }
 
+async function autoGenerateInvoice(req, res) {
+  try {
+    const eventId = req.params.eventId || req.params.id;
+    const event = await repository.findEventForUser(eventId, req.userId);
+    if (!event) return res.status(404).json({ success: false, message: 'Event not found.' });
+
+    const invoiceRepo = require('../repositories/invoiceRepository');
+    const existing = await invoiceRepo.listByEvent(event._id.toString(), req.userId);
+    if (existing && existing.length > 0) {
+      return res.json({
+        success: true,
+        invoice: existing[0].toPublicJSON(),
+        invoices: existing.map((i) => i.toPublicJSON()),
+        isNew: false,
+      });
+    }
+
+    let clientName = 'Client';
+    let clientPhone = '9999999999';
+    let clientAddress = event.location || 'Studio';
+    if (event.clientId) {
+      const client = await repository.findClientForUser(event.clientId, req.userId);
+      if (client) {
+        clientName = client.name || clientName;
+        clientPhone = client.phone || clientPhone;
+        clientAddress = client.address || clientAddress;
+      }
+    }
+    const userRepo = require('../repositories/userRepository');
+    const user = await userRepo.findById(req.userId);
+    const userPhone = user && user.phone ? user.phone : '9999999999';
+
+    const eventDeliverables = await repository.listDeliverables(event._id, req.userId);
+    const deliverables = (eventDeliverables && eventDeliverables.length > 0)
+      ? eventDeliverables.map((d) => ({ name: d.title, cost: Math.max(1, Math.round(event.totalAmount / eventDeliverables.length)) }))
+      : [{ name: `${event.title} (${event.eventType})`, cost: event.totalAmount || 1 }];
+
+    const created = await invoiceRepo.createInvoice({
+      userId: req.userId,
+      eventId: event._id.toString(),
+      eventName: event.title,
+      contactName: clientName,
+      phone: clientPhone.length === 10 ? clientPhone : userPhone,
+      address: clientAddress,
+      dueDate: event.startsAt || new Date(),
+      issuedOn: new Date(),
+      deliverables,
+      amountReceived: event.paymentTotal || 0,
+      documentType: 'receipt',
+    });
+
+    return res.status(201).json({
+      success: true,
+      invoice: created.toPublicJSON(),
+      invoices: [created.toPublicJSON()],
+      isNew: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to auto-create invoice for this event.',
+    });
+  }
+}
+
 module.exports = {
   listClients, getClient, createClient, updateClient, deleteClient,
   listEvents, getEvent, createEvent, updateEvent, deleteEvent,
@@ -202,4 +325,5 @@ module.exports = {
   uploadPaymentProof, removePaymentProof, authorizePaymentProof,
   listExpenses, getExpense, createExpense, updateExpense, deleteExpense,
   listDeliverables, getDeliverable, createDeliverable, updateDeliverable, deleteDeliverable,
+  autoGenerateInvoice,
 };

@@ -63,7 +63,7 @@ async function createUser(data) {
   const cleanEmail = String(email || '').trim().toLowerCase();
 
   if (memoryUsers.enabled) {
-    return memoryUsers.create({ username, phone: cleanPhone, password, googleId, email: cleanEmail, ownerName: ownerName || username, logoUrl, address });
+    return memoryUsers.create({ username, phone: cleanPhone, password, googleId, email: cleanEmail, ownerName: ownerName || username, logoUrl, address, categories: data.categories || [] });
   }
   return User.create({
     username,
@@ -74,6 +74,7 @@ async function createUser(data) {
     ownerName: ownerName || username,
     logoUrl: logoUrl || '',
     address: address ? dataSecurity.encrypt(address) : '',
+    categories: Array.isArray(data.categories) ? data.categories : [],
   });
 }
 
@@ -87,6 +88,11 @@ async function updateUser(id, fields) {
   }
   if (secureFields.address) {
     secureFields.address = dataSecurity.encrypt(secureFields.address);
+  }
+  if (secureFields.categories !== undefined) {
+    secureFields.categories = Array.isArray(secureFields.categories)
+      ? secureFields.categories
+      : [];
   }
 
   if (memoryUsers.enabled) {
@@ -129,6 +135,49 @@ async function deleteUserAccount(userId) {
   return true;
 }
 
+async function searchPhotographers({ userId, location, query, category, limit = 50 }) {
+  if (memoryUsers.enabled) {
+    return memoryUsers.searchPhotographers({ userId, location, query, category, limit });
+  }
+
+  const mongoose = require('mongoose');
+  const filter = {};
+  if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+    filter._id = { $ne: userId };
+  }
+
+  const conditions = [];
+  const loc = String(location || query || '').trim();
+  if (loc) {
+    const escaped = escapeRegex(loc);
+    conditions.push({
+      $or: [
+        { city: { $regex: escaped, $options: 'i' } },
+        { address: { $regex: escaped, $options: 'i' } },
+        { studioName: { $regex: escaped, $options: 'i' } },
+        { ownerName: { $regex: escaped, $options: 'i' } },
+      ],
+    });
+  }
+
+  const cat = String(category || '').trim();
+  if (cat) {
+    const escapedCat = escapeRegex(cat);
+    conditions.push({
+      $or: [
+        { categories: { $elemMatch: { $regex: escapedCat, $options: 'i' } } },
+        { specialties: { $regex: escapedCat, $options: 'i' } },
+      ],
+    });
+  }
+
+  if (conditions.length > 0) {
+    filter.$and = conditions;
+  }
+
+  return User.find(filter).limit(Number(limit) || 50);
+}
+
 module.exports = {
   findByPhone,
   findByUsername,
@@ -138,4 +187,5 @@ module.exports = {
   createUser,
   updateUser,
   deleteUserAccount,
+  searchPhotographers,
 };

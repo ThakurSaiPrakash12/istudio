@@ -21,6 +21,7 @@ const invoiceRoutes = require('./routes/invoices');
 const clientRoutes = require('./routes/clients');
 const eventRoutes = require('./routes/events');
 const eventChildRoutes = require('./routes/eventChildren');
+const photographerRoutes = require('./routes/photographers');
 const legalRoutes = require('./routes/legal');
 
 const app = express();
@@ -121,6 +122,7 @@ app.use('/api/auth', authRateLimit, authRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/photographers', photographerRoutes);
 app.use('/api', eventChildRoutes);
 
 app.use((error, req, res, _next) => {

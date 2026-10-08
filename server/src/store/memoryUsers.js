@@ -64,6 +64,9 @@ function publicFields(user) {
     instagram: user.instagram || '',
     website: user.website || '',
     specialties: user.specialties || '',
+    categories: Array.isArray(user.categories) ? user.categories : [],
+    latitude: typeof user.latitude === 'number' ? user.latitude : null,
+    longitude: typeof user.longitude === 'number' ? user.longitude : null,
     logoUrl: user.logoUrl || '',
     paymentQrUrl: user.paymentQrUrl || '',
     googleId: user.googleId || '',
@@ -86,6 +89,7 @@ function toDoc(user, withPassword = false) {
     instagram: user.instagram || '',
     website: user.website || '',
     specialties: user.specialties || '',
+    categories: Array.isArray(user.categories) ? user.categories : [],
     logoUrl: user.logoUrl || '',
     paymentQrUrl: user.paymentQrUrl || '',
     toPublicJSON() {
@@ -140,6 +144,9 @@ const memoryUsers = {
       instagram: data.instagram || '',
       website: data.website || '',
       specialties: data.specialties || '',
+      categories: Array.isArray(data.categories) ? data.categories : [],
+      latitude: typeof data.latitude === 'number' ? data.latitude : null,
+      longitude: typeof data.longitude === 'number' ? data.longitude : null,
       logoUrl: data.logoUrl || '',
     };
     users.push(user);
@@ -159,6 +166,30 @@ const memoryUsers = {
     users.splice(index, 1);
     saveUsersToDisk(users);
     return true;
+  },
+  searchPhotographers({ userId, location, query, category, limit = 50 }) {
+    const locLower = String(location || query || '').toLowerCase().trim();
+    const catLower = String(category || '').toLowerCase().trim();
+    return users
+      .filter((u) => u.id !== userId)
+      .filter((u) => {
+        if (locLower) {
+          const matchCity = (u.city || '').toLowerCase().includes(locLower);
+          const matchAddress = (u.address || '').toLowerCase().includes(locLower);
+          const matchStudio = (u.studioName || '').toLowerCase().includes(locLower);
+          const matchOwner = (u.ownerName || '').toLowerCase().includes(locLower);
+          if (!matchCity && !matchAddress && !matchStudio && !matchOwner) return false;
+        }
+        if (catLower) {
+          const cats = Array.isArray(u.categories) ? u.categories : [];
+          const matchCat = cats.some((c) => c.toLowerCase().includes(catLower));
+          const matchSpec = (u.specialties || '').toLowerCase().includes(catLower);
+          if (!matchCat && !matchSpec) return false;
+        }
+        return true;
+      })
+      .slice(0, limit)
+      .map((u) => toDoc(u));
   },
 };
 

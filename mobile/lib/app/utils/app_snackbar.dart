@@ -24,10 +24,23 @@ class AppSnackBar {
           {Duration duration = const Duration(seconds: 3)}) =>
       show(context, message, type: SnackType.error, duration: duration);
 
-  static void info(BuildContext context, String message,
-          {Duration duration = const Duration(seconds: 2), IconData? icon}) =>
-      show(context, message,
-          type: SnackType.info, duration: duration, icon: icon);
+  static void info(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(seconds: 2),
+    IconData? icon,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) =>
+      show(
+        context,
+        message,
+        type: SnackType.info,
+        duration: duration,
+        icon: icon,
+        actionLabel: actionLabel,
+        onAction: onAction,
+      );
 
   /// Awaits [future], then shows [success] (if given) or a red snackbar with
   /// the API error message, falling back to [error].
@@ -57,6 +70,8 @@ class AppSnackBar {
     SnackType type = SnackType.info,
     Duration duration = const Duration(seconds: 2),
     IconData? icon,
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     if (!context.mounted) return;
 
@@ -96,6 +111,13 @@ class AppSnackBar {
             borderRadius: BorderRadius.circular(14),
           ),
           content: content,
+          action: actionLabel != null && onAction != null
+              ? SnackBarAction(
+                  label: actionLabel,
+                  textColor: Colors.amberAccent,
+                  onPressed: onAction,
+                )
+              : null,
         ),
       );
   }

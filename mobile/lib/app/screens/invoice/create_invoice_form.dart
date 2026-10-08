@@ -80,6 +80,26 @@ class CreateInvoiceFormState extends State<CreateInvoiceForm> {
     });
   }
 
+  /// Pre-fills the form with event data. Called externally via [GlobalKey].
+  void prefill({String? event, String? contact, double? amount}) {
+    if (event != null && event.isNotEmpty && _eventController.text.isEmpty) {
+      _eventController.text = event;
+    }
+    if (contact != null && contact.isNotEmpty && _contactController.text.isEmpty) {
+      _contactController.text = contact;
+    }
+    if (amount != null && amount > 0) {
+      // Add a pre-filled deliverable so the total is reflected
+      setState(() {
+        _deliverables.add(InvoiceDeliverable(
+          id: 'pre-${DateTime.now().millisecondsSinceEpoch}',
+          name: 'Event Payment',
+          cost: amount,
+        ));
+      });
+    }
+  }
+
   Invoice _buildInvoice() {
     final provider = context.read<InvoicesProvider>();
     return Invoice(

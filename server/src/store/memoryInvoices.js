@@ -34,9 +34,21 @@ const memoryInvoices = {
       .sort((a, b) => new Date(b.issuedOn) - new Date(a.issuedOn))
       .map(toDoc);
   },
+  listByEvent(eventId, userId) {
+    return invoices
+      .filter((item) => item.userId === userId && item.eventId === eventId)
+      .sort((a, b) => new Date(b.issuedOn) - new Date(a.issuedOn))
+      .map(toDoc);
+  },
   findByIdForUser(id, userId) {
     const invoice = invoices.find(
       (item) => item.id === id && item.userId === userId,
+    );
+    return invoice ? toDoc(invoice) : null;
+  },
+  findByPaymentId(paymentId, userId) {
+    const invoice = invoices.find(
+      (item) => String(item.paymentId) === String(paymentId) && item.userId === userId,
     );
     return invoice ? toDoc(invoice) : null;
   },
@@ -61,6 +73,8 @@ const memoryInvoices = {
       upiId: fields.upiId || '',
       amountReceived: totals.received,
       documentType: fields.documentType || 'receipt',
+      eventId: fields.eventId || null,
+      paymentId: fields.paymentId || null,
     };
     invoices.unshift(invoice);
     return toDoc(invoice);
@@ -87,6 +101,8 @@ const memoryInvoices = {
       'upiId',
       'amountReceived',
       'number',
+      'eventId',
+      'paymentId',
     ];
     for (const key of allowed) {
       if (fields[key] !== undefined) invoice[key] = fields[key];

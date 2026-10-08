@@ -63,6 +63,8 @@ class Invoice {
     required this.deliverables,
     this.upiId = '',
     this.amountReceived = 0,
+    this.eventId = '',
+    this.paymentId = '',
   });
 
   final String id;
@@ -76,6 +78,8 @@ class Invoice {
   final List<InvoiceDeliverable> deliverables;
   final String upiId;
   final double amountReceived;
+  final String eventId;
+  final String paymentId;
 
   /// Legacy estimate records may still exist in storage; they are not receipts.
   static bool isLegacyEstimate(Map<String, dynamic> json) =>
@@ -133,6 +137,8 @@ class Invoice {
     List<InvoiceDeliverable>? deliverables,
     String? upiId,
     double? amountReceived,
+    String? eventId,
+    String? paymentId,
   }) {
     return Invoice(
       id: id ?? this.id,
@@ -146,6 +152,8 @@ class Invoice {
       deliverables: deliverables ?? this.deliverables,
       upiId: upiId ?? this.upiId,
       amountReceived: amountReceived ?? this.amountReceived,
+      eventId: eventId ?? this.eventId,
+      paymentId: paymentId ?? this.paymentId,
     );
   }
 
@@ -161,6 +169,8 @@ class Invoice {
     'deliverables': deliverables.map((item) => item.toJson()).toList(),
     'upiId': upiId,
     'amountReceived': amountReceived,
+    'eventId': eventId,
+    'paymentId': paymentId,
   };
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
@@ -181,6 +191,8 @@ class Invoice {
       deliverables: items,
       upiId: json['upiId'] as String? ?? '',
       amountReceived: (json['amountReceived'] as num?)?.toDouble() ?? 0,
+      eventId: json['eventId'] as String? ?? '',
+      paymentId: json['paymentId'] as String? ?? '',
     );
   }
 }

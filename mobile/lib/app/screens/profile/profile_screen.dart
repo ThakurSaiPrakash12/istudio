@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -11,8 +12,10 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_config.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
+import '../../utils/photographer_categories.dart';
 import '../../utils/validators.dart';
 import '../../widgets/avatar_crop_screen.dart';
+import '../../widgets/category_selector_sheet.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
@@ -44,6 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController _youtube;
   late final TextEditingController _website;
   late final TextEditingController _specialties;
+  List<String> _selectedCategories = [];
 
   Timer? _usernameDebounce;
   bool _isCheckingUsername = false;
@@ -66,6 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _youtube = TextEditingController(text: user?.youtube ?? '');
     _website = TextEditingController(text: user?.website ?? '');
     _specialties = TextEditingController(text: user?.specialties ?? '');
+    _selectedCategories = List<String>.from(user?.categories ?? []);
   }
 
   @override
@@ -100,6 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _youtube.text = user.youtube;
     _website.text = user.website;
     _specialties.text = user.specialties;
+    _selectedCategories = List<String>.from(user.categories);
     _isUsernameAvailable = null;
     _usernameErrorText = null;
   }
@@ -387,6 +393,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'youtube': _youtube.text.trim(),
       'website': _website.text.trim(),
       'specialties': _specialties.text.trim(),
+      'categories': _selectedCategories,
     });
     if (!mounted) return;
     if (success) {
@@ -693,9 +700,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSocialCard(User? user) {
+    final cats = user?.categories ?? [];
     return StudioCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Photographer Categories chips
+          if (cats.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 4, 0, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.camera_alt_outlined, size: 16, color: context.accentColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Photographer Roles',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: context.textMuted,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: cats.map((c) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: context.accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: context.accentColor.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Text(
+                        c,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.accentColor,
+                        ),
+                      ),
+                    )).toList(),
+                  ),
+                  Divider(height: 20, color: context.cardBorder),
+                ],
+              ),
+            ),
+          ],
           _DetailRow(icon: Icons.auto_awesome_outlined, label: 'Specialties', value: _orDash(user?.specialties)),
           _DetailRow(icon: Icons.camera_alt_outlined, label: 'Instagram', value: _orDash(user?.instagram)),
           _DetailRow(icon: Icons.ondemand_video_rounded, label: 'YouTube', value: _orDash(user?.youtube)),
@@ -1233,6 +1292,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : null,
           ),
           const SizedBox(height: 14),
+          // Photographer Roles & Categories
+          _buildCategorySelector(),
+          const SizedBox(height: 14),
           StudioTextField(
             label: 'Instagram (optional)',
             hint: '@yourstudio',
@@ -1283,6 +1345,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _orDash(String? value) {
     if (value == null || value.trim().isEmpty) return '—';
     return value.trim();
+  }
+
+  Widget _buildCategorySelector() {
+    final isDark = context.isDark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.photo_camera_outlined, size: 16, color: context.accentColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Photographer Roles & Categories',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: context.textMain,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                final updated = await CategorySelectorSheet.show(
+                  context,
+                  initial: _selectedCategories,
+                );
+                if (updated != null && mounted) {
+                  setState(() => _selectedCategories = updated);
+                }
+              },
+              icon: Icon(
+                _selectedCategories.isEmpty ? Icons.add_rounded : Icons.edit_rounded,
+                size: 15,
+                color: context.accentColor,
+              ),
+              label: Text(
+                _selectedCategories.isEmpty ? 'Select Roles' : 'Edit Roles',
+                style: TextStyle(color: context.accentColor, fontSize: 13),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_selectedCategories.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: context.innerBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: context.cardBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: context.textMuted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Select your roles so other photographers can find and collaborate with you.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: context.textMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _selectedCategories.map((cat) {
+              final isOperator = PhotographerCategories.isOperatorRole(cat);
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isOperator
+                      ? AppColors.sky.withValues(alpha: isDark ? 0.18 : 0.1)
+                      : context.accentColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isOperator
+                        ? AppColors.sky.withValues(alpha: 0.4)
+                        : context.accentColor.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isOperator ? Icons.video_camera_back_outlined : Icons.camera_alt_outlined,
+                      size: 12,
+                      color: isOperator ? AppColors.sky : context.accentColor,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      cat,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isOperator ? AppColors.sky : context.accentColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedCategories.remove(cat));
+                      },
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 13,
+                        color: isOperator ? AppColors.sky : context.accentColor,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+      ],
+    );
   }
 }
 
@@ -1386,7 +1576,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
 
     try {
       final auth = context.read<AuthProvider>();
-      final result = await auth.sendDeleteAccountOtp();
+      await auth.sendDeleteAccountOtp();
       if (!mounted) return;
 
       setState(() {
@@ -1838,7 +2028,7 @@ class _ChangeEmailSheetState extends State<_ChangeEmailSheet> {
 
     try {
       final auth = context.read<AuthProvider>();
-      final result = await auth.sendEmailChangeOtp(email);
+      await auth.sendEmailChangeOtp(email);
       if (!mounted) return;
 
       setState(() {

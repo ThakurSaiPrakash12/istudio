@@ -37,5 +37,6 @@ router.post('/', idempotency, createRules, controller.createEvent);
 router.get('/:id', controller.getEvent);
 router.put('/:id', updateRules, controller.updateEvent);
 router.delete('/:id', controller.deleteEvent);
+router.post('/:id/auto-invoice', controller.autoGenerateInvoice);
 
 module.exports = router;

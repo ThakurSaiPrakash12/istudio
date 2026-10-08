@@ -55,7 +55,13 @@ async function listInvoices(req, res) {
   try {
     const invoices = (await invoiceRepository.listByUser(req.userId))
       .filter((invoice) => (invoice.documentType || 'receipt') !== 'estimate');
-    const publicInvoices = invoices.map((invoice) => invoice.toPublicJSON());
+    let publicInvoices = invoices.map((invoice) => invoice.toPublicJSON());
+    if (req.query.eventId) {
+      const targetEventId = String(req.query.eventId).trim();
+      publicInvoices = publicInvoices.filter(
+        (item) => item.eventId === targetEventId,
+      );
+    }
     const filter = String(req.query.filter || 'all').toLowerCase();
     const filtered =
       filter && filter !== 'all'
@@ -121,6 +127,8 @@ function readInvoiceFields(body) {
     deliverables,
     upiId: String(body.upiId || '').trim(),
     amountReceived: Number(body.amountReceived) || 0,
+    eventId: String(body.eventId || '').trim(),
+    paymentId: String(body.paymentId || '').trim(),
   };
 }
 

@@ -55,6 +55,40 @@ class LauncherUtils {
     }
   }
 
+  /// Launch WhatsApp with [phoneNumber] and optional [prefilledMessage].
+  static Future<bool> openWhatsApp(
+    BuildContext context,
+    String phoneNumber, {
+    String? prefilledMessage,
+  }) async {
+    final cleanDigits = phoneNumber.replaceAll(RegExp(r'\D'), '');
+    if (cleanDigits.isEmpty) {
+      _showFeedback(context, 'No phone number provided');
+      return false;
+    }
+    final normalized =
+        cleanDigits.length == 10 ? '91$cleanDigits' : cleanDigits;
+    final textParam =
+        prefilledMessage != null ? Uri.encodeComponent(prefilledMessage) : '';
+    final urlString =
+        'https://wa.me/$normalized${textParam.isNotEmpty ? '?text=$textParam' : ''}';
+    final uri = Uri.parse(urlString);
+
+    HapticFeedback.lightImpact();
+    try {
+      if (await canLaunchUrl(uri)) {
+        return await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        return await launchUrl(uri);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showFeedback(context, 'Could not open WhatsApp for $phoneNumber');
+      }
+      return false;
+    }
+  }
+
   static void _showFeedback(BuildContext context, String message) {
     AppSnackBar.error(context, message);
   }

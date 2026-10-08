@@ -13,6 +13,7 @@ class User {
     this.youtube = '',
     this.website = '',
     this.specialties = '',
+    this.categories = const [],
     this.logoUrl = '',
     this.paymentQrUrl = '',
     this.googleId = '',
@@ -32,10 +33,13 @@ class User {
   final String youtube;
   final String website;
   final String specialties;
+  final List<String> categories;
   final String logoUrl;
   final String paymentQrUrl;
   final String googleId;
   final bool needsPasswordSetup;
+
+  bool get hasCategories => categories.isNotEmpty;
 
   String get displayStudioName =>
       studioName.isNotEmpty ? studioName : 'Your studio';
@@ -71,6 +75,17 @@ class User {
       youtube: json['youtube'] as String? ?? '',
       website: json['website'] as String? ?? '',
       specialties: json['specialties'] as String? ?? '',
+      categories: (json['categories'] as List<dynamic>?)
+              ?.map((e) => e.toString().trim())
+              .where((e) => e.isNotEmpty)
+              .toList() ??
+          ((json['specialties'] is String && (json['specialties'] as String).trim().isNotEmpty)
+              ? (json['specialties'] as String)
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toList()
+              : const []),
       logoUrl: json['logoUrl'] as String? ?? '',
       paymentQrUrl: json['paymentQrUrl'] as String? ?? '',
       googleId: json['googleId'] as String? ?? '',
@@ -93,6 +108,7 @@ class User {
       'youtube': youtube,
       'website': website,
       'specialties': specialties,
+      'categories': categories,
       'logoUrl': logoUrl,
       'paymentQrUrl': paymentQrUrl,
       'googleId': googleId,
@@ -112,6 +128,7 @@ class User {
     String? youtube,
     String? website,
     String? specialties,
+    List<String>? categories,
     String? logoUrl,
     String? paymentQrUrl,
     String? googleId,
@@ -131,6 +148,7 @@ class User {
       youtube: youtube ?? this.youtube,
       website: website ?? this.website,
       specialties: specialties ?? this.specialties,
+      categories: categories ?? this.categories,
       logoUrl: logoUrl ?? this.logoUrl,
       paymentQrUrl: paymentQrUrl ?? this.paymentQrUrl,
       googleId: googleId ?? this.googleId,

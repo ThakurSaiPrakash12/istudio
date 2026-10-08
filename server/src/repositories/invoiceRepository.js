@@ -65,6 +65,8 @@ async function createInvoice(fields) {
     upiId: fields.upiId || '',
     amountReceived: totals.received,
     documentType: fields.documentType || 'receipt',
+    eventId: fields.eventId || null,
+    paymentId: fields.paymentId || null,
   };
 
   if (usesMemory()) {
@@ -102,6 +104,8 @@ async function updateInvoice(id, userId, fields) {
     'dueDate',
     'upiId',
     'amountReceived',
+    'eventId',
+    'paymentId',
   ];
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const invoice = await findByIdForUser(id, userId);
@@ -190,9 +194,26 @@ async function deleteInvoice(id, userId) {
   return true;
 }
 
+async function listByEvent(eventId, userId) {
+  if (usesMemory()) {
+    return memoryInvoices.listByEvent(eventId, userId);
+  }
+  return Invoice.find({ userId, eventId }).sort({ issuedOn: -1, createdAt: -1 });
+}
+
+async function findByPaymentId(paymentId, userId) {
+  if (!paymentId) return null;
+  if (usesMemory()) {
+    return memoryInvoices.findByPaymentId(paymentId, userId);
+  }
+  return Invoice.findOne({ paymentId: String(paymentId), userId });
+}
+
 module.exports = {
   listByUser,
+  listByEvent,
   findByIdForUser,
+  findByPaymentId,
   nextNumber,
   createInvoice,
   updateInvoice,

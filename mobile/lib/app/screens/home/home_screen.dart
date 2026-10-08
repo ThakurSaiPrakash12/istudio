@@ -32,6 +32,7 @@ import '../../routes/smooth_page_route.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/launcher_utils.dart';
 import '../../widgets/shimmer_loading.dart';
+import '../../widgets/category_selector_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -118,6 +119,44 @@ class _HomeScreenState extends State<HomeScreen>
         curve: Curves.easeOutCubic,
       );
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkProfileCompletionPrompt();
+    });
+  }
+
+  static bool _profileCompletionSnackbarShown = false;
+
+  void _checkProfileCompletionPrompt() {
+    if (!mounted || _profileCompletionSnackbarShown) return;
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+
+    // Do not affect users who already have categories
+    if (user.categories.isNotEmpty) return;
+
+    _profileCompletionSnackbarShown = true;
+    AppSnackBar.info(
+      context,
+      'Select your photographer roles & categories to complete your profile.',
+      duration: const Duration(seconds: 6),
+      actionLabel: 'Complete Profile',
+      onAction: () async {
+        final selected = await CategorySelectorSheet.show(
+          context,
+          initial: user.categories,
+        );
+        if (selected != null && mounted) {
+          final auth = context.read<AuthProvider>();
+          final success = await auth.updateProfile({
+            'categories': selected,
+          });
+          if (success && mounted) {
+            AppSnackBar.success(context, 'Profile categories saved.');
+          }
+        }
+      },
+    );
   }
 
   @override

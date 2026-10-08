@@ -7,8 +7,10 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
+import '../../utils/photographer_categories.dart';
 import '../../utils/validators.dart';
 import '../../widgets/avatar_crop_screen.dart';
+import '../../widgets/category_selector_sheet.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
@@ -37,6 +39,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
   late final TextEditingController _youtube;
   late final TextEditingController _website;
   bool _uploadingLogo = false;
+  List<String> _selectedCategories = [];
 
   @override
   void initState() {
@@ -54,6 +57,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
     _instagram = TextEditingController(text: user?.instagram ?? '');
     _youtube = TextEditingController(text: user?.youtube ?? '');
     _website = TextEditingController(text: user?.website ?? '');
+    _selectedCategories = List<String>.from(user?.categories ?? []);
   }
 
   @override
@@ -166,6 +170,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       'instagram': _instagram.text.trim(),
       'youtube': _youtube.text.trim(),
       'website': _website.text.trim(),
+      'categories': _selectedCategories,
     });
     if (!mounted) return;
     if (ok) {
@@ -327,6 +332,8 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
                               _required(v, 'Enter what you specialise in'),
                         ),
                         const SizedBox(height: 14),
+                        _buildCategorySelector(context),
+                        const SizedBox(height: 14),
                         StudioTextField(
                           label: 'About your studio *',
                           hint: 'Tell clients what makes your studio special',
@@ -433,6 +440,132 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCategorySelector(BuildContext context) {
+    final isDark = context.isDark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.photo_camera_outlined, size: 16, color: context.accentColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Photographer Roles & Categories',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: context.textMain,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                final updated = await CategorySelectorSheet.show(
+                  context,
+                  initial: _selectedCategories,
+                );
+                if (updated != null && mounted) {
+                  setState(() => _selectedCategories = updated);
+                }
+              },
+              icon: Icon(
+                _selectedCategories.isEmpty ? Icons.add_rounded : Icons.edit_rounded,
+                size: 15,
+                color: context.accentColor,
+              ),
+              label: Text(
+                _selectedCategories.isEmpty ? 'Select Roles' : 'Edit Roles',
+                style: TextStyle(color: context.accentColor, fontSize: 13),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_selectedCategories.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: context.innerBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: context.cardBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 15, color: context.textMuted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Select your photographer roles so others can discover you.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: context.textMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _selectedCategories.map((cat) {
+              final isOperator = PhotographerCategories.isOperatorRole(cat);
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isOperator
+                      ? AppColors.sky.withValues(alpha: isDark ? 0.18 : 0.1)
+                      : context.accentColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isOperator
+                        ? AppColors.sky.withValues(alpha: 0.4)
+                        : context.accentColor.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isOperator ? Icons.video_camera_back_outlined : Icons.camera_alt_outlined,
+                      size: 12,
+                      color: isOperator ? AppColors.sky : context.accentColor,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      cat,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isOperator ? AppColors.sky : context.accentColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () => setState(() => _selectedCategories.remove(cat)),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 13,
+                        color: isOperator ? AppColors.sky : context.accentColor,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+      ],
     );
   }
 

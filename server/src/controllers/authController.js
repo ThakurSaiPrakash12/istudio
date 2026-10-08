@@ -348,6 +348,21 @@ async function updateProfile(req, res) {
       }
     }
 
+    if (req.body.categories !== undefined) {
+      if (Array.isArray(req.body.categories)) {
+        fields.categories = req.body.categories
+          .map((c) => String(c || "").trim())
+          .filter(Boolean)
+          .slice(0, 30);
+      } else if (typeof req.body.categories === "string") {
+        fields.categories = req.body.categories
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .slice(0, 30);
+      }
+    }
+
     // Username change — check availability
     if (req.body.username !== undefined) {
       const newUsername = String(req.body.username || "").trim();

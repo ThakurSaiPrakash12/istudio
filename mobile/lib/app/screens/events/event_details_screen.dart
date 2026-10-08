@@ -19,6 +19,10 @@ import '../../widgets/fade_slide_in.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/animated_financial_text.dart';
 import 'edit_event_screen.dart';
+import '../photographers/nearby_photographers_screen.dart';
+import '../invoice/create_invoice_form.dart';
+import '../invoice/invoice_preview_screen.dart';
+import '../../providers/invoices_provider.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   const EventDetailsScreen({
@@ -553,6 +557,71 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          // Find Nearby Photographers
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => NearbyPhotographersScreen(event: event),
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      context.accentColor.withValues(alpha: 0.15),
+                      context.accentColor.withValues(alpha: 0.06),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: context.accentColor.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: context.accentColor.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.search_rounded, size: 16, color: context.accentColor),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Find Nearby Photographers',
+                            style: TextStyle(
+                              color: context.accentColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            event.location.isNotEmpty
+                                ? 'Near: ${event.location}'
+                                : 'Search photographers near this event',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.textMuted, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 14, color: context.accentColor),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1020,54 +1089,61 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                             )
                           else
                             const SizedBox.shrink(),
-                          InkWell(
-                            onTap: () => p.hasProof
-                                ? _showProofDialog(context, event.id, p)
-                                : _pickAndUploadProof(
-                                    context,
-                                    event.id,
-                                    p.id,
-                                    replacing: false,
-                                  ),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: context.accentColor.withValues(
-                                  alpha: 0.16,
-                                ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildPaymentReceiptBadge(context, event.id, p.id),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () => p.hasProof
+                                    ? _showProofDialog(context, event.id, p)
+                                    : _pickAndUploadProof(
+                                        context,
+                                        event.id,
+                                        p.id,
+                                        replacing: false,
+                                      ),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: context.accentColor.withValues(
-                                    alpha: 0.4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
                                   ),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    p.hasProof
-                                        ? Icons.attachment_rounded
-                                        : Icons.add_photo_alternate_outlined,
-                                    size: 11,
-                                    color: context.accentColor,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    p.hasProof ? 'View Proof' : 'Add Proof',
-                                    style: TextStyle(
-                                      color: context.accentColor,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
+                                  decoration: BoxDecoration(
+                                    color: context.accentColor.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: context.accentColor.withValues(
+                                        alpha: 0.4,
+                                      ),
                                     ),
                                   ),
-                                ],
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        p.hasProof
+                                            ? Icons.attachment_rounded
+                                            : Icons.add_photo_alternate_outlined,
+                                        size: 11,
+                                        color: context.accentColor,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        p.hasProof ? 'View Proof' : 'Add Proof',
+                                        style: TextStyle(
+                                          color: context.accentColor,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
@@ -1099,6 +1175,59 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentReceiptBadge(
+    BuildContext context,
+    String eventId,
+    String paymentId,
+  ) {
+    final invoicesProvider = context.watch<InvoicesProvider?>();
+    if (invoicesProvider == null) return const SizedBox.shrink();
+    final matches = invoicesProvider.invoices.where(
+      (inv) =>
+          inv.paymentId == paymentId ||
+          (inv.eventId == eventId && inv.paymentId == paymentId),
+    );
+    if (matches.isEmpty) return const SizedBox.shrink();
+    final receipt = matches.first;
+
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => InvoicePreviewScreen(invoice: receipt),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: context.accentColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: context.accentColor.withValues(alpha: 0.3),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.receipt_rounded, size: 11, color: context.accentColor),
+            const SizedBox(width: 3),
+            Text(
+              'Receipt: ${receipt.number}',
+              style: TextStyle(
+                color: context.accentColor,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2564,6 +2693,136 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
   }
 
   // ================= Dialogs / Sheets =================
+
+  /// Shows a bottom-sheet prompt after every payment so users can immediately
+  /// generate and share an invoice for the event.
+  void _promptAutoInvoice(BuildContext ctx, String eventId, double paymentAmount) {
+    if (!ctx.mounted) return;
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!ctx.mounted) return;
+      showModalBottomSheet(
+        context: ctx,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (sheetCtx) {
+          return Container(
+            decoration: BoxDecoration(
+              color: sheetCtx.cardBg,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border.all(color: sheetCtx.cardBorder, width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.only(
+              left: 24, right: 24, top: 20,
+              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 28,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: sheetCtx.textMuted.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: sheetCtx.accentColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(Icons.receipt_long_rounded, color: sheetCtx.accentColor, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Create Invoice?',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: sheetCtx.textMain,
+                            ),
+                          ),
+                          Text(
+                            'Payment of ₹${paymentAmount.toInt()} recorded. Generate an invoice for this event to share with your client.',
+                            style: TextStyle(fontSize: 13, color: sheetCtx.textMuted, height: 1.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(sheetCtx).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: sheetCtx.cardBorder),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: Text('Later', style: TextStyle(color: sheetCtx.textMuted)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetCtx).pop();
+                          // Navigate to invoice creation for this event
+                          final event = ctx.read<EventsProvider>().findById(eventId);
+                          if (event != null && ctx.mounted) {
+                            Navigator.of(ctx).push(
+                              MaterialPageRoute(
+                                builder: (_) => _EventInvoiceShortcut(
+                                  eventId: eventId,
+                                  eventTitle: event.title,
+                                  clientName: event.clientName,
+                                  amount: paymentAmount,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.receipt_long_rounded, size: 18, color: Colors.white),
+                        label: const Text('Create Invoice', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: sheetCtx.accentColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
+  }
+
   void _showAddPaymentSheet(BuildContext context, String eventId) {
     final titleController = TextEditingController(text: 'Payment');
     final amountController = TextEditingController();
@@ -3067,10 +3326,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                                     duration: const Duration(seconds: 4),
                                   );
                                 } else {
+                                  // Refresh invoices to show newly generated payment receipt immediately
+                                  modalContext.read<InvoicesProvider?>()?.loadInvoices();
                                   AppSnackBar.success(
                                     context,
                                     'Payment of ₹${amount.toInt()} recorded!',
                                   );
+                                  // Auto-invoice prompt after each payment
+                                  _promptAutoInvoice(context, eventId, amount);
                                 }
                               } catch (e) {
                                 if (sheetContext.mounted) {
@@ -3833,4 +4096,100 @@ class _WorkflowStage {
 
   final String name;
   final List<DeliverableTask> tasks;
+}
+
+/// A lightweight screen that hosts the invoice creation form pre-navigated
+/// after the user records a payment, enabling quick invoice generation from
+/// any event.
+class _EventInvoiceShortcut extends StatelessWidget {
+  const _EventInvoiceShortcut({
+    required this.eventId,
+    required this.eventTitle,
+    required this.clientName,
+    required this.amount,
+  });
+
+  final String eventId;
+  final String eventTitle;
+  final String clientName;
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            StudioAppBar(
+              title: 'New Invoice',
+              subtitle: 'For $eventTitle',
+              leading: IconButton(
+                tooltip: 'Back',
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: context.textMain,
+                  size: 20,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            Expanded(
+              child: _EventInvoiceFormWrapper(
+                eventTitle: eventTitle,
+                clientName: clientName,
+                amount: amount,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EventInvoiceFormWrapper extends StatefulWidget {
+  const _EventInvoiceFormWrapper({
+    required this.eventTitle,
+    required this.clientName,
+    required this.amount,
+  });
+
+  final String eventTitle;
+  final String clientName;
+  final double amount;
+
+  @override
+  State<_EventInvoiceFormWrapper> createState() =>
+      _EventInvoiceFormWrapperState();
+}
+
+class _EventInvoiceFormWrapperState extends State<_EventInvoiceFormWrapper> {
+  final _formKey = GlobalKey<CreateInvoiceFormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Pre-fill the form with event data
+      _formKey.currentState?.prefill(
+        event: widget.eventTitle,
+        contact: widget.clientName,
+        amount: widget.amount,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CreateInvoiceForm(
+      key: _formKey,
+      onSaved: (_) {
+        if (mounted) {
+          AppSnackBar.success(context, 'Invoice created and saved!');
+          Navigator.of(context).pop();
+        }
+      },
+    );
+  }
 }

@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/client.dart';
 import '../models/invoice.dart';
+import '../models/studio_event.dart';
 import '../services/api_service.dart';
 import '../services/invoice_service.dart';
 import 'auth_provider.dart';
@@ -70,6 +72,117 @@ class InvoicesProvider extends ChangeNotifier {
     return null;
   }
 
+  List<Invoice> getInvoicesForEvent(String eventId, {String? eventName}) {
+    final trimmedName = eventName?.trim().toLowerCase();
+    final matches = _invoices.where((inv) {
+      if (inv.eventId.isNotEmpty && inv.eventId == eventId) return true;
+      if (trimmedName != null &&
+          trimmedName.isNotEmpty &&
+          inv.eventName.trim().toLowerCase() == trimmedName) {
+        return true;
+      }
+      return false;
+    }).toList();
+    matches.sort((a, b) => b.issuedOn.compareTo(a.issuedOn));
+    return matches;
+  }
+
+  Future<Invoice> ensureInvoiceForEvent(
+    StudioEvent event, {
+    Client? client,
+  }) async {
+    final existing = getInvoicesForEvent(event.id, eventName: event.title);
+    if (existing.isNotEmpty) {
+      return existing.first;
+    }
+
+    if (_useApi && _token != null) {
+      try {
+        final auto = await _invoiceService.autoGenerateForEvent(
+          token: _token!,
+          eventId: event.id,
+        );
+        final index = _invoices.indexWhere((i) => i.id == auto.id);
+        if (index == -1) {
+          _invoices.insert(0, auto);
+        } else {
+          _invoices[index] = auto;
+        }
+        notifyListeners();
+        return auto;
+      } catch (_) {
+        // Fallback to local invoice creation below
+      }
+    }
+
+    final deliverables = event.deliverables.isNotEmpty
+        ? event.deliverables
+            .map(
+              (d) => InvoiceDeliverable(
+                id: d.id,
+                name: d.title,
+                cost: event.deliverables.isNotEmpty
+                    ? (event.totalAmount / event.deliverables.length)
+                    : event.totalAmount,
+              ),
+            )
+            .toList()
+        : [
+            InvoiceDeliverable(
+              id: 'item_1',
+              name: '${event.title} (${event.eventType})',
+              cost: event.totalAmount,
+            ),
+          ];
+
+    final newInvoice = Invoice(
+      id: 'inv_${DateTime.now().millisecondsSinceEpoch}',
+      number: nextNumber(),
+      eventName: event.title,
+      contactName: client?.name ?? 'Client',
+      phone: client?.phone ?? '',
+      address: event.location,
+      issuedOn: DateTime.now(),
+      dueDate: event.startsAt,
+      deliverables: deliverables,
+      upiId: _lastUpiId,
+      amountReceived: event.amountReceived,
+      eventId: event.id,
+    );
+
+    return addInvoice(newInvoice);
+  }
+
+  Future<Invoice> createPaymentReceipt(
+    StudioEvent event,
+    PaymentRecord payment, {
+    Client? client,
+  }) async {
+    final deliverable = InvoiceDeliverable(
+      id: 'pay_${payment.id}',
+      name: 'Payment (${payment.method.name.toUpperCase()}) - ${payment.title}',
+      cost: payment.amount,
+    );
+
+    final receipt = Invoice(
+      id: 'receipt_${DateTime.now().millisecondsSinceEpoch}',
+      number: nextNumber(),
+      eventName: event.title,
+      contactName: client?.name ?? 'Client',
+      phone: client?.phone ?? '',
+      address: event.location,
+      issuedOn: payment.paidAt,
+      dueDate: event.startsAt,
+      deliverables: [deliverable],
+      upiId: _lastUpiId,
+      amountReceived: payment.amount,
+      eventId: event.id,
+      paymentId: payment.id,
+    );
+
+    return addInvoice(receipt);
+  }
+
   String nextNumber() {
     var max = 1000;
     final pattern = RegExp(r'INV-(\d+)', caseSensitive: false);
@@ -101,6 +214,8 @@ class InvoicesProvider extends ChangeNotifier {
     notifyListeners();
     loadRemote();
   }
+
+  Future<void> loadInvoices() => loadRemote();
 
   Future<void> bootstrap() async {
     try {
