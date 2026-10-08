@@ -25,7 +25,7 @@ class PhotographerCategories {
     'Candid photographer',
     'Cinematic Vidiographer',
     'Led screen s',
-    'Drone s',
+    'Drones',
     'Internet Live',
     'Traditional photographer taker',
   ];
@@ -43,6 +43,8 @@ class PhotographerCategories {
     'Operators: Vidiography',
     'Operators: candid photographer',
     'Operators: Candid Vidiographer',
+    'Operators: Video Editor',
+    'Operators: Album Designer',  
   ];
 
   /// Master list of all predefined categories

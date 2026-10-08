@@ -219,6 +219,8 @@ class StudioEvent {
     this.startTime = '10:00 AM',
     this.endTime = '04:00 PM',
     required this.location,
+    this.latitude,
+    this.longitude,
     required this.status,
     required this.totalAmount,
     double? amountReceived,
@@ -238,6 +240,8 @@ class StudioEvent {
   final String startTime;
   final String endTime;
   final String location;
+  final double? latitude;
+  final double? longitude;
   final EventStatus status;
   final double totalAmount;
   final double? _customAmountReceived;
@@ -363,6 +367,8 @@ class StudioEvent {
     String? startTime,
     String? endTime,
     String? location,
+    double? latitude,
+    double? longitude,
     EventStatus? status,
     double? totalAmount,
     double? amountReceived,
@@ -381,6 +387,8 @@ class StudioEvent {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       location: location ?? this.location,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       status: status ?? this.status,
       totalAmount: totalAmount ?? this.totalAmount,
       amountReceived: amountReceived ?? this.amountReceived,
@@ -401,6 +409,8 @@ class StudioEvent {
     'startTime': startTime,
     'endTime': endTime,
     'location': location,
+    'latitude': latitude,
+    'longitude': longitude,
     'status': status.name,
     'totalAmount': totalAmount,
     'amountReceived': _customAmountReceived,
@@ -446,6 +456,8 @@ class StudioEvent {
       startTime: json['startTime'] as String? ?? '10:00 AM',
       endTime: json['endTime'] as String? ?? '04:00 PM',
       location: json['location'] as String? ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       status: status,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
       amountReceived: (json['amountReceived'] as num?)?.toDouble(),

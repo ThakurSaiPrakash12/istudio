@@ -17,6 +17,8 @@ const createRules = [
   body('status').isIn(['upcoming', 'inProgress', 'paymentDue', 'completed', 'cancelled']).withMessage('Enter a valid event status.'),
   body('totalAmount').isFloat({ min: 0 }).withMessage('Enter a valid event amount.'),
   body('clientId').optional().isMongoId().withMessage('Enter a valid client.'),
+  body('latitude').optional({ nullable: true }).isFloat(),
+  body('longitude').optional({ nullable: true }).isFloat(),
   body('notes').optional().trim().isLength({ max: 2000 }),
 ];
 const updateRules = [
@@ -26,6 +28,8 @@ const updateRules = [
   body('startTime').optional().trim().isLength({ max: 30 }),
   body('endTime').optional().trim().isLength({ max: 30 }),
   body('location').optional().trim().isLength({ min: 1, max: 240 }),
+  body('latitude').optional({ nullable: true }).isFloat(),
+  body('longitude').optional({ nullable: true }).isFloat(),
   body('status').optional().isIn(['upcoming', 'inProgress', 'paymentDue', 'completed', 'cancelled']),
   body('totalAmount').optional().isFloat({ min: 0 }),
   body('clientId').optional().isMongoId(),

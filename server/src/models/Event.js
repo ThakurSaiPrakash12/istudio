@@ -9,6 +9,8 @@ const eventSchema = new mongoose.Schema({
   startTime: { type: String, default: '10:00 AM', trim: true, maxlength: 30 },
   endTime: { type: String, default: '04:00 PM', trim: true, maxlength: 30 },
   location: { type: String, required: true, trim: true, maxlength: 240 },
+  latitude: { type: Number, default: null },
+  longitude: { type: Number, default: null },
   status: {
     type: String,
     enum: ['upcoming', 'inProgress', 'paymentDue', 'completed', 'cancelled'],

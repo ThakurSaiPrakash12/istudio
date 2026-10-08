@@ -24,7 +24,7 @@ function fields(body, names) {
 }
 
 const clientFields = ['name', 'phone', 'email', 'address', 'notes', 'status'];
-const eventFields = ['clientId', 'title', 'eventType', 'startsAt', 'startTime', 'endTime', 'location', 'status', 'totalAmount', 'notes'];
+const eventFields = ['clientId', 'title', 'eventType', 'startsAt', 'startTime', 'endTime', 'location', 'status', 'totalAmount', 'notes', 'latitude', 'longitude'];
 const paymentFields = ['title', 'amount', 'paidAt', 'method', 'reference', 'proofUrl'];
 const expenseFields = ['title', 'amount', 'category', 'incurredAt'];
 const deliverableFields = ['stage', 'title', 'isCompleted', 'completedAt'];

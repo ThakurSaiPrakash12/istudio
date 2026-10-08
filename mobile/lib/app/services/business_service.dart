@@ -159,6 +159,8 @@ class BusinessService {
     'startTime': event.startTime,
     'endTime': event.endTime,
     'location': event.location,
+    if (event.latitude != null) 'latitude': event.latitude,
+    if (event.longitude != null) 'longitude': event.longitude,
     'status': event.status.name,
     'totalAmount': event.totalAmount,
     'notes': event.notes,
@@ -204,6 +206,8 @@ class BusinessService {
       startTime: json['startTime'] as String? ?? '10:00 AM',
       endTime: json['endTime'] as String? ?? '04:00 PM',
       location: json['location'] as String? ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       status: EventStatus.values.firstWhere(
         (item) => item.name == json['status'],
         orElse: () => EventStatus.upcoming,

@@ -36,8 +36,9 @@ async function searchNearbyPhotographers(req, res) {
     const category = String(req.query.category || '').trim();
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
 
-    const originLat = req.query.lat !== undefined ? req.query.lat : req.query.latitude;
-    const originLng = req.query.lng !== undefined ? req.query.lng : req.query.longitude;
+    let originLat = req.query.lat !== undefined ? req.query.lat : req.query.latitude;
+    let originLng = req.query.lng !== undefined ? req.query.lng : req.query.longitude;
+
     const hasOriginCoords =
       originLat !== undefined && originLng !== undefined &&
       originLat !== '' && originLng !== '' &&
@@ -53,12 +54,22 @@ async function searchNearbyPhotographers(req, res) {
 
     let photographers = (users || []).map((u) => {
       const json = u.toPublicJSON ? u.toPublicJSON() : u;
+      const pLat = json.latitude;
+      const pLng = json.longitude;
+
       let distanceKm = null;
-      if (hasOriginCoords) {
-        distanceKm = calculateDistanceKm(originLat, originLng, json.latitude, json.longitude);
+      if (
+        hasOriginCoords &&
+        pLat !== null && pLat !== undefined &&
+        pLng !== null && pLng !== undefined &&
+        !isNaN(Number(pLat)) && !isNaN(Number(pLng))
+      ) {
+        distanceKm = calculateDistanceKm(originLat, originLng, pLat, pLng);
       }
       return {
         ...json,
+        latitude: pLat !== undefined ? pLat : null,
+        longitude: pLng !== undefined ? pLng : null,
         distanceKm,
       };
     });

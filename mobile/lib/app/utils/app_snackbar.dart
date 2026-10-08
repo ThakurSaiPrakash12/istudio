@@ -16,31 +16,34 @@ class AppSnackBar {
   static OverlayEntry? _overlayEntry;
   static Timer? _overlayTimer;
 
-  static void success(BuildContext context, String message,
-          {Duration duration = const Duration(seconds: 2)}) =>
-      show(context, message, type: SnackType.success, duration: duration);
+  static void success(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(seconds: 10),
+  }) => show(context, message, type: SnackType.success, duration: duration);
 
-  static void error(BuildContext context, String message,
-          {Duration duration = const Duration(seconds: 3)}) =>
-      show(context, message, type: SnackType.error, duration: duration);
+  static void error(
+    BuildContext context,
+    String message, {
+    Duration? duration,
+  }) => show(context, message, type: SnackType.error, duration: duration);
 
   static void info(
     BuildContext context,
     String message, {
-    Duration duration = const Duration(seconds: 2),
+    Duration? duration = const Duration(seconds: 2),
     IconData? icon,
     String? actionLabel,
     VoidCallback? onAction,
-  }) =>
-      show(
-        context,
-        message,
-        type: SnackType.info,
-        duration: duration,
-        icon: icon,
-        actionLabel: actionLabel,
-        onAction: onAction,
-      );
+  }) => show(
+    context,
+    message,
+    type: SnackType.info,
+    duration: duration,
+    icon: icon,
+    actionLabel: actionLabel,
+    onAction: onAction,
+  );
 
   /// Awaits [future], then shows [success] (if given) or a red snackbar with
   /// the API error message, falling back to [error].
@@ -68,7 +71,7 @@ class AppSnackBar {
     BuildContext context,
     String message, {
     SnackType type = SnackType.info,
-    Duration duration = const Duration(seconds: 2),
+    Duration? duration = const Duration(seconds: 2),
     IconData? icon,
     String? actionLabel,
     VoidCallback? onAction,
@@ -80,10 +83,7 @@ class AppSnackBar {
       SnackType.error => (_errorColor, Icons.error_rounded),
       SnackType.info => (_infoColor, Icons.info_rounded),
     };
-    final content = _SnackContent(
-      message: message,
-      icon: icon ?? defaultIcon,
-    );
+    final content = _SnackContent(message: message, icon: icon ?? defaultIcon);
 
     // A SnackBar renders on the page Scaffold, which is hidden behind
     // bottom sheets and dialogs, so popups get an overlay toast instead.
@@ -105,7 +105,7 @@ class AppSnackBar {
         SnackBar(
           behavior: SnackBarBehavior.floating,
           backgroundColor: bg,
-          duration: duration,
+          duration: duration ?? const Duration(days: 365),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -117,6 +117,12 @@ class AppSnackBar {
                   textColor: Colors.amberAccent,
                   onPressed: onAction,
                 )
+              : type == SnackType.error
+              ? SnackBarAction(
+                  label: 'Dismiss',
+                  textColor: Colors.white,
+                  onPressed: () {},
+                )
               : null,
         ),
       );
@@ -126,7 +132,7 @@ class AppSnackBar {
     BuildContext context,
     Widget content,
     Color bg,
-    Duration duration,
+    Duration? duration,
   ) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
@@ -141,7 +147,9 @@ class AppSnackBar {
     );
     _overlayEntry = entry;
     overlay.insert(entry);
-    _overlayTimer = Timer(duration, _removeOverlay);
+    if (duration != null) {
+      _overlayTimer = Timer(duration, _removeOverlay);
+    }
   }
 
   static void _removeOverlay() {
