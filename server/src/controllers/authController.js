@@ -1,12 +1,42 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
+const https = require("https");
 
 const userRepository = require("../repositories/userRepository");
 const otpService = require("../services/otpService");
 const googleAuthService = require("../services/googleAuthService");
 const { uploadToCloudinary } = require("../config/cloudinary");
 const logger = require("../config/logger");
+
+const PHOTON_BASE_URL =
+  process.env.PHOTON_API_URL || "https://photon.komoot.io/api";
+
+/**
+ * Geocode a free-text address/city to {lat, lng} using the Photon OSM API.
+ * Returns null on failure — never throws.
+ */
+async function geocodeAddress(text) {
+  if (!text || !text.trim()) return null;
+  const encoded = encodeURIComponent(text.trim());
+  const url = `${PHOTON_BASE_URL}/?q=${encoded}&limit=1`;
+  return new Promise((resolve) => {
+    https.get(url, { headers: { 'User-Agent': 'IStudioApp/1.0' } }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          const feature = json.features && json.features[0];
+          if (!feature) return resolve(null);
+          const coords = feature.geometry && feature.geometry.coordinates;
+          if (!coords || coords.length < 2) return resolve(null);
+          resolve({ lat: coords[1], lng: coords[0] });
+        } catch { resolve(null); }
+      });
+    }).on('error', () => resolve(null)).setTimeout(4000, function () { this.destroy(); resolve(null); });
+  });
+}
 
 function logCaught(req, message, error) {
   const meta = logger.fromRequest(req, error);
@@ -416,6 +446,27 @@ async function updateProfile(req, res) {
       return res
         .status(400)
         .json({ success: false, message: validationMessage });
+    }
+
+    // Auto-geocode: if address or city changed and no explicit lat/lng was
+    // provided by the client, resolve coordinates server-side so the
+    // photographer appears in nearby searches.
+    const addressOrCityChanged =
+      fields.address !== undefined || fields.city !== undefined;
+    const explicitCoordsProvided =
+      req.body.latitude !== undefined || req.body.longitude !== undefined;
+
+    if (addressOrCityChanged && !explicitCoordsProvided) {
+      const searchText = (fields.address || fields.city || '').trim();
+      if (searchText) {
+        try {
+          const geo = await geocodeAddress(searchText);
+          if (geo) {
+            fields.latitude = geo.lat;
+            fields.longitude = geo.lng;
+          }
+        } catch { /* non-critical — silently skip */ }
+      }
     }
 
     const user = await userRepository.updateUser(req.userId, fields);

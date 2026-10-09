@@ -92,6 +92,8 @@ function toDoc(user, withPassword = false) {
     categories: Array.isArray(user.categories) ? user.categories : [],
     logoUrl: user.logoUrl || '',
     paymentQrUrl: user.paymentQrUrl || '',
+    latitude: typeof user.latitude === 'number' ? user.latitude : null,
+    longitude: typeof user.longitude === 'number' ? user.longitude : null,
     toPublicJSON() {
       return publicFields(user);
     },

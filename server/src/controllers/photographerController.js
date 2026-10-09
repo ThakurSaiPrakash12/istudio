@@ -44,10 +44,17 @@ async function searchNearbyPhotographers(req, res) {
       originLat !== '' && originLng !== '' &&
       !isNaN(Number(originLat)) && !isNaN(Number(originLng));
 
+    // When coordinates are provided, spatial filtering is governed by GPS proximity.
+    // We avoid filtering by `location` string when coordinates are present, because it
+    // often contains a full venue address (e.g. "Hotel XYZ, Street, City") which fails
+    // exact text matching against photographer city/address.
+    // Explicit search keywords in `query` are still honored.
+    const textFilter = hasOriginCoords ? (query || '') : (location || query || '');
+
     const users = await userRepository.searchPhotographers({
       userId: req.userId,
-      location: hasOriginCoords ? '' : location,
-      query,
+      location: textFilter,
+      query: '',
       category,
       limit,
     });
@@ -74,16 +81,19 @@ async function searchNearbyPhotographers(req, res) {
       };
     });
 
-    if (hasOriginCoords) {
-      photographers.sort((a, b) => {
-        if (a.distanceKm != null && b.distanceKm != null) {
-          return a.distanceKm - b.distanceKm;
-        }
-        if (a.distanceKm != null) return -1;
-        if (b.distanceKm != null) return 1;
-        return 0;
-      });
-    }
+    // Sort: photographers with a computed distance first (nearest first),
+    // then the rest alphabetically by studio name.
+    photographers.sort((a, b) => {
+      if (a.distanceKm != null && b.distanceKm != null) {
+        return a.distanceKm - b.distanceKm;
+      }
+      if (a.distanceKm != null) return -1;
+      if (b.distanceKm != null) return 1;
+      // Both lack coordinates — sort alphabetically
+      const nameA = (a.studioName || a.ownerName || '').toLowerCase();
+      const nameB = (b.studioName || b.ownerName || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
     return res.json({
       success: true,

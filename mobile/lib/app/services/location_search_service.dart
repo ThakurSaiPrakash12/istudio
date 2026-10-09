@@ -72,15 +72,26 @@ class LocationSearchService {
   final http.Client _client;
 
   /// Searches for venues / addresses by text query using OpenStreetMap geocoding.
-  Future<List<PlaceLocation>> searchPlaces(String query) async {
+  /// Optionally biases results around [latitude] and [longitude] if provided.
+  Future<List<PlaceLocation>> searchPlaces(
+    String query, {
+    double? latitude,
+    double? longitude,
+  }) async {
     final clean = query.trim();
     if (clean.length < 2) return [];
 
     // 1. Try Photon first (instant search-as-you-type OSM index)
     try {
-      final uri = Uri.parse(
-        'https://photon.komoot.io/api/?q=${Uri.encodeComponent(clean)}&limit=5',
-      );
+      var url =
+          'https://photon.komoot.io/api/?q=${Uri.encodeComponent(clean)}&limit=6';
+      if (latitude != null &&
+          longitude != null &&
+          !latitude.isNaN &&
+          !longitude.isNaN) {
+        url += '&lat=$latitude&lon=$longitude';
+      }
+      final uri = Uri.parse(url);
       final response =
           await _client.get(uri).timeout(const Duration(seconds: 4));
       if (response.statusCode == 200) {
@@ -119,8 +130,16 @@ class LocationSearchService {
   }
 
   /// Geocodes a location text into coordinates.
-  Future<PlaceLocation?> geocodeLocation(String query) async {
-    final results = await searchPlaces(query);
+  Future<PlaceLocation?> geocodeLocation(
+    String query, {
+    double? latitude,
+    double? longitude,
+  }) async {
+    final results = await searchPlaces(
+      query,
+      latitude: latitude,
+      longitude: longitude,
+    );
     if (results.isNotEmpty) return results.first;
     return null;
   }

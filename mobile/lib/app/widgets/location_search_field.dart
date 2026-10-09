@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/location_search_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/geo_distance_utils.dart';
 
 class LocationSearchField extends StatefulWidget {
   const LocationSearchField({
@@ -14,6 +15,9 @@ class LocationSearchField extends StatefulWidget {
     this.hint = 'Search venue, hall, palace, or area...',
     this.initialLatitude,
     this.initialLongitude,
+    this.referenceLatitude,
+    this.referenceLongitude,
+    this.referenceLabel,
     this.locationSearchService,
     this.onCoordinatesCleared,
     this.validator,
@@ -25,6 +29,9 @@ class LocationSearchField extends StatefulWidget {
   final String hint;
   final double? initialLatitude;
   final double? initialLongitude;
+  final double? referenceLatitude;
+  final double? referenceLongitude;
+  final String? referenceLabel;
   final LocationSearchService? locationSearchService;
   final VoidCallback? onCoordinatesCleared;
   final String? Function(String?)? validator;
@@ -98,7 +105,11 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
       if (!mounted) return;
       setState(() => _searching = true);
       try {
-        final places = await _service.searchPlaces(query);
+        final places = await _service.searchPlaces(
+          query,
+          latitude: widget.referenceLatitude,
+          longitude: widget.referenceLongitude,
+        );
         if (!mounted) return;
         setState(() {
           _suggestions = places;
@@ -113,7 +124,11 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
 
   Future<void> _autoGeocode(String query) async {
     try {
-      final place = await _service.geocodeLocation(query);
+      final place = await _service.geocodeLocation(
+        query,
+        latitude: widget.referenceLatitude,
+        longitude: widget.referenceLongitude,
+      );
       if (place != null && mounted && widget.controller.text.trim() == query) {
         setState(() {
           _hasCoordinates = true;
@@ -282,6 +297,19 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
                 ),
                 itemBuilder: (ctx, idx) {
                   final place = _suggestions[idx];
+                  double? distanceKm;
+                  if (widget.referenceLatitude != null &&
+                      widget.referenceLongitude != null &&
+                      !widget.referenceLatitude!.isNaN &&
+                      !widget.referenceLongitude!.isNaN) {
+                    distanceKm = GeoDistanceUtils.calculateHaversineKm(
+                      widget.referenceLatitude!,
+                      widget.referenceLongitude!,
+                      place.latitude,
+                      place.longitude,
+                    );
+                  }
+
                   return Material(
                     color: Colors.transparent,
                     child: ListTile(
@@ -319,6 +347,50 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
                           color: context.textMuted,
                         ),
                       ),
+                      trailing: distanceKm != null
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (distanceKm < 25
+                                        ? AppColors.pastelMint
+                                        : AppColors.sky)
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: (distanceKm < 25
+                                          ? AppColors.pastelMint
+                                          : AppColors.sky)
+                                      .withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.near_me_rounded,
+                                    size: 11,
+                                    color: distanceKm < 25
+                                        ? AppColors.pastelMint
+                                        : AppColors.sky,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${distanceKm.toStringAsFixed(1)} km',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: distanceKm < 25
+                                          ? AppColors.pastelMint
+                                          : AppColors.sky,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : null,
                       onTap: () => _selectPlace(place),
                     ),
                   );

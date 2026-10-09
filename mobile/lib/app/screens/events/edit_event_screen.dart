@@ -6,10 +6,12 @@ import 'package:provider/provider.dart';
 
 import '../../models/client.dart';
 import '../../models/studio_event.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
+import '../../utils/geo_distance_utils.dart';
 import '../../widgets/location_search_field.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
@@ -210,6 +212,37 @@ class _EditEventScreenState extends State<EditEventScreen> {
   @override
   Widget build(BuildContext context) {
     final received = widget.event.amountReceived;
+    AuthProvider? auth;
+    try {
+      auth = context.watch<AuthProvider>();
+    } catch (_) {
+      auth = null;
+    }
+    final currentUser = auth?.user;
+    final studioLat = currentUser?.latitude;
+    final studioLng = currentUser?.longitude;
+    final studioName = (currentUser?.studioName.trim().isNotEmpty == true)
+        ? currentUser!.studioName.trim()
+        : ((currentUser?.city.trim().isNotEmpty == true)
+            ? currentUser!.city.trim()
+            : 'Studio');
+
+    double? distanceKm;
+    if (studioLat != null &&
+        studioLng != null &&
+        _eventLatitude != null &&
+        _eventLongitude != null &&
+        !studioLat.isNaN &&
+        !studioLng.isNaN &&
+        !_eventLatitude!.isNaN &&
+        !_eventLongitude!.isNaN) {
+      distanceKm = GeoDistanceUtils.calculateHaversineKm(
+        studioLat,
+        studioLng,
+        _eventLatitude!,
+        _eventLongitude!,
+      );
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -302,18 +335,32 @@ class _EditEventScreenState extends State<EditEventScreen> {
                       controller: _locationController,
                       initialLatitude: _eventLatitude,
                       initialLongitude: _eventLongitude,
+                      referenceLatitude: studioLat,
+                      referenceLongitude: studioLng,
+                      referenceLabel: studioName,
                       onLocationSelected: (place) {
-                        _eventLatitude = place.latitude;
-                        _eventLongitude = place.longitude;
+                        setState(() {
+                          _eventLatitude = place.latitude;
+                          _eventLongitude = place.longitude;
+                        });
                       },
                       onCoordinatesCleared: () {
-                        _eventLatitude = null;
-                        _eventLongitude = null;
+                        setState(() {
+                          _eventLatitude = null;
+                          _eventLongitude = null;
+                        });
                       },
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Please enter a location'
                           : null,
                     ),
+                    if (_eventLatitude != null && _eventLongitude != null)
+                      _buildLocationDistanceCard(
+                        context,
+                        distanceKm: distanceKm,
+                        studioName: studioName,
+                        hasStudioCoords: studioLat != null && studioLng != null,
+                      ),
                     const SizedBox(height: 22),
                     _sectionHeader('Financials'),
                     const SizedBox(height: 12),
@@ -691,5 +738,190 @@ class _EditEventScreenState extends State<EditEventScreen> {
         _clientName = client.name;
       });
     });
+  }
+
+  Widget _buildLocationDistanceCard(
+    BuildContext context, {
+    required double? distanceKm,
+    required String studioName,
+    required bool hasStudioCoords,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasCoords = _eventLatitude != null && _eventLongitude != null;
+    if (!hasCoords && _locationController.text.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    String tierLabel;
+    Color tierColor;
+    IconData tierIcon;
+    String estTime;
+
+    if (distanceKm != null) {
+      if (distanceKm < 0.5) {
+        tierLabel = 'At Studio';
+        tierColor = AppColors.pastelMint;
+        tierIcon = Icons.home_work_rounded;
+        estTime = 'Zero travel required';
+      } else if (distanceKm < 2.5) {
+        tierLabel = 'Same Locality (< 2.5 km)';
+        tierColor = AppColors.pastelMint;
+        tierIcon = Icons.directions_walk_rounded;
+        estTime = '~5–10 mins travel';
+      } else if (distanceKm < 25.0) {
+        tierLabel = 'Local Coverage (< 25 km)';
+        tierColor = AppColors.sky;
+        tierIcon = Icons.directions_car_rounded;
+        estTime = '~${(distanceKm * 2.2).clamp(10, 60).round()} mins drive';
+      } else if (distanceKm < 60.0) {
+        tierLabel = 'Extended Metro (< 60 km)';
+        tierColor = Colors.orangeAccent;
+        tierIcon = Icons.commute_rounded;
+        estTime = '~${(distanceKm * 1.8).clamp(30, 120).round()} mins drive';
+      } else {
+        tierLabel = 'Outstation Shoot (> 60 km)';
+        tierColor = Colors.purpleAccent;
+        tierIcon = Icons.flight_takeoff_rounded;
+        estTime = 'Outstation travel charges apply';
+      }
+    } else {
+      tierLabel = hasCoords ? 'Location Locked' : 'Custom Location';
+      tierColor = AppColors.sky;
+      tierIcon = Icons.place_rounded;
+      estTime = '';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: (distanceKm != null && distanceKm < 25
+                  ? AppColors.pastelMint
+                  : AppColors.sky)
+              .withValues(alpha: isDark ? 0.35 : 0.4),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: tierColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(tierIcon, size: 18, color: tierColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (distanceKm != null) ...[
+                      Row(
+                        children: [
+                          Text(
+                            distanceKm < 0.5
+                                ? 'In-Studio Shoot'
+                                : '${distanceKm.toStringAsFixed(1)} km',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: context.textMain,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tierColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              tierLabel,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: tierColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        distanceKm < 0.5
+                            ? 'Location matches your studio coordinates'
+                            : 'Distance from $studioName • $estTime',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          color: context.textMuted,
+                        ),
+                      ),
+                    ] else if (!hasStudioCoords) ...[
+                      Text(
+                        'Coordinates Locked',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: context.textMain,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Set your Studio address in Profile to calculate distance from studio.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          color: context.textMuted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (hasCoords) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: (isDark ? Colors.black : Colors.grey.shade100)
+                    .withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 13,
+                    color: AppColors.pastelMint,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'GPS: ${_eventLatitude!.toStringAsFixed(4)}°, ${_eventLongitude!.toStringAsFixed(4)}° • Auto-synced for nearby photographer calculations',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10.5,
+                        color: context.textMuted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

@@ -13,6 +13,7 @@ import '../../routes/smooth_page_route.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
+import '../../utils/geo_distance_utils.dart';
 import '../../widgets/studio_app_bar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
@@ -543,25 +544,93 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      color: context.accentColor,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        event.location,
-                        style: TextStyle(
-                          color: context.textMain,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                Builder(
+                  builder: (ctx) {
+                    AuthProvider? auth;
+                    try {
+                      auth = Provider.of<AuthProvider>(ctx, listen: false);
+                    } catch (_) {
+                      auth = null;
+                    }
+                    final studio = auth?.user;
+                    double? distFromStudioKm;
+                    if (studio?.latitude != null &&
+                        studio?.longitude != null &&
+                        event.latitude != null &&
+                        event.longitude != null &&
+                        !studio!.latitude!.isNaN &&
+                        !studio.longitude!.isNaN &&
+                        !event.latitude!.isNaN &&
+                        !event.longitude!.isNaN) {
+                      distFromStudioKm = GeoDistanceUtils.calculateHaversineKm(
+                        studio.latitude!,
+                        studio.longitude!,
+                        event.latitude!,
+                        event.longitude!,
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          color: context.accentColor,
+                          size: 18,
                         ),
-                      ),
-                    ),
-                  ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                event.location,
+                                style: TextStyle(
+                                  color: context.textMain,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (distFromStudioKm != null) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: (distFromStudioKm < 25
+                                            ? AppColors.pastelMint
+                                            : AppColors.sky)
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: (distFromStudioKm < 25
+                                              ? AppColors.pastelMint
+                                              : AppColors.sky)
+                                          .withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    distFromStudioKm < 0.5
+                                        ? 'At Studio (0 km)'
+                                        : '${distFromStudioKm.toStringAsFixed(1)} km from studio',
+                                    style: TextStyle(
+                                      color: distFromStudioKm < 25
+                                          ? AppColors.pastelMint
+                                          : AppColors.sky,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

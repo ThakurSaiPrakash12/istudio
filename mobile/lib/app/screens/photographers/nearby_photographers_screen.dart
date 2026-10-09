@@ -44,10 +44,7 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
   @override
   void initState() {
     super.initState();
-    final defaultLoc = widget.initialLocation ??
-        (widget.event?.location.isNotEmpty == true
-            ? widget.event!.location
-            : '');
+    final defaultLoc = widget.initialLocation ?? '';
     _searchController = TextEditingController(text: defaultLoc);
     _fetchPhotographers();
   }
@@ -83,6 +80,7 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
       final results = await _service.searchNearby(
         token: token,
         location: queryLoc.isNotEmpty ? queryLoc : null,
+        query: queryLoc.isNotEmpty ? queryLoc : null,
         category: cat,
         latitude: widget.event?.latitude,
         longitude: widget.event?.longitude,
