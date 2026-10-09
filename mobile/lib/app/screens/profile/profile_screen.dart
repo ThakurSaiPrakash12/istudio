@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_config.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/photographer_categories.dart';
@@ -17,6 +18,7 @@ import '../../utils/validators.dart';
 import '../../widgets/avatar_crop_screen.dart';
 import '../../widgets/category_selector_sheet.dart';
 import '../../widgets/location_search_field.dart';
+import '../../widgets/pin_particle_field.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
@@ -1567,7 +1569,11 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-/// Two-step account deletion verification sheet (Email OTP + Password)
+enum _DeleteAccountStep { requestOtp, verifyOtp, confirmPassword }
+
+/// Account deletion verification sheet:
+/// 1. Verifies email OTP code using PinParticleField (just like signup OTP)
+/// 2. Then verifies account password to confirm permanent deletion
 class _DeleteAccountSheet extends StatefulWidget {
   const _DeleteAccountSheet();
 
@@ -1576,37 +1582,56 @@ class _DeleteAccountSheet extends StatefulWidget {
 }
 
 class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
-  final _otpController = TextEditingController();
+  static const _dangerColor = Color(0xFFFF5252);
+
+  _DeleteAccountStep _step = _DeleteAccountStep.requestOtp;
+
+  final List<TextEditingController> _otpControllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
+
   final _passwordController = TextEditingController();
+  final _passwordFocusNode = FocusNode();
   bool _obscurePassword = true;
+
   bool _sendingOtp = false;
-  bool _otpSent = false;
-  int _cooldown = 0;
-  Timer? _timer;
+  bool _verifyingOtp = false;
   bool _deleting = false;
+
+  int _cooldownSeconds = 0;
+  Timer? _cooldownTimer;
   String? _errorMessage;
+  String? _deleteToken;
 
   @override
   void dispose() {
-    _otpController.dispose();
+    _cooldownTimer?.cancel();
+    for (final c in _otpControllers) {
+      c.dispose();
+    }
+    for (final f in _otpFocusNodes) {
+      f.dispose();
+    }
     _passwordController.dispose();
-    _timer?.cancel();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
-  void _startCooldown() {
-    setState(() => _cooldown = 30);
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  void _startCooldown([int seconds = 60]) {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldownSeconds = seconds);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      if (_cooldown <= 1) {
+      if (_cooldownSeconds <= 1) {
         timer.cancel();
-        setState(() => _cooldown = 0);
+        setState(() => _cooldownSeconds = 0);
       } else {
-        setState(() => _cooldown--);
+        setState(() => _cooldownSeconds--);
       }
     });
   }
@@ -1619,20 +1644,33 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
 
     try {
       final auth = context.read<AuthProvider>();
-      await auth.sendDeleteAccountOtp();
+      final res = await auth.sendDeleteAccountOtp();
       if (!mounted) return;
 
+      final cd = (res['cooldownSeconds'] as num?)?.toInt() ?? 60;
       setState(() {
         _sendingOtp = false;
-        _otpSent = true;
+        _step = _DeleteAccountStep.verifyOtp;
       });
-      _startCooldown();
+      _startCooldown(cd);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _otpFocusNodes[0].requestFocus();
+      });
 
       AppSnackBar.success(
         context,
         'Verification email sent. Check your inbox and spam folder.',
         duration: const Duration(seconds: 4),
       );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sendingOtp = false;
+        _errorMessage = e.message;
+      });
+      AppSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
       final message = e.toString().replaceFirst('Exception: ', '');
@@ -1644,17 +1682,66 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
     }
   }
 
-  Future<void> _confirmDelete() async {
-    final otp = _otpController.text.trim();
-    final password = _passwordController.text;
+  Future<void> _handleVerifyOtp() async {
+    FocusScope.of(context).unfocus();
+    final otp = _otpControllers.map((c) => c.text.trim()).join();
 
     if (otp.length != 6) {
-      const message = 'Please enter the 6-digit verification code.';
+      const message = 'Please enter the complete 6-digit verification code.';
       setState(() => _errorMessage = message);
       AppSnackBar.error(context, message);
       return;
     }
-    if (password.isEmpty) {
+
+    setState(() {
+      _verifyingOtp = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final auth = context.read<AuthProvider>();
+      final token = await auth.verifyDeleteAccountOtp(otp);
+      if (!mounted) return;
+
+      setState(() {
+        _verifyingOtp = false;
+        _deleteToken = token;
+        _step = _DeleteAccountStep.confirmPassword;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _passwordFocusNode.requestFocus();
+      });
+
+      AppSnackBar.success(
+        context,
+        'Code verified. Please confirm your password to finalize deletion.',
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _verifyingOtp = false;
+        _errorMessage = e.message;
+      });
+      AppSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().replaceFirst('Exception: ', '');
+      setState(() {
+        _verifyingOtp = false;
+        _errorMessage = message;
+      });
+      AppSnackBar.error(context, message);
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final auth = context.read<AuthProvider>();
+    final needsPassword = !(auth.user?.needsPasswordSetup ?? false);
+    final password = _passwordController.text;
+
+    if (needsPassword && password.isEmpty) {
       const message = 'Please enter your account password.';
       setState(() => _errorMessage = message);
       AppSnackBar.error(context, message);
@@ -1666,8 +1753,10 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
       _errorMessage = null;
     });
 
-    final auth = context.read<AuthProvider>();
-    final success = await auth.deleteAccount(otp: otp, password: password);
+    final success = await auth.deleteAccount(
+      deleteToken: _deleteToken,
+      password: password,
+    );
 
     if (!mounted) return;
     setState(() => _deleting = false);
@@ -1691,9 +1780,6 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthProvider>();
-    final user = auth.user;
-    const dangerColor = Color(0xFFFF5252);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -1701,7 +1787,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
         color: context.cardBg,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(
-          top: BorderSide(color: dangerColor.withValues(alpha: 0.3), width: 1.5),
+          top: BorderSide(color: _dangerColor.withValues(alpha: 0.3), width: 1.5),
         ),
       ),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
@@ -1723,274 +1809,312 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: dangerColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.delete_forever_rounded, color: dangerColor, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Permanently Delete Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: dangerColor,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'This action cannot be undone.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            if (_step == _DeleteAccountStep.requestOtp)
+              _buildRequestStep(context)
+            else if (_step == _DeleteAccountStep.verifyOtp)
+              _buildVerifyOtpStep(context)
+            else
+              _buildConfirmPasswordStep(context),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Warning Notice
+  Widget _buildRequestStep(BuildContext context) {
+    final user = context.read<AuthProvider>().user;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header
+        Row(
+          children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: dangerColor.withValues(alpha: 0.08),
+                color: _dangerColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: dangerColor.withValues(alpha: 0.2)),
               ),
-              child: Row(
+              child: const Icon(Icons.delete_forever_rounded, color: _dangerColor, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: dangerColor, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'All your events, clients, quotes, invoices, and expenses will be permanently wiped. To protect your data, verify your identity below.',
-                      style: TextStyle(fontSize: 12, color: context.textMain, height: 1.35),
+                  const Text(
+                    'Permanently Delete Account',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _dangerColor,
                     ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'This action cannot be undone.',
+                    style: TextStyle(fontSize: 12, color: context.textMuted),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Error banner if any
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(fontSize: 12, color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-            ],
-
-            // Step 1: Mail Verification
-            Text(
-              'STEP 1: VERIFY EMAIL OWNERSHIP',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: context.accentColor,
-                letterSpacing: 0.5,
-              ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: context.innerBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: context.cardBorder),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Warning Notice
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _dangerColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _dangerColor.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: _dangerColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'All your events, clients, quotes, invoices, and expenses will be permanently wiped. To protect your data, a verification code will be sent to your email.',
+                  style: TextStyle(fontSize: 12, color: context.textMain, height: 1.35),
+                ),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.mail_outline_rounded, size: 18, color: context.textMuted),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      user?.email ?? 'Registered Email',
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        if (_errorMessage != null) ...[
+          _buildErrorBanner(_errorMessage!),
+          const SizedBox(height: 14),
+        ],
+
+        // Registered Email Card
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: context.innerBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.cardBorder),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.mark_email_read_outlined, size: 20, color: context.accentColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Registered Email',
+                      style: TextStyle(fontSize: 11, color: context.textMuted),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      user?.email ?? 'Unknown Email',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: context.textMain,
                       ),
                     ),
-                  ),
-                  SizedBox(
-                    height: 34,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: context.accentColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 22),
+
+        // Send OTP Button
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _dangerColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          onPressed: _sendingOtp ? null : _sendOtp,
+          child: _sendingOtp
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Text(
+                  'Send Verification Code',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: () {
+                setState(() => _step = _DeleteAccountStep.verifyOtp);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _otpFocusNodes[0].requestFocus();
+                });
+              },
+              child: Text(
+                'Already have a code?',
+                style: TextStyle(color: context.accentColor, fontSize: 12.5, fontWeight: FontWeight.w600),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: context.textMuted, fontSize: 12.5, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerifyOtpStep(BuildContext context) {
+    final user = context.read<AuthProvider>().user;
+    final isDark = AppColors.isDark(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: context.accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.mark_email_read_outlined, color: context.accentColor, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Verify Email Code',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: context.textMain,
                         ),
                       ),
-                      onPressed: (_sendingOtp || _cooldown > 0) ? null : _sendOtp,
-                      child: _sendingOtp
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(
-                              _cooldown > 0
-                                  ? '${_cooldown}s'
-                                  : (_otpSent ? 'Resend' : 'Send Code'),
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                    ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: context.accentColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Step 1 of 2',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: context.accentColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Code sent to ${user?.email ?? 'your email'}',
+                    style: TextStyle(fontSize: 12, color: context.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            if (_otpSent) ...[
-              const SizedBox(height: 10),
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: TextStyle(
-                  color: context.textMain,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 4,
-                ),
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: 'Enter 6-digit code',
-                  hintStyle: TextStyle(
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        if (_errorMessage != null) ...[
+          _buildErrorBanner(_errorMessage!),
+          const SizedBox(height: 14),
+        ],
+
+        Text(
+          'Enter the 6-digit verification code from your inbox to confirm your identity.',
+          style: TextStyle(fontSize: 12.5, color: context.textMuted, height: 1.35),
+        ),
+        const SizedBox(height: 16),
+
+        // 6 PIN boxes with particle burst (matching signup OTP field)
+        PinParticleField(
+          controllers: _otpControllers,
+          focusNodes: _otpFocusNodes,
+          isDark: isDark,
+          onChanged: () {
+            if (_errorMessage != null) {
+              setState(() => _errorMessage = null);
+            }
+          },
+          onCompleted: (_) => _handleVerifyOtp(),
+        ),
+        const SizedBox(height: 16),
+
+        // Resend Timer / Button
+        Center(
+          child: _cooldownSeconds > 0
+              ? Text(
+                  'Resend code in ${_cooldownSeconds}s',
+                  style: TextStyle(
                     color: context.textMuted,
-                    fontSize: 13,
-                    letterSpacing: 0,
+                    fontSize: 12.5,
                   ),
-                  prefixIcon: Icon(Icons.pin_outlined, color: context.accentColor, size: 20),
-                  filled: true,
-                  fillColor: context.innerBg,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: context.cardBorder),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: context.cardBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: context.accentColor, width: 1.5),
+                )
+              : TextButton.icon(
+                  onPressed: _sendingOtp ? null : _sendOtp,
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text(
+                    'Resend Code',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-            ],
+        ),
+        const SizedBox(height: 18),
 
-            const SizedBox(height: 18),
-
-            // Step 2: Password Verification
-            Text(
-              'STEP 2: CONFIRM ACCOUNT PASSWORD',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: context.accentColor,
-                letterSpacing: 0.5,
+        // Verify OTP Button
+        StudioButton(
+          label: 'Verify Code',
+          isLoading: _verifyingOtp,
+          onPressed: _verifyingOtp ? null : _handleVerifyOtp,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: () => setState(() => _step = _DeleteAccountStep.requestOtp),
+              child: Text(
+                'Back',
+                style: TextStyle(color: context.textMuted, fontWeight: FontWeight.w600),
               ),
             ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              style: TextStyle(color: context.textMain, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Enter your account password',
-                hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
-                prefixIcon: Icon(Icons.lock_outline_rounded, color: context.accentColor, size: 20),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    color: context.textMuted,
-                    size: 20,
-                  ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                ),
-                filled: true,
-                fillColor: context.innerBg,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: context.cardBorder),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: context.cardBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: context.accentColor, width: 1.5),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Confirm Delete Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: dangerColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              onPressed: _deleting ? null : _confirmDelete,
-              child: _deleting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text(
-                      'Permanently Delete Account',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
-            ),
-            const SizedBox(height: 10),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
@@ -2000,6 +2124,237 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildConfirmPasswordStep(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final needsPassword = !(auth.user?.needsPasswordSetup ?? false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _dangerColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.lock_person_outlined, color: _dangerColor, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Confirm Password',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: _dangerColor,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _dangerColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Step 2 of 2',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: _dangerColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Verification code approved',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.green.shade600,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Warning Box
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _dangerColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _dangerColor.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: _dangerColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Final Step: Enter your account password to authorize permanent deletion. All data will be deleted immediately and cannot be recovered.',
+                  style: TextStyle(fontSize: 12, color: context.textMain, height: 1.35),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        if (_errorMessage != null) ...[
+          _buildErrorBanner(_errorMessage!),
+          const SizedBox(height: 14),
+        ],
+
+        if (needsPassword) ...[
+          Text(
+            'ACCOUNT PASSWORD',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: context.accentColor,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _passwordController,
+            focusNode: _passwordFocusNode,
+            obscureText: _obscurePassword,
+            style: TextStyle(color: context.textMain, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Enter your account password',
+              hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
+              prefixIcon: Icon(Icons.lock_outline_rounded, color: context.accentColor, size: 20),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: context.textMuted,
+                  size: 20,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              filled: true,
+              fillColor: context.innerBg,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: context.cardBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: context.cardBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: context.accentColor, width: 1.5),
+              ),
+            ),
+            onSubmitted: (_) => _confirmDelete(),
+          ),
+        ] else ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.innerBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.cardBorder),
+            ),
+            child: Text(
+              'Your account is connected via Google Sign-In. Tap below to confirm deletion.',
+              style: TextStyle(fontSize: 13, color: context.textMuted),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 24),
+
+        // Confirm Delete Button
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _dangerColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          onPressed: _deleting ? null : _confirmDelete,
+          child: _deleting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Text(
+                  'Permanently Delete Account',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: () => setState(() => _step = _DeleteAccountStep.verifyOtp),
+              child: Text(
+                'Back to Code Verification',
+                style: TextStyle(color: context.textMuted, fontWeight: FontWeight.w600),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: context.textMuted, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 12.5, color: Colors.red, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
       ),
     );
   }

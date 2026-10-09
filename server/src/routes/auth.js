@@ -23,6 +23,7 @@ const {
   verifyCurrentPassword,
   changePassword,
   deleteAccountSendOtp,
+  deleteAccountVerifyOtp,
   deleteAccount,
   sendEmailChangeOtp,
   verifyEmailChange,
@@ -223,6 +224,7 @@ router.post(
   changePassword,
 );
 router.post('/delete-account/send-otp', requireAuth, deleteAccountSendOtp);
+router.post('/delete-account/verify-otp', requireAuth, deleteAccountVerifyOtp);
 router.post('/delete-account/confirm', requireAuth, deleteAccount);
 router.post('/send-email-change-otp', requireAuth, sendEmailChangeOtp);
 router.post('/verify-email-change', requireAuth, verifyEmailChange);

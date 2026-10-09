@@ -37,6 +37,14 @@ class AuthProvider extends ChangeNotifier {
   bool get isBootstrapping => _isBootstrapping;
   bool get isLoggedIn => _user != null && _token != null;
 
+  @visibleForTesting
+  void setUserForTesting(User user, [String token = 'test_token']) {
+    _user = user;
+    _token = token;
+    _isBootstrapping = false;
+    notifyListeners();
+  }
+
   Future<void> bootstrap() async {
     try {
       // 1. One-time seamless migration of any existing unencrypted SharedPreferences data
@@ -402,8 +410,20 @@ class AuthProvider extends ChangeNotifier {
     return _authService.sendDeleteAccountOtp(token: _token!);
   }
 
+  Future<String> verifyDeleteAccountOtp(String otp) async {
+    if (_token == null) {
+      throw const ApiException('Please sign in to continue.');
+    }
+    final res = await _authService.verifyDeleteAccountOtp(
+      token: _token!,
+      otp: otp,
+    );
+    return res['deleteToken'] as String? ?? '';
+  }
+
   Future<bool> deleteAccount({
-    required String otp,
+    String? otp,
+    String? deleteToken,
     required String password,
   }) async {
     if (_token == null) {
@@ -418,6 +438,7 @@ class AuthProvider extends ChangeNotifier {
       await _authService.deleteAccount(
         token: _token!,
         otp: otp,
+        deleteToken: deleteToken,
         password: password,
       );
       try {

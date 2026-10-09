@@ -1283,6 +1283,62 @@ async function deleteAccountSendOtp(req, res) {
   }
 }
 
+async function deleteAccountVerifyOtp(req, res) {
+  try {
+    const user = await userRepository.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Account not found.",
+      });
+    }
+
+    const email = user.email ? String(user.email).trim().toLowerCase() : "";
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "No registered email found for this account.",
+      });
+    }
+
+    const otp = String(req.body?.otp || req.query?.otp || "").trim();
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter the verification code.",
+      });
+    }
+
+    try {
+      await otpService.verifyEmailOtp(email, otp);
+    } catch (otpErr) {
+      const status = otpErr.statusCode || 400;
+      return res.status(status).json({
+        success: false,
+        message: otpErr.message || "Invalid or expired verification code.",
+      });
+    }
+
+    const deleteToken = jwt.sign(
+      { userId: user._id.toString(), purpose: "account_deletion" },
+      process.env.JWT_SECRET || "lumen_studio_fallback_secret",
+      { expiresIn: "15m", algorithm: "HS256" },
+    );
+
+    return res.json({
+      success: true,
+      message: "Verification code verified successfully.",
+      deleteToken,
+    });
+  } catch (error) {
+    logCaught(req, "deleteAccountVerifyOtp error", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to verify code at this time.",
+    });
+  }
+}
+
 async function deleteAccount(req, res) {
   try {
     const user = await userRepository.findById(req.userId, {
@@ -1295,31 +1351,56 @@ async function deleteAccount(req, res) {
       });
     }
 
-    const otp = String(req.body.otp || req.query.otp || "").trim();
-    const password = String(req.body.password || req.query.password || "");
+    const otp = String(req.body?.otp || req.query?.otp || "").trim();
+    const deleteToken = String(req.body?.deleteToken || req.query?.deleteToken || "").trim();
+    const password = String(req.body?.password || req.query?.password || "");
 
-    if (!otp) {
+    if (!deleteToken && !otp) {
       return res.status(400).json({
         success: false,
-        message: "Please provide the email verification code.",
+        message: "Please provide the email verification code or verify session.",
       });
     }
 
-    if (!password) {
+    if (user.password && !password) {
       return res.status(400).json({
         success: false,
         message: "Please provide your account password to confirm deletion.",
       });
     }
 
-    // 1. Verify email OTP (verify user owns email)
-    try {
-      await otpService.verifyEmailOtp(user.email, otp);
-    } catch (otpErr) {
-      return res.status(400).json({
-        success: false,
-        message: otpErr.message || "Invalid or expired verification code.",
-      });
+    // 1. Verify email OTP or deleteToken
+    if (deleteToken) {
+      try {
+        const payload = jwt.verify(
+          deleteToken,
+          process.env.JWT_SECRET || "lumen_studio_fallback_secret",
+          { algorithms: ["HS256"] },
+        );
+        if (
+          payload.purpose !== "account_deletion" ||
+          String(payload.userId) !== String(req.userId)
+        ) {
+          return res.status(401).json({
+            success: false,
+            message: "Invalid or expired deletion session. Please verify your code again.",
+          });
+        }
+      } catch (err) {
+        return res.status(401).json({
+          success: false,
+          message: "Verification session expired. Please verify your code again.",
+        });
+      }
+    } else {
+      try {
+        await otpService.verifyEmailOtp(user.email, otp);
+      } catch (otpErr) {
+        return res.status(400).json({
+          success: false,
+          message: otpErr.message || "Invalid or expired verification code.",
+        });
+      }
     }
 
     // 2. Verify account password
@@ -1487,6 +1568,7 @@ module.exports = {
   verifyCurrentPassword,
   changePassword,
   deleteAccountSendOtp,
+  deleteAccountVerifyOtp,
   deleteAccount,
   sendEmailChangeOtp,
   verifyEmailChange,
