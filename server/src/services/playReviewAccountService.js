@@ -37,10 +37,25 @@ async function ensureReviewAccount({
   const existing = await repository.findByEmail(normalizedEmail);
   const hashedPassword = await bcrypt.hash(reviewPassword, 12);
 
+  const fullProfile = {
+    studioName: 'Clients Hub Studio',
+    phone: '9999900001',
+    city: 'Cupertino',
+    state: 'California',
+    district: 'Santa Clara',
+    address: '1 Infinite Loop, Cupertino, CA 95014',
+    specialties: 'Traditional & Candid Photography',
+    about: 'Official Clients Hub demonstration studio for App Store evaluation.',
+    categories: ['Traditional Photographer', 'Candid Photographer', 'Cinematographer'],
+    latitude: 37.33182,
+    longitude: -122.03118,
+    isReviewAccount: true,
+  };
+
   if (existing) {
     await repository.updateUser(existing._id || existing.id, {
       password: hashedPassword,
-      isReviewAccount: true,
+      ...fullProfile,
     });
     return { created: false };
   }
@@ -51,7 +66,7 @@ async function ensureReviewAccount({
     email: normalizedEmail,
     ownerName: label,
     password: hashedPassword,
-    isReviewAccount: true,
+    ...fullProfile,
   });
   return { created: true };
 }
