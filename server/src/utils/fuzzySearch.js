@@ -79,7 +79,7 @@ function squashText(text) {
 }
 
 /**
- * Phonetic reduction for common Indian transliteration variants.
+ * Phonetic reduction for common Indian transliteration variants and typo patterns.
  * Applied only for comparison — does not modify stored data.
  */
 function phoneticNormalize(text) {
@@ -90,7 +90,49 @@ function phoneticNormalize(text) {
   s = s.replace(/oo/g, 'u');   // shoonya / shuunya
   s = s.replace(/sh/g, 's');   // sharma / sarma
   s = s.replace(/ck/g, 'k');   // black / blak
+  s = s.replace(/kh/g, 'k');   // khan / kan
+  s = s.replace(/dh/g, 'd');   // jodhpur / jodpur
+  s = s.replace(/bh/g, 'b');   // bharat / barat
+  s = s.replace(/gh/g, 'g');   // ghat / gat
+  s = s.replace(/ch/g, 'c');   // chennai / cennai
+  s = s.replace(/w/g, 'v');    // wedding / vedding
+  s = s.replace(/z/g, 'j');    // vizag / vijag
+  // Collapse duplicate letters: 'chennai' -> 'chenai', 'kapoor' -> 'kapor', 'wedding' -> 'weding'
+  s = s.replace(/([a-z])\1+/g, '$1');
   return s;
+}
+
+/**
+ * Damerau-Levenshtein edit distance: counts insertions, deletions, substitutions,
+ * and transpositions of adjacent characters as a single edit.
+ */
+function damerauLevenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a) return b ? b.length : 0;
+  if (!b) return a.length;
+
+  const aLen = a.length;
+  const bLen = b.length;
+  const d = [];
+
+  for (let i = 0; i <= aLen; i++) d[i] = [i];
+  for (let j = 0; j <= bLen; j++) d[0][j] = j;
+
+  for (let i = 1; i <= aLen; i++) {
+    for (let j = 1; j <= bLen; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(
+        d[i - 1][j] + 1,
+        d[i][j - 1] + 1,
+        d[i - 1][j - 1] + cost,
+      );
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+  }
+
+  return d[aLen][bLen];
 }
 
 // ---------------------------------------------------------------------------
@@ -170,8 +212,18 @@ const CATEGORY_SYNONYMS = {
   live:           ['Internet Live Streaming'],
   stream:         ['Internet Live Streaming'],
   streaming:      ['Internet Live Streaming'],
+  livestrem:      ['Internet Live Streaming'],
   webcast:        ['Internet Live Streaming'],
   broadcast:      ['Internet Live Streaming'],
+  // Common typo variants
+  vedio:          ['Cinematic Videographer', 'Traditional Videographer'],
+  drne:           ['Drones'],
+  weding:         ['Traditional Photographer', 'Candid Photographer'],
+  wedin:          ['Traditional Photographer', 'Candid Photographer'],
+  canid:          ['Candid Photographer'],
+  potrait:        ['Candid Photographer'],
+  potraits:       ['Candid Photographer'],
+  preweding:      ['Traditional Photographer', 'Candid Photographer'],
 };
 
 // ---------------------------------------------------------------------------
@@ -179,8 +231,17 @@ const CATEGORY_SYNONYMS = {
 // ---------------------------------------------------------------------------
 
 /**
+ * Return consonant skeleton by stripping vowels and non-alphabetic chars.
+ * Useful for Indian transliterations and abbreviation typos (e.g. "hydrbd" -> "hdrbd").
+ */
+function consonantSkeleton(text) {
+  if (!text) return '';
+  return text.toLowerCase().replace(/[^a-z]/g, '').replace(/[aeiouy]/g, '');
+}
+
+/**
  * Expand a query string into a de-duplicated set of matching category names.
- * Works for exact keyword matches and near-matches (similarity ≥ 0.80).
+ * Works for exact keyword matches and near-matches.
  */
 function getRelatedCategoriesForQuery(query) {
   const norm = normalizeText(query);
@@ -200,7 +261,7 @@ function getRelatedCategoriesForQuery(query) {
       if (key === w) continue;
       if (key.length >= 4 && (key.includes(w) || w.includes(key))) {
         for (const cat of CATEGORY_SYNONYMS[key]) matched.add(cat);
-      } else if (key.length >= 5 && w.length >= 5 && similarity(w, key) >= 0.80) {
+      } else if (key.length >= 5 && w.length >= 5 && similarity(w, key) >= 0.75) {
         for (const cat of CATEGORY_SYNONYMS[key]) matched.add(cat);
       }
     }
@@ -220,6 +281,8 @@ function getRelatedCategoriesForQuery(query) {
  *   • City alias equivalence
  *   • Phonetic equivalence
  *   • Levenshtein distance within length-aware threshold
+ *   • Prefix typo matching (typing a word with typos in real time)
+ *   • Consonant skeleton equivalence (e.g. "hydrbd" vs "hyderabad")
  *
  * Both arguments should already be normalised (lowercase, trimmed).
  */
@@ -227,36 +290,60 @@ function tokenFuzzyMatch(qToken, tToken) {
   if (!qToken || !tToken) return false;
   if (qToken === tToken) return true;
 
-  // Guard: do not fuzzy-match trivially short tokens
-  if (qToken.length <= 2 || tToken.length <= 2) return qToken === tToken;
+  // Short tokens guard: allow exact or prefix
+  if (qToken.length <= 2 || tToken.length <= 2) {
+    return qToken === tToken || tToken.startsWith(qToken);
+  }
 
   const shorter = Math.min(qToken.length, tToken.length);
 
   // Substring containment — only meaningful if the common part is ≥ 3 chars
   if (shorter >= 3 && (tToken.includes(qToken) || qToken.includes(tToken))) return true;
 
-  // City alias equivalence
+  // City alias equivalence (including typo on alias, e.g. "vzag" for "vizag" -> "visakhapatnam")
   const qAlias = CITY_ALIASES[qToken];
-  if (qAlias && (qAlias === tToken || tToken.includes(qAlias))) return true;
+  if (qAlias) {
+    if (qAlias === tToken || tToken.includes(qAlias) || levenshtein(qAlias, tToken) <= 1) return true;
+  }
   const tAlias = CITY_ALIASES[tToken];
-  if (tAlias && (tAlias === qToken || qToken.includes(tAlias))) return true;
+  if (tAlias) {
+    if (tAlias === qToken || qToken.includes(tAlias) || levenshtein(tAlias, qToken) <= 1) return true;
+  }
 
-  // Phonetic equivalence
+  // Phonetic equivalence (handles single/double letters and transliterations)
   const qP = phoneticNormalize(qToken);
   const tP = phoneticNormalize(tToken);
   if (qP === tP) return true;
   if (qP.length >= 3 && tP.length >= 3 && (tP.includes(qP) || qP.includes(tP))) return true;
 
-  // Length-aware Levenshtein thresholds
+  // Length-aware Levenshtein / Damerau thresholds (tolerant to spelling mistakes)
   const maxLen = Math.max(qToken.length, tToken.length);
-  const dist = levenshtein(qToken, tToken);
-  if (maxLen <= 4 && dist <= 1) return true;
-  if (maxLen <= 7 && dist <= 1) return true;
-  if (maxLen >= 8 && dist <= 2) return true;
-  if (maxLen >= 12 && dist <= 3) return true;
+  const dDist = damerauLevenshtein(qToken, tToken);
+  if (maxLen <= 4 && dDist <= 1) return true;
+  if (maxLen <= 7 && dDist <= 2) return true; // e.g. "annd" vs "anand", "balji" vs "balaji", "vedio" vs "video", "wedin" vs "wedding"
+  if (maxLen <= 11 && dDist <= 2) return true; // e.g. "hydrabad" vs "hyderabad", "potrait" vs "portrait", "chenai" vs "chennai"
+  if (maxLen >= 12 && dDist <= 3) return true;
+
+  // Transpositions & 2-char typo for medium words
+  if (qToken.length >= 5 && tToken.length >= 5 && Math.abs(qToken.length - tToken.length) <= 1 && dDist <= 2) {
+    if (similarity(qToken, tToken) >= 0.60) return true;
+  }
 
   // Phonetic Levenshtein
   if (levenshtein(qP, tP) <= 1) return true;
+
+  // Prefix typo matching: user is typing a word with a typo in real time (length >= 5)
+  if (tToken.length >= 6 && qToken.length >= 5 && qToken.length <= tToken.length) {
+    const tPrefix = tToken.slice(0, qToken.length);
+    if (damerauLevenshtein(qToken, tPrefix) <= 1) return true;
+  }
+
+  // Consonant skeleton (vowels omitted by user, e.g. "hydrbd" vs "hyderabad")
+  const qSkel = consonantSkeleton(qToken);
+  const tSkel = consonantSkeleton(tToken);
+  if (qSkel.length >= 4 && tSkel.length >= 4) {
+    if (qSkel === tSkel || tSkel.startsWith(qSkel)) return true;
+  }
 
   return false;
 }
@@ -271,7 +358,12 @@ function tokenFuzzyMatch(qToken, tToken) {
  * Scores: exact=1.0, partial-substr=0.85-0.9, fuzzy≥0.70.
  */
 function scoreToken(qToken, targetTokens, squashedSearchable) {
-  if (!qToken || qToken.length <= 2) return 0; // Short-token guard
+  if (!qToken) return 0;
+  if (qToken.length <= 2) {
+    if (targetTokens.includes(qToken)) return 1.0;
+    if (targetTokens.some((t) => t.startsWith(qToken))) return 0.85;
+    return 0;
+  }
 
   let best = 0;
 
@@ -291,7 +383,7 @@ function scoreToken(qToken, targetTokens, squashedSearchable) {
       best = Math.max(best, 0.80 + 0.10 * ratio); // 0.80–0.90
     } else if (tokenFuzzyMatch(qToken, tToken)) {
       const sim = similarity(qToken, tToken);
-      best = Math.max(best, Math.max(sim, 0.70));
+      best = Math.max(best, Math.max(sim, 0.78));
     }
   }
 
@@ -348,8 +440,8 @@ function scorePhotographerMatch(user, query) {
   const allTokens     = normQuery.split(' ').filter(Boolean);
   const meaningfulTokens = allTokens.filter((t) => t.length > 2);
 
-  // Very short / empty query after normalisation → match everything
-  if (meaningfulTokens.length === 0) return normQuery.length === 0 ? 1.0 : 0;
+  // Very short / empty query after normalisation → match everything if empty
+  if (normQuery.length === 0) return 1.0;
 
   // Combine all searchable text (address included — already decrypted by here)
   const combinedSearchable = [
@@ -360,6 +452,35 @@ function scorePhotographerMatch(user, query) {
   ].join(' ');
 
   const squashedSearchable = squashText(combinedSearchable);
+
+  // Short queries (1 or 2 characters, e.g. "m" or "mu"):
+  // Prioritize word-prefix matches across studio name, owner name, username, city, categories, etc.
+  if (meaningfulTokens.length === 0) {
+    const q = normQuery;
+    const wordsStartsWith = (str) => {
+      if (!str) return false;
+      const words = str.split(' ').filter(Boolean);
+      return words.some((w) => w.startsWith(q));
+    };
+
+    if (studioName.startsWith(q)) return 1.0;
+    if (wordsStartsWith(studioName)) return 0.95;
+    if (ownerName.startsWith(q) || wordsStartsWith(ownerName)) return 0.93;
+    if (username.startsWith(q)) return 0.92;
+    if (city.startsWith(q) || wordsStartsWith(city)) return 0.90;
+    if (district.startsWith(q) || wordsStartsWith(district)) return 0.89;
+    if (state.startsWith(q) || wordsStartsWith(state)) return 0.88;
+    if (categories.some((c) => wordsStartsWith(c))) return 0.87;
+    if (wordsStartsWith(specialties)) return 0.85;
+    if (wordsStartsWith(about)) return 0.83;
+    if (wordsStartsWith(combinedSearchable)) return 0.80;
+
+    // Substring match for short queries
+    if (q.length >= 2 && combinedSearchable.includes(q)) return 0.70;
+    if (q.length === 1 && (studioName.includes(q) || ownerName.includes(q) || city.includes(q))) return 0.60;
+
+    return 0;
+  }
 
   // ── Tier 1: exact phrase matches ─────────────────────────────────────────
   if (combinedSearchable.includes(normQuery)) return 1.0;
@@ -389,7 +510,7 @@ function scorePhotographerMatch(user, query) {
 
   for (const qToken of meaningfulTokens) {
     const ts = scoreToken(qToken, targetTokens, squashedSearchable);
-    if (ts >= 0.70) {
+    if (ts >= 0.65) {
       matchedCount++;
       totalScore += ts;
     }
