@@ -41,7 +41,9 @@ class AuthProvider extends ChangeNotifier {
   bool get hasSeenFeatureTour => _hasSeenFeatureTour;
   bool get hasVerifiedGoogleMaps => _hasVerifiedGoogleMaps;
   bool get needsLocationUpdate =>
-      isLoggedIn && (!_hasVerifiedGoogleMaps || !_user!.hasVerifiedLocation);
+      isLoggedIn &&
+      !_hasVerifiedGoogleMaps &&
+      !_user!.hasVerifiedLocation;
 
   Future<void> completeFeatureTour() async {
     _hasSeenFeatureTour = true;
@@ -737,6 +739,9 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _hasSeenFeatureTour =
         prefs.getBool('has_seen_features_tour_${result.user.id}') ?? false;
+    _hasVerifiedGoogleMaps =
+        prefs.getBool('has_verified_google_maps_${result.user.id}') ??
+        result.user.hasVerifiedLocation;
     _token = result.token;
     _user = result.user;
   }
