@@ -18,6 +18,28 @@ class ParsedCoordinates {
   String toString() => '$latitude, $longitude';
 }
 
+class ReverseGeocodeResult {
+  const ReverseGeocodeResult({
+    required this.displayName,
+    this.city,
+    this.state,
+    this.district,
+    this.country,
+    this.countryCode,
+  });
+
+  final String displayName;
+  final String? city;
+  final String? state;
+  final String? district;
+  final String? country;
+  final String? countryCode;
+
+  @override
+  String toString() =>
+      'ReverseGeocodeResult(displayName: $displayName, city: $city, state: $state, district: $district, country: $country)';
+}
+
 class GoogleMapsLocationParser {
   GoogleMapsLocationParser({http.Client? client})
       : _client = client ?? http.Client();
@@ -430,8 +452,13 @@ class GoogleMapsLocationParser {
     return null;
   }
 
-  /// Reverse geocodes coordinates to a human-friendly address using Nominatim.
-  Future<String?> reverseGeocode(double latitude, double longitude) async {
+  /// Reverse geocodes coordinates to structured address details (country, state, district, city).
+  /// Works globally — supporting Indian states/districts as well as international countries.
+  Future<ReverseGeocodeResult?> reverseGeocodeDetails(
+    double latitude,
+    double longitude,
+  ) async {
+    // 1. Try OpenStreetMap Nominatim with addressdetails=1
     try {
       final uri = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=$latitude&lon=$longitude&zoom=18&addressdetails=1',
@@ -443,17 +470,128 @@ class GoogleMapsLocationParser {
 
       if (res.statusCode == 200) {
         final data = json.decode(res.body) as Map<String, dynamic>;
-        final displayName = data['display_name'] as String?;
-        if (displayName != null && displayName.isNotEmpty) {
-          final parts = displayName.split(',').map((s) => s.trim()).toList();
+        final displayName = data['display_name'] as String? ?? '';
+        final addr = data['address'] as Map<String, dynamic>? ?? {};
+
+        final country = addr['country'] as String?;
+        final countryCode = addr['country_code'] as String?;
+        final isIndia = (country?.toLowerCase() == 'india') ||
+            (countryCode?.toLowerCase() == 'in');
+
+        final state = addr['state'] as String? ??
+            addr['province'] as String? ??
+            addr['region'] as String? ??
+            addr['state_district'] as String?;
+
+        final rawDistrict = addr['district'] as String? ??
+            addr['county'] as String? ??
+            addr['state_district'] as String? ??
+            addr['city_district'] as String? ??
+            addr['city'] as String?;
+
+        var district = rawDistrict;
+        if (isIndia && district != null) {
+          district = district
+              .replaceAll(
+                RegExp(
+                  r'\s+(district|mandal|county|zone|division)$',
+                  caseSensitive: false,
+                ),
+                '',
+              )
+              .trim();
+        }
+
+        final city = addr['city'] as String? ??
+            addr['town'] as String? ??
+            addr['village'] as String? ??
+            addr['municipality'] as String? ??
+            addr['suburb'] as String? ??
+            district;
+
+        String formattedName = displayName;
+        if (formattedName.isNotEmpty) {
+          final parts =
+              formattedName.split(',').map((s) => s.trim()).toList();
           if (parts.length > 3) {
-            return parts.take(3).join(', ');
+            formattedName = parts.take(3).join(', ');
           }
-          return displayName;
+        }
+
+        return ReverseGeocodeResult(
+          displayName: formattedName.isNotEmpty
+              ? formattedName
+              : '$latitude, $longitude',
+          city: city?.trim().isNotEmpty == true ? city!.trim() : null,
+          state: state?.trim().isNotEmpty == true ? state!.trim() : null,
+          district:
+              district?.trim().isNotEmpty == true ? district!.trim() : null,
+          country: country?.trim().isNotEmpty == true ? country!.trim() : null,
+          countryCode: countryCode?.trim().isNotEmpty == true
+              ? countryCode!.trim().toLowerCase()
+              : null,
+        );
+      }
+    } catch (_) {}
+
+    // 2. Fallback to Photon reverse geocode
+    try {
+      final uri = Uri.parse(
+        'https://photon.komoot.io/reverse?lat=$latitude&lon=$longitude',
+      );
+      final res = await _client.get(
+        uri,
+        headers: {'User-Agent': 'iStudio-Photography-App/1.0'},
+      ).timeout(const Duration(seconds: 4));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body) as Map<String, dynamic>;
+        final features = data['features'] as List<dynamic>?;
+        if (features != null && features.isNotEmpty) {
+          final props = (features.first
+                  as Map<String, dynamic>)['properties']
+              as Map<String, dynamic>? ??
+              {};
+
+          final name = props['name'] as String? ?? '';
+          final street = props['street'] as String? ?? '';
+          final city = props['city'] as String? ?? props['locality'] as String?;
+          final district =
+              props['district'] as String? ?? props['county'] as String?;
+          final state = props['state'] as String?;
+          final country = props['country'] as String?;
+          final countryCode = props['countrycode'] as String?;
+
+          final parts = [name, street, city]
+              .where((p) => p != null && p.trim().isNotEmpty)
+              .toList();
+          final formattedName = parts.isNotEmpty
+              ? parts.join(', ')
+              : '$latitude, $longitude';
+
+          return ReverseGeocodeResult(
+            displayName: formattedName,
+            city: city?.trim().isNotEmpty == true ? city!.trim() : null,
+            state: state?.trim().isNotEmpty == true ? state!.trim() : null,
+            district:
+                district?.trim().isNotEmpty == true ? district!.trim() : null,
+            country:
+                country?.trim().isNotEmpty == true ? country!.trim() : null,
+            countryCode: countryCode?.trim().isNotEmpty == true
+                ? countryCode!.trim().toLowerCase()
+                : null,
+          );
         }
       }
     } catch (_) {}
+
     return null;
+  }
+
+  /// Reverse geocodes coordinates to a human-friendly address string.
+  Future<String?> reverseGeocode(double latitude, double longitude) async {
+    final details = await reverseGeocodeDetails(latitude, longitude);
+    return details?.displayName;
   }
 
   static String? _extractPlaceName(String url) {

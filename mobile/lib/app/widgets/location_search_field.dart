@@ -193,7 +193,15 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
     try {
       final res = await _googleMapsParser.parseAsync(clean);
       if (res != null && mounted) {
-        String? name = res.placeName;
+        ReverseGeocodeResult? details;
+        try {
+          details = await _googleMapsParser.reverseGeocodeDetails(
+            res.latitude,
+            res.longitude,
+          );
+        } catch (_) {}
+
+        String? name = details?.displayName ?? res.placeName;
         if (name == null ||
             name.isEmpty ||
             RegExp(r'^[-+]?\d').hasMatch(name)) {
@@ -208,9 +216,13 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
 
         _selectPlace(PlaceLocation(
           name: finalName,
-          displayName: finalName,
+          displayName: details?.displayName ?? finalName,
           latitude: res.latitude,
           longitude: res.longitude,
+          city: details?.city,
+          state: details?.state,
+          district: details?.district,
+          country: details?.country,
         ));
 
         if (mounted) {

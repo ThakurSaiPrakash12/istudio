@@ -57,6 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController _youtube;
   late final TextEditingController _website;
   late final TextEditingController _specialties;
+  late final TextEditingController _country;
   late final TextEditingController _locationSearch;
   List<String> _selectedCategories = [];
   double? _studioLatitude;
@@ -80,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _city = TextEditingController(text: user?.city ?? '');
     _state = TextEditingController(text: user?.state ?? '');
     _district = TextEditingController(text: user?.district ?? '');
+    _country = TextEditingController(text: 'India');
     _address = TextEditingController(text: user?.address ?? '');
     _about = TextEditingController(text: user?.about ?? '');
     _instagram = TextEditingController(text: user?.instagram ?? '');
@@ -115,6 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _city.dispose();
     _state.dispose();
     _district.dispose();
+    _country.dispose();
     _address.dispose();
     _about.dispose();
     _instagram.dispose();
@@ -482,6 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'city': _city.text.trim(),
       'state': _state.text.trim(),
       'district': _district.text.trim(),
+      'country': _country.text.trim(),
       'address': _address.text.trim(),
       'about': _about.text.trim(),
       'instagram': _instagram.text.trim(),
@@ -2057,19 +2061,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               setState(() {
                 _studioLatitude = result.latitude;
                 _studioLongitude = result.longitude;
-                // Auto-fill city if empty
-                if (_city.text.trim().isEmpty && result.city != null) {
+                if (result.country != null && result.country!.trim().isNotEmpty) {
+                  _country.text = result.country!.trim();
+                }
+                if (result.city != null && result.city!.isNotEmpty) {
                   _city.text = result.city!;
                 }
-                // Auto-fill state if empty
-                if (_state.text.trim().isEmpty && result.state != null) {
+                if (result.state != null && result.state!.isNotEmpty) {
                   _state.text = result.state!;
                 }
-                // Auto-fill district if empty
-                if (_district.text.trim().isEmpty && result.district != null) {
+                if (result.district != null && result.district!.isNotEmpty) {
                   _district.text = result.district!;
                 }
-                // Auto-fill address — always overwrite with full address from Google Maps result
                 if (result.displayName.isNotEmpty) {
                   _address.text = result.displayName;
                   final lower = result.displayName.toLowerCase();
@@ -2091,6 +2094,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 14),
           LocationDropdowns(
+            countryController: _country,
             stateController: _state,
             districtController: _district,
             cityController: _city,

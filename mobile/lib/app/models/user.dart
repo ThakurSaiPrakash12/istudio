@@ -9,6 +9,7 @@ class User {
     this.city = '',
     this.state = '',
     this.district = '',
+    this.country = 'India',
     this.address = '',
     this.about = '',
     this.instagram = '',
@@ -33,6 +34,7 @@ class User {
   final String city;
   final String state;
   final String district;
+  final String country;
   final String address;
   final String about;
   final String instagram;
@@ -104,6 +106,7 @@ class User {
       city: json['city'] as String? ?? '',
       state: json['state'] as String? ?? '',
       district: json['district'] as String? ?? '',
+      country: json['country'] as String? ?? 'India',
       address: json['address'] as String? ?? '',
       about: json['about'] as String? ?? '',
       instagram: json['instagram'] as String? ?? '',
@@ -141,6 +144,7 @@ class User {
       'city': city,
       'state': state,
       'district': district,
+      'country': country,
       'address': address,
       'about': about,
       'instagram': instagram,
@@ -165,6 +169,7 @@ class User {
     String? city,
     String? state,
     String? district,
+    String? country,
     String? address,
     String? about,
     String? instagram,
@@ -189,6 +194,7 @@ class User {
       city: city ?? this.city,
       state: state ?? this.state,
       district: district ?? this.district,
+      country: country ?? this.country,
       address: address ?? this.address,
       about: about ?? this.about,
       instagram: instagram ?? this.instagram,

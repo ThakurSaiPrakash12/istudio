@@ -58,6 +58,7 @@ class _GoogleMapsLocationSheetState extends State<GoogleMapsLocationSheet> {
   bool _resolving = false;
   ParsedCoordinates? _parsedCoords;
   String? _resolvedAddress;
+  ReverseGeocodeResult? _reverseDetails;
 
   @override
   void initState() {
@@ -121,9 +122,12 @@ class _GoogleMapsLocationSheetState extends State<GoogleMapsLocationSheet> {
     try {
       final res = await _parser.parseAsync(rawText);
       if (res != null) {
-        HapticFeedback.mediumImpact();
-        String? addr = res.placeName;
-        // Try reverse geocoding if place name not found in link
+        ReverseGeocodeResult? details;
+        try {
+          details = await _parser.reverseGeocodeDetails(res.latitude, res.longitude);
+        } catch (_) {}
+
+        String? addr = details?.displayName ?? res.placeName;
         if (addr == null || addr.isEmpty || RegExp(r'^[-+]?\d').hasMatch(addr)) {
           addr = await _parser.reverseGeocode(res.latitude, res.longitude) ?? addr;
         }
@@ -132,6 +136,7 @@ class _GoogleMapsLocationSheetState extends State<GoogleMapsLocationSheet> {
           setState(() {
             _parsedCoords = res;
             _resolvedAddress = addr;
+            _reverseDetails = details;
             if (addr != null && addr.isNotEmpty) {
               _nameController.text = addr;
             }
@@ -226,6 +231,10 @@ class _GoogleMapsLocationSheetState extends State<GoogleMapsLocationSheet> {
       displayName: name,
       latitude: _parsedCoords!.latitude,
       longitude: _parsedCoords!.longitude,
+      city: _reverseDetails?.city,
+      state: _reverseDetails?.state,
+      district: _reverseDetails?.district,
+      country: _reverseDetails?.country,
     );
 
     widget.onLocationConfirmed(place);

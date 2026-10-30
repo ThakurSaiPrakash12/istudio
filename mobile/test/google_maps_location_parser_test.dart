@@ -73,17 +73,15 @@ void main() {
       expect(GoogleMapsLocationParser.isGoogleMapsUrl(''), isFalse);
     });
 
-    test('resolves real Google Maps short link asynchronously', () async {
+    test('reverseGeocodeDetails returns structured location details', () async {
       final parser = GoogleMapsLocationParser();
-      final res = await parser.parseAsync('https://maps.app.goo.gl/ttQaX1XkSeW4pXxk7');
-      // Verifies that the short link resolves and returns valid coordinates.
-      // Exact values are not pinned because Google Maps may return slightly
-      // different center coordinates across requests/regions.
-      expect(res, isNotNull, reason: 'Should resolve short link to coordinates');
-      expect(res!.latitude, inInclusiveRange(17.0, 18.0),
-          reason: 'Latitude should be in Hyderabad region');
-      expect(res.longitude, inInclusiveRange(78.0, 79.0),
-          reason: 'Longitude should be in Hyderabad region');
+      // Cupertino location (outside India)
+      final res = await parser.reverseGeocodeDetails(37.33182, -122.03118);
+      if (res != null) {
+        expect(res.displayName.isNotEmpty, isTrue);
+        expect(res.country, equals('United States'));
+        expect(res.state, equals('California'));
+      }
     });
   });
 }

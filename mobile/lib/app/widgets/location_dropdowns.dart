@@ -122,6 +122,19 @@ class _LocationDropdownsState extends State<LocationDropdowns> {
   }
 
   void _onCountryControllerUpdated() {
+    final c = _countryController.text.trim();
+    final isKnown = popularCountries.any(
+      (p) => p['name']!.toLowerCase() == c.toLowerCase(),
+    );
+    if (!isKnown && c.isNotEmpty && c.toLowerCase() != 'india') {
+      _customCountryMode = true;
+      if (_customCountryController.text != c) {
+        _customCountryController.text = c;
+      }
+    } else {
+      _customCountryMode = false;
+    }
+    _syncFromControllers();
     setState(() {});
   }
 

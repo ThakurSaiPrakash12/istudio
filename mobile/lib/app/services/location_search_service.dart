@@ -11,6 +11,7 @@ class PlaceLocation {
     this.city,
     this.state,
     this.district,
+    this.country,
   });
 
   final String name;
@@ -20,6 +21,7 @@ class PlaceLocation {
   final String? city;
   final String? state;
   final String? district;
+  final String? country;
 
   factory PlaceLocation.fromPhoton(Map<String, dynamic> feature) {
     final properties = feature['properties'] as Map<String, dynamic>? ?? {};
@@ -40,6 +42,7 @@ class PlaceLocation {
         '';
     final state = properties['state'] as String?;
     final district = properties['district'] as String? ?? properties['county'] as String?;
+    final country = properties['country'] as String?;
 
     final parts = [name, street, locality, city]
         .where((p) => p.trim().isNotEmpty)
@@ -55,6 +58,7 @@ class PlaceLocation {
       city: city.isNotEmpty ? city : null,
       state: state,
       district: district,
+      country: country,
     );
   }
 
@@ -63,12 +67,29 @@ class PlaceLocation {
     final displayName = json['display_name'] as String? ?? '';
     final lat = double.tryParse(json['lat']?.toString() ?? '') ?? 0.0;
     final lon = double.tryParse(json['lon']?.toString() ?? '') ?? 0.0;
+    final addr = json['address'] as Map<String, dynamic>? ?? {};
+
+    final country = addr['country'] as String?;
+    final state = addr['state'] as String? ??
+        addr['province'] as String? ??
+        addr['region'] as String?;
+    final district = addr['district'] as String? ??
+        addr['county'] as String? ??
+        addr['state_district'] as String?;
+    final city = addr['city'] as String? ??
+        addr['town'] as String? ??
+        addr['village'] as String? ??
+        addr['suburb'] as String?;
 
     return PlaceLocation(
       name: name.isNotEmpty ? name : displayName.split(',').first.trim(),
       displayName: displayName,
       latitude: lat,
       longitude: lon,
+      city: city,
+      state: state,
+      district: district,
+      country: country,
     );
   }
 }

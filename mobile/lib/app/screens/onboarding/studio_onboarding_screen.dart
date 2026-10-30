@@ -37,6 +37,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
   late final TextEditingController _city;
   late final TextEditingController _state;
   late final TextEditingController _district;
+  late final TextEditingController _country;
   late final TextEditingController _address;
   late final TextEditingController _specialties;
   late final TextEditingController _about;
@@ -63,6 +64,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
     _city = TextEditingController(text: user?.city ?? '');
     _state = TextEditingController(text: user?.state ?? '');
     _district = TextEditingController(text: user?.district ?? '');
+    _country = TextEditingController(text: 'India');
     _specialties = TextEditingController(text: user?.specialties ?? '');
     _about = TextEditingController(text: user?.about ?? '');
     _instagram = TextEditingController(text: user?.instagram ?? '');
@@ -94,6 +96,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       _city,
       _state,
       _district,
+      _country,
       _address,
       _specialties,
       _about,
@@ -204,6 +207,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       'city': _city.text.trim(),
       'state': _state.text.trim(),
       'district': _district.text.trim(),
+      'country': _country.text.trim(),
       'address': _address.text.trim(),
       'specialties': _specialties.text.trim(),
       'about': _about.text.trim(),
@@ -428,6 +432,9 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
                             setState(() {
                               _studioLatitude = result.latitude;
                               _studioLongitude = result.longitude;
+                              if (result.country != null && result.country!.trim().isNotEmpty) {
+                                _country.text = result.country!.trim();
+                              }
                               if (result.city != null && result.city!.isNotEmpty) {
                                 _city.text = result.city!;
                               }
@@ -458,6 +465,7 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
                         ),
                         const SizedBox(height: 14),
                         LocationDropdowns(
+                          countryController: _country,
                           stateController: _state,
                           districtController: _district,
                           cityController: _city,

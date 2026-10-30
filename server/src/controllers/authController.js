@@ -285,6 +285,7 @@ const PROFILE_FIELDS = [
   "city",
   "state",
   "district",
+  "country",
   "address",
   "about",
   "instagram",
