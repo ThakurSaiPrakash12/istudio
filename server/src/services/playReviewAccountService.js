@@ -77,8 +77,8 @@ async function ensurePlayReviewAccount({
  * Ensures the Apple App Store review account exists.
  */
 async function ensureAppleReviewAccount({
-  email = process.env.APPLE_REVIEW_EMAIL,
-  password = process.env.APPLE_REVIEW_PASSWORD,
+  email = process.env.APPLE_REVIEW_EMAIL || 'applereview@clientshub.com',
+  password = process.env.APPLE_REVIEW_PASSWORD || 'ClientsHub@Review2024',
   repository = userRepository,
 } = {}) {
   return ensureReviewAccount({
