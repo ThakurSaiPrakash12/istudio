@@ -384,9 +384,15 @@ describe('Multi-word coverage thresholds', () => {
     assertNoMatch(PROFILES.delhiDrone,    'in of');
   });
 
-  it('very short single-char queries return 0', () => {
-    assertNoMatch(PROFILES.mumbaiWedding, 'a');
-    assertNoMatch(PROFILES.delhiDrone,    'm');
+  it('short single-char queries match word prefixes and non-matching returns 0', () => {
+    // "m" matches Mumbai in mumbaiWedding and Mehta in delhiDrone
+    assertMatches(PROFILES.mumbaiWedding, 'm');
+    assertMatches(PROFILES.delhiDrone,    'm');
+    // "a" matches Anand in mumbaiWedding
+    assertMatches(PROFILES.mumbaiWedding, 'a');
+    // Unrelated single char with no matches returns 0
+    assertNoMatch(PROFILES.mumbaiWedding, 'z');
+    assertNoMatch(PROFILES.delhiDrone,    'z');
   });
 });
 
