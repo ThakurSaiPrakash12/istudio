@@ -174,8 +174,11 @@ class _AuthGate extends StatelessWidget {
           ? const AuthScreen(key: ValueKey('auth'))
           : !auth.hasSeenFeatureTour
               ? const AppFeaturesShowcaseScreen(key: ValueKey('features_tour'))
-              : (auth.user!.isProfileIncomplete || auth.needsLocationUpdate)
+              // New user or truly incomplete profile → full onboarding form
+              : (auth.user!.isProfileIncomplete && !auth.user!.hasBasicProfileFilled)
                   ? const StudioOnboardingScreen(key: ValueKey('onboarding'))
+                  // Existing user with basic info filled but no Google Maps → enter app,
+                  // AppShell shows a location prompt popup instead of full onboarding
                   : const AppShell(key: ValueKey('home')),
     );
   }

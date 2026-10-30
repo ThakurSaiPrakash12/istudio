@@ -56,7 +56,6 @@ class User {
 
   bool get isGoogleUser => googleId.isNotEmpty;
 
-  /// Socials (instagram, youtube, website) and the logo are optional.
   /// Whether the user has an exact verified studio location via Google Maps.
   bool get hasVerifiedLocation =>
       latitude != null &&
@@ -64,6 +63,20 @@ class User {
       latitude != 0.0 &&
       longitude != 0.0 &&
       address.trim().isNotEmpty;
+
+  /// True when all basic profile fields (name, phone, email, city, specialties,
+  /// about) are filled — REGARDLESS of whether Google Maps location is linked.
+  /// Used to distinguish new users (need full onboarding) from existing users
+  /// who just haven't linked Google Maps yet (need only a location prompt).
+  bool get hasBasicProfileFilled => [
+        studioName,
+        ownerName,
+        phone,
+        email,
+        city,
+        specialties,
+        about,
+      ].every((value) => value.trim().isNotEmpty);
 
   /// Socials (instagram, youtube, website) and the logo are optional.
   /// Studio Location is mandatory for all users (new and existing).

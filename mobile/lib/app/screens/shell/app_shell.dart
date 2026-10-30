@@ -3,8 +3,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../theme/app_colors.dart';
@@ -14,6 +16,8 @@ import '../clients/clients_screen.dart';
 import '../home/home_screen.dart';
 import '../invoice/invoice_screen.dart';
 import '../photographers/nearby_photographers_screen.dart';
+import '../profile/profile_screen.dart';
+import '../../routes/smooth_page_route.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -37,6 +41,156 @@ class _AppShellState extends State<AppShell> {
     if (newIndex == _index) return;
     HapticFeedback.lightImpact();
     setState(() => _index = newIndex);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      final user = auth.user;
+      // Show a location prompt only for existing users who have filled their
+      // basic profile but haven't linked a Google Maps location yet.
+      if (user != null &&
+          user.hasBasicProfileFilled &&
+          !user.hasVerifiedLocation &&
+          !auth.hasVerifiedGoogleMaps) {
+        _showLocationPrompt();
+      }
+    });
+  }
+
+  void _showLocationPrompt() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      builder: (sheetCtx) {
+        final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+        final accent = AppColors.gold;
+        return Container(
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AppColors.gold.withValues(alpha: 0.35),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 28,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: isDark ? 0.18 : 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(Icons.location_on_rounded,
+                          color: accent, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Link Your Studio Location',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Required for discovery & client bookings',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
+                              color: isDark
+                                  ? Colors.white54
+                                  : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Your studio doesn\'t have a Google Maps location linked yet. Add it in your profile so clients can find you and your studio appears in nearby searches.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13.5,
+                    height: 1.5,
+                    color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(sheetCtx).pop();
+                      Navigator.of(context).push(
+                        SmoothPageRoute(
+                          builder: (_) => const ProfileScreen(initialEditing: true),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
+                    label: Text(
+                      'Update Location in Profile',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(sheetCtx).pop(),
+                    child: Text(
+                      'Remind me later',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13.5,
+                        color: isDark ? Colors.white54 : const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
