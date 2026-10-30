@@ -59,12 +59,12 @@ async function findByEmail(email) {
 }
 
 async function createUser(data) {
-  const { username, phone = '', password = '', googleId = null, email = '', ownerName = '', logoUrl = '', address = '' } = data;
+  const { username, phone = '', password = '', googleId = null, email = '', ownerName = '', logoUrl = '', address = '', isReviewAccount = false } = data;
   const cleanPhone = String(phone || '').trim();
   const cleanEmail = String(email || '').trim().toLowerCase();
 
   if (memoryUsers.enabled) {
-    return memoryUsers.create({ username, phone: cleanPhone, password, googleId, email: cleanEmail, ownerName: ownerName || username, logoUrl, address, categories: data.categories || [] });
+    return memoryUsers.create({ username, phone: cleanPhone, password, googleId, email: cleanEmail, ownerName: ownerName || username, logoUrl, address, categories: data.categories || [], isReviewAccount });
   }
   return User.create({
     username,
@@ -76,6 +76,7 @@ async function createUser(data) {
     logoUrl: logoUrl || '',
     address: address ? dataSecurity.encrypt(address) : '',
     categories: Array.isArray(data.categories) ? data.categories : [],
+    isReviewAccount: isReviewAccount || false,
   });
 }
 
@@ -159,7 +160,7 @@ async function searchPhotographers({ userId, location, query, state, district, c
   }
 
   const mongoose = require('mongoose');
-  const baseFilter = {};
+  const baseFilter = { isReviewAccount: { $ne: true } };
   if (!includeSelf && userId && mongoose.Types.ObjectId.isValid(userId)) {
     baseFilter._id = { $ne: userId };
   }

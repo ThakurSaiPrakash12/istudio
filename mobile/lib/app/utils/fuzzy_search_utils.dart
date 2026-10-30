@@ -67,7 +67,7 @@ class FuzzySearchUtils {
     return normalize(text).replaceAll(' ', '');
   }
 
-  /// Phonetic reduction for common Indian transliteration variants.
+  /// Phonetic reduction for common Indian transliteration variants and typo patterns.
   /// Applied only for comparison — does not modify stored data.
   static String phoneticNormalize(String text) {
     var s = normalize(text);
@@ -77,7 +77,55 @@ class FuzzySearchUtils {
     s = s.replaceAll('oo', 'u');
     s = s.replaceAll('sh', 's');
     s = s.replaceAll('ck', 'k');
+    s = s.replaceAll('kh', 'k');
+    s = s.replaceAll('dh', 'd');
+    s = s.replaceAll('bh', 'b');
+    s = s.replaceAll('gh', 'g');
+    s = s.replaceAll('ch', 'c');
+    s = s.replaceAll('w', 'v');
+    s = s.replaceAll('z', 'j');
+    // Collapse duplicate letters: 'chennai' -> 'chenai', 'kapoor' -> 'kapor', 'wedding' -> 'weding'
+    s = s.replaceAll(RegExp(r'([a-z])\1+'), r'$1');
     return s;
+  }
+
+  /// Damerau-Levenshtein edit distance: counts insertions, deletions, substitutions,
+  /// and transpositions of adjacent characters as a single edit.
+  static int damerauLevenshtein(String a, String b) {
+    if (a == b) return 0;
+    if (a.isEmpty) return b.length;
+    if (b.isEmpty) return a.length;
+
+    final aLen = a.length;
+    final bLen = b.length;
+    final d = List.generate(aLen + 1, (_) => List.filled(bLen + 1, 0));
+
+    for (int i = 0; i <= aLen; i++) {
+      d[i][0] = i;
+    }
+    for (int j = 0; j <= bLen; j++) {
+      d[0][j] = j;
+    }
+
+    for (int i = 1; i <= aLen; i++) {
+      for (int j = 1; j <= bLen; j++) {
+        final cost = a.codeUnitAt(i - 1) == b.codeUnitAt(j - 1) ? 0 : 1;
+        d[i][j] = min(
+          d[i - 1][j] + 1,
+          min(
+            d[i][j - 1] + 1,
+            d[i - 1][j - 1] + cost,
+          ),
+        );
+        if (i > 1 &&
+            j > 1 &&
+            a.codeUnitAt(i - 1) == b.codeUnitAt(j - 2) &&
+            a.codeUnitAt(i - 2) == b.codeUnitAt(j - 1)) {
+          d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1);
+        }
+      }
+    }
+    return d[aLen][bLen];
   }
 
   // ─── Configurable alias / synonym tables ─────────────────────────────────
@@ -173,46 +221,87 @@ class FuzzySearchUtils {
     'streaming':      ['Internet Live Streaming'],
     'webcast':        ['Internet Live Streaming'],
     'broadcast':      ['Internet Live Streaming'],
+    // Common typo variants
+    'vedio':          ['Traditional Videographer', 'Cinematic Videographer', 'Videography', 'Video Editor'],
+    'drne':           ['Drones'],
+    'weding':         ['Traditional Photographer', 'Candid Photographer'],
+    'wedin':          ['Traditional Photographer', 'Candid Photographer'],
+    'canid':          ['Candid Photographer'],
+    'potrait':        ['Candid Photographer', 'Traditional Photographer'],
+    'potraits':       ['Candid Photographer', 'Traditional Photographer'],
+    'preweding':      ['Traditional Photographer', 'Candid Photographer'],
+    'livestrem':      ['Internet Live Streaming'],
   };
+
+  /// Return consonant skeleton by stripping vowels and non-alphabetic chars.
+  /// Useful for Indian transliterations and abbreviation typos (e.g. "hydrbd" -> "hdrbd").
+  static String consonantSkeleton(String text) {
+    if (text.isEmpty) return '';
+    return text.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '').replaceAll(RegExp(r'[aeiouy]'), '');
+  }
 
   // ─── Token-level fuzzy match ──────────────────────────────────────────────
 
   /// Returns true when qToken and tToken are considered equivalent.
-  /// Short-token guard: tokens ≤ 2 chars must be exact-equal.
+  /// Handles spelling mistakes across studio name, owner name, category, and location.
   static bool tokenFuzzyMatch(String qToken, String tToken) {
     if (qToken.isEmpty || tToken.isEmpty) return false;
     if (qToken == tToken) return true;
 
-    // Short-token guard: no fuzzy for very short tokens
-    if (qToken.length <= 2 || tToken.length <= 2) return qToken == tToken;
+    // Short-token guard: allow exact or prefix
+    if (qToken.length <= 2 || tToken.length <= 2) {
+      return qToken == tToken || tToken.startsWith(qToken);
+    }
 
     final shorter = min(qToken.length, tToken.length);
 
     // Substring containment — only meaningful if the common part is ≥ 3 chars
     if (shorter >= 3 && (tToken.contains(qToken) || qToken.contains(tToken))) return true;
 
-    // City alias equivalence
+    // City alias equivalence (including typo on alias, e.g. "vzag" for "vizag" -> "visakhapatnam")
     final qAlias = cityAliases[qToken];
-    if (qAlias != null && (qAlias == tToken || tToken.contains(qAlias))) return true;
+    if (qAlias != null) {
+      if (qAlias == tToken || tToken.contains(qAlias) || levenshtein(qAlias, tToken) <= 1) return true;
+    }
     final tAlias = cityAliases[tToken];
-    if (tAlias != null && (tAlias == qToken || qToken.contains(tAlias))) return true;
+    if (tAlias != null) {
+      if (tAlias == qToken || qToken.contains(tAlias) || levenshtein(tAlias, qToken) <= 1) return true;
+    }
 
-    // Phonetic equivalence
+    // Phonetic equivalence (handles single/double letters and Indian transliterations)
     final qP = phoneticNormalize(qToken);
     final tP = phoneticNormalize(tToken);
     if (qP == tP) return true;
     if (qP.length >= 3 && tP.length >= 3 && (tP.contains(qP) || qP.contains(tP))) return true;
 
-    // Length-aware Levenshtein thresholds
+    // Length-aware Levenshtein / Damerau thresholds (tolerant to spelling mistakes)
     final maxLen = max(qToken.length, tToken.length);
-    final dist   = levenshtein(qToken, tToken);
-    if (maxLen <= 4 && dist <= 1) return true;
-    if (maxLen <= 7 && dist <= 1) return true;
-    if (maxLen >= 8 && dist <= 2) return true;
-    if (maxLen >= 12 && dist <= 3) return true;
+    final dDist  = damerauLevenshtein(qToken, tToken);
+    if (maxLen <= 4 && dDist <= 1) return true;
+    if (maxLen <= 7 && dDist <= 2) return true; // e.g. "annd" vs "anand", "balji" vs "balaji", "vedio" vs "video", "wedin" vs "wedding"
+    if (maxLen <= 11 && dDist <= 2) return true; // e.g. "hydrabad" vs "hyderabad", "potrait" vs "portrait", "chenai" vs "chennai"
+    if (maxLen >= 12 && dDist <= 3) return true;
+
+    // Transpositions & 2-char typo for medium words
+    if (qToken.length >= 5 && tToken.length >= 5 && (qToken.length - tToken.length).abs() <= 1 && dDist <= 2) {
+      if (similarity(qToken, tToken) >= 0.60) return true;
+    }
 
     // Phonetic Levenshtein
     if (levenshtein(qP, tP) <= 1) return true;
+
+    // Prefix typo matching: user is typing a word with a typo in real time (length >= 5)
+    if (tToken.length >= 6 && qToken.length >= 5 && qToken.length <= tToken.length) {
+      final tPrefix = tToken.substring(0, qToken.length);
+      if (damerauLevenshtein(qToken, tPrefix) <= 1) return true;
+    }
+
+    // Consonant skeleton (vowels omitted by user, e.g. "hydrbd" vs "hyderabad")
+    final qSkel = consonantSkeleton(qToken);
+    final tSkel = consonantSkeleton(tToken);
+    if (qSkel.length >= 4 && tSkel.length >= 4) {
+      if (qSkel == tSkel || tSkel.startsWith(qSkel)) return true;
+    }
 
     return false;
   }
@@ -220,9 +309,14 @@ class FuzzySearchUtils {
   // ─── Per-token score helper ───────────────────────────────────────────────
 
   /// Scores a single query token against all target tokens.
-  /// Returns 0.0 if the short-token guard fires or no match is found.
+  /// Returns 0.0 if no match is found.
   static double _scoreToken(String qToken, List<String> targetTokens, String squashedSearchable) {
-    if (qToken.length <= 2) return 0.0; // Short-token guard
+    if (qToken.isEmpty) return 0.0;
+    if (qToken.length <= 2) {
+      if (targetTokens.contains(qToken)) return 1.0;
+      if (targetTokens.any((t) => t.startsWith(qToken))) return 0.85;
+      return 0.0;
+    }
 
     double best = 0.0;
 
@@ -238,7 +332,7 @@ class FuzzySearchUtils {
         best = max(best, 0.80 + 0.10 * ratio);
       } else if (tokenFuzzyMatch(qToken, tToken)) {
         final sim = similarity(qToken, tToken);
-        best = max(best, max(sim, 0.70));
+        best = max(best, max(sim, 0.78));
       }
     }
 
@@ -276,7 +370,7 @@ class FuzzySearchUtils {
         final k = entry.key;
         if (k.length >= 4 && (k.contains(w) || w.contains(k))) {
           result.addAll(entry.value);
-        } else if (k.length >= 5 && w.length >= 5 && similarity(w, k) >= 0.80) {
+        } else if (k.length >= 5 && w.length >= 5 && similarity(w, k) >= 0.75) {
           result.addAll(entry.value);
         }
       }
@@ -303,23 +397,60 @@ class FuzzySearchUtils {
     final allTokens        = normQuery.split(' ').where((s) => s.isNotEmpty).toList();
     final meaningfulTokens = allTokens.where((t) => t.length > 2).toList();
 
-    // Empty/trivially short query
-    if (meaningfulTokens.isEmpty) return normQuery.isEmpty ? 1.0 : 0.0;
+    final normStudio = normalize(profile.studioName);
+    final normOwner = normalize(profile.ownerName);
+    final normUser = normalize(profile.username);
+    final normCity = normalize(profile.city);
+    final normDistrict = normalize(profile.district);
+    final normState = normalize(profile.state);
+    final normSpecialties = normalize(profile.specialties);
+    final normAbout = normalize(profile.about);
+    final normAddress = normalize(profile.address);
+    final normCats = profile.categories.map(normalize).toList();
 
     final combinedSearchable = [
-      normalize(profile.city),
-      normalize(profile.district),
-      normalize(profile.state),
-      normalize(profile.address),
-      normalize(profile.studioName),
-      normalize(profile.ownerName),
-      normalize(profile.username),
-      normalize(profile.specialties),
-      normalize(profile.about),
-      ...profile.categories.map(normalize),
+      normCity,
+      normDistrict,
+      normState,
+      normAddress,
+      normStudio,
+      normOwner,
+      normUser,
+      normSpecialties,
+      normAbout,
+      ...normCats,
     ].join(' ');
 
     final squashedSearchable = squash(combinedSearchable);
+
+    // Short queries (1 or 2 characters, e.g. "m" or "mu"):
+    // Prioritize word-prefix matches across studio name, owner name, username, city, categories, etc.
+    if (meaningfulTokens.isEmpty) {
+      final q = normQuery;
+      bool wordsStartsWith(String str) {
+        if (str.isEmpty) return false;
+        final words = str.split(' ').where((w) => w.isNotEmpty);
+        return words.any((w) => w.startsWith(q));
+      }
+
+      if (normStudio.startsWith(q)) return 1.0;
+      if (wordsStartsWith(normStudio)) return 0.95;
+      if (normOwner.startsWith(q) || wordsStartsWith(normOwner)) return 0.93;
+      if (normUser.startsWith(q)) return 0.92;
+      if (normCity.startsWith(q) || wordsStartsWith(normCity)) return 0.90;
+      if (normDistrict.startsWith(q) || wordsStartsWith(normDistrict)) return 0.89;
+      if (normState.startsWith(q) || wordsStartsWith(normState)) return 0.88;
+      if (normCats.any((c) => wordsStartsWith(c))) return 0.87;
+      if (wordsStartsWith(normSpecialties)) return 0.85;
+      if (wordsStartsWith(normAbout)) return 0.83;
+      if (wordsStartsWith(combinedSearchable)) return 0.80;
+
+      // Substring match for short queries
+      if (q.length >= 2 && combinedSearchable.contains(q)) return 0.70;
+      if (q.length == 1 && (normStudio.contains(q) || normOwner.contains(q) || normCity.contains(q))) return 0.60;
+
+      return 0.0;
+    }
 
     // ── Tier 1: exact phrase ────────────────────────────────────────────────
     if (combinedSearchable.contains(normQuery)) return 1.0;
@@ -350,7 +481,7 @@ class FuzzySearchUtils {
 
     for (final qToken in meaningfulTokens) {
       final ts = _scoreToken(qToken, targetTokens, squashedSearchable);
-      if (ts >= 0.70) {
+      if (ts >= 0.65) {
         matchedCount++;
         totalScore += ts;
       }

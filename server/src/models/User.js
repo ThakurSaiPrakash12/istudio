@@ -50,6 +50,7 @@ const userSchema = new mongoose.Schema(
     longitude: { type: Number, default: null },
     logoUrl: { type: String, default: '' },
     paymentQrUrl: { type: String, default: '' },
+    isReviewAccount: { type: Boolean, default: false },
   },
   {
     timestamps: true,

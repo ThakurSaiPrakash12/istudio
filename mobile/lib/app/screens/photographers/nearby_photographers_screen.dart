@@ -45,7 +45,9 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
   late final TextEditingController _locationSearchController;
   final Set<String> _selectedCategories = {};
   bool _loading = false;
+  bool _isBackgroundSyncing = false;
   List<PhotographerProfile> _photographers = [];
+  List<PhotographerProfile> _allPhotographers = [];
   String? _errorMessage;
   String? _selectedState;
   String? _selectedDistrict;
@@ -61,7 +63,18 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
     final defaultLoc = widget.initialLocation ?? '';
     _searchController = TextEditingController(text: defaultLoc);
     _locationSearchController = TextEditingController();
-    _fetchPhotographers();
+
+    // Use preloaded cache if already available in memory for instantaneous rendering
+    if (PhotographerService.preloadedPhotographers.isNotEmpty) {
+      _allPhotographers = List.from(PhotographerService.preloadedPhotographers);
+      _photographers = List.from(_allPhotographers);
+      _loading = false;
+      if (defaultLoc.isNotEmpty) {
+        _applyLocalFilter();
+      }
+    }
+
+    _fetchPhotographers(isBackgroundSync: _allPhotographers.isNotEmpty);
   }
 
   @override
@@ -72,11 +85,63 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
     super.dispose();
   }
 
+  /// Instantly filters the preloaded photographers in memory as the user types (0ms latency).
+  void _applyLocalFilter() {
+    final queryText = _searchController.text.trim();
+    if (_allPhotographers.isEmpty) return;
+
+    List<PhotographerProfile> filtered = List.from(_allPhotographers);
+
+    // Apply category filters
+    if (_selectedCategories.isNotEmpty) {
+      filtered = filtered.where((p) {
+        return _selectedCategories.any((cat) =>
+            p.categories.any((c) => c.toLowerCase().contains(cat.toLowerCase())) ||
+            p.specialties.toLowerCase().contains(cat.toLowerCase()));
+      }).toList();
+    }
+
+    // Apply state & district filters
+    if (_selectedState != null && _selectedState!.isNotEmpty) {
+      final s = _selectedState!.toLowerCase();
+      filtered = filtered.where((p) => p.state.toLowerCase() == s).toList();
+    }
+    if (_selectedDistrict != null && _selectedDistrict!.isNotEmpty) {
+      final d = _selectedDistrict!.toLowerCase();
+      filtered = filtered.where((p) => p.district.toLowerCase() == d || p.city.toLowerCase() == d).toList();
+    }
+
+    // If query text is present, rank and filter by fuzzy/prefix relevance
+    if (queryText.isNotEmpty) {
+      final scored = <MapEntry<PhotographerProfile, double>>[];
+      for (final p in filtered) {
+        final score = FuzzySearchUtils.scorePhotographer(p, queryText);
+        if (score > 0) {
+          scored.add(MapEntry(p, score));
+        }
+      }
+      scored.sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return a.key.displayName.toLowerCase().compareTo(b.key.displayName.toLowerCase());
+      });
+      filtered = scored.map((e) => e.key).toList();
+    }
+
+    setState(() {
+      _photographers = filtered;
+    });
+  }
+
   void _onSearchChanged(String text) {
+    // 1. Instant keystroke update from preloaded cache
+    _applyLocalFilter();
+
+    // 2. Debounced background sync with backend
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 350), () {
       if (mounted) {
-        _fetchPhotographers();
+        _fetchPhotographers(isBackgroundSync: true);
       }
     });
   }
@@ -90,7 +155,7 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
     return '';
   }
 
-  Future<void> _fetchPhotographers() async {
+  Future<void> _fetchPhotographers({bool isBackgroundSync = false}) async {
     final token = context.read<AuthProvider>().token;
     if (token == null || token.isEmpty) return;
 
@@ -98,10 +163,17 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
     // If a newer call starts before this one resolves, we discard stale results.
     final seq = ++_fetchSeq;
 
-    setState(() {
-      _loading = true;
-      _errorMessage = null;
-    });
+    if (!isBackgroundSync && _allPhotographers.isEmpty) {
+      setState(() {
+        _loading = true;
+        _errorMessage = null;
+      });
+    } else {
+      setState(() {
+        _isBackgroundSyncing = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final queryLoc = _searchController.text.trim();
@@ -172,15 +244,33 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
         });
       }
 
+      // Maintain master in-memory cache for instant preloading
+      if (queryLoc.isEmpty && _selectedCategories.isEmpty && _selectedDistrict == null) {
+        _allPhotographers = List.from(sortedResults);
+        PhotographerService.preloadedPhotographers = List.from(sortedResults);
+      } else {
+        final existingIds = _allPhotographers.map((p) => p.id).toSet();
+        for (final p in sortedResults) {
+          if (!existingIds.contains(p.id)) {
+            _allPhotographers.add(p);
+          }
+        }
+        PhotographerService.preloadedPhotographers = List.from(_allPhotographers);
+      }
+
       setState(() {
         _photographers = sortedResults;
         _loading = false;
+        _isBackgroundSyncing = false;
       });
     } catch (e) {
       if (seq != _fetchSeq || !mounted) return;
       setState(() {
         _loading = false;
-        _errorMessage = 'Unable to load photographers near this location.';
+        _isBackgroundSyncing = false;
+        if (_photographers.isEmpty) {
+          _errorMessage = 'Unable to load photographers near this location.';
+        }
       });
     }
   }
@@ -1285,7 +1375,8 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
                               ),
                               onSubmitted: (_) {
                                 _debounceTimer?.cancel();
-                                _fetchPhotographers();
+                                _applyLocalFilter();
+                                _fetchPhotographers(isBackgroundSync: _photographers.isNotEmpty);
                               },
                             ),
                           ),
@@ -1295,13 +1386,20 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
                               onPressed: () {
                                 _debounceTimer?.cancel();
                                 _searchController.clear();
-                                _fetchPhotographers();
+                                if (_allPhotographers.isNotEmpty) {
+                                  _applyLocalFilter();
+                                }
+                                _fetchPhotographers(isBackgroundSync: true);
                               },
                             ),
                           IconButton(
                             tooltip: 'Search',
                             icon: const Icon(Icons.arrow_forward_rounded, color: AppColors.sky),
-                            onPressed: _fetchPhotographers,
+                            onPressed: () {
+                              _debounceTimer?.cancel();
+                              _applyLocalFilter();
+                              _fetchPhotographers(isBackgroundSync: _photographers.isNotEmpty);
+                            },
                           ),
                           const SizedBox(width: 2),
                         ],
@@ -1441,6 +1539,13 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
             ],
           ),
         ),
+
+        if (_isBackgroundSyncing)
+          const LinearProgressIndicator(
+            minHeight: 2,
+            color: AppColors.sky,
+            backgroundColor: Colors.transparent,
+          ),
 
         // List / Loading / Error / Empty Content
         Expanded(

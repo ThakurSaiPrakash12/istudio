@@ -42,8 +42,7 @@ class AuthProvider extends ChangeNotifier {
   bool get hasVerifiedGoogleMaps => _hasVerifiedGoogleMaps;
   bool get needsLocationUpdate =>
       isLoggedIn &&
-      !_hasVerifiedGoogleMaps &&
-      !_user!.hasVerifiedLocation;
+      (!_hasVerifiedGoogleMaps || !_user!.hasVerifiedLocation);
 
   Future<void> completeFeatureTour() async {
     _hasSeenFeatureTour = true;

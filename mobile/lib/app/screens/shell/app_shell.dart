@@ -17,6 +17,7 @@ import '../home/home_screen.dart';
 import '../invoice/invoice_screen.dart';
 import '../photographers/nearby_photographers_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../services/photographer_service.dart';
 import '../../routes/smooth_page_route.dart';
 
 class AppShell extends StatefulWidget {
@@ -49,6 +50,9 @@ class _AppShellState extends State<AppShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final auth = context.read<AuthProvider>();
+      if (auth.token != null && auth.token!.isNotEmpty) {
+        PhotographerService.preloadIfEmpty(auth.token!);
+      }
       final user = auth.user;
       // Show a location prompt only for existing users who have filled their
       // basic profile but haven't linked a Google Maps location yet.

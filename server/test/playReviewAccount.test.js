@@ -49,7 +49,7 @@ describe('Google Play review account', () => {
   it('rejects incomplete or invalid credentials', async () => {
     await assert.rejects(
       ensurePlayReviewAccount({ email: 'test@gmail.com', password: '' }),
-      /both be set/,
+      /both email and password are required/,
     );
     await assert.rejects(
       ensurePlayReviewAccount({ email: 'test@gmail.com', password: 'short' }),

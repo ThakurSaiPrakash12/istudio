@@ -6,6 +6,21 @@ class PhotographerService {
 
   final ApiService _api;
 
+  /// Global in-memory cache of discovered photographers for instant live preloaded search
+  static List<PhotographerProfile> preloadedPhotographers = [];
+
+  /// Asynchronously preloads photographers into memory so Discover tab opens instantly
+  static Future<void> preloadIfEmpty(String token) async {
+    if (preloadedPhotographers.isNotEmpty || token.isEmpty) return;
+    try {
+      final service = PhotographerService();
+      final list = await service.searchNearby(token: token);
+      if (list.isNotEmpty) {
+        preloadedPhotographers = list;
+      }
+    } catch (_) {}
+  }
+
   Future<List<PhotographerProfile>> searchNearby({
     required String token,
     String? location,

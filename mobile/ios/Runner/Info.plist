@@ -4,6 +4,8 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -48,7 +50,7 @@
 		</dict>
 	</dict>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Lumen needs photo access so you can upload your studio logo.</string>
+	<string>Clients Hub requires access to your photo library to select and upload your studio logo, payment QR code, or payment receipts.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
@@ -73,5 +75,22 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>GIDClientID</key>
+<string>764740513996-lhvgssp5ofup18bqjo6j604lvj4vtbje.apps.googleusercontent.com</string>
+
+<key>GIDServerClientID</key>
+<string>764740513996-ki20rajjiiskhbven06cgl6aglupk5jf.apps.googleusercontent.com</string>
+
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>com.googleusercontent.apps.764740513996-lhvgssp5ofup18bqjo6j604lvj4vtbje</string>
+        </array>
+    </dict>
+</array>
 </dict>
 </plist>
