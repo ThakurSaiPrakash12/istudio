@@ -21,6 +21,7 @@ async function ensureReviewAccount({
   password,
   prefix = 'review',
   label = 'App Store Reviewer',
+  phone = '9999900001',
   repository = userRepository,
 }) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -39,7 +40,7 @@ async function ensureReviewAccount({
 
   const fullProfile = {
     studioName: 'Clients Hub Studio',
-    phone: '9999900001',
+    phone,
     city: 'Cupertino',
     state: 'California',
     district: 'Santa Clara',
@@ -140,6 +141,7 @@ async function ensurePlayReviewAccount({
     password,
     prefix: 'play_review',
     label: 'Google Play Reviewer',
+    phone: '9999900002', // phone is unique per user, so it must differ from the Apple account
     repository,
   });
 }
