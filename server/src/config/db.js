@@ -23,7 +23,18 @@ async function connectDb() {
   }
 
   mongoose.set('strictQuery', true);
-  await mongoose.connect(process.env.MONGODB_URI);
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+  } catch (error) {
+    // Some local resolvers (e.g. router DNS over link-local IPv6) refuse the
+    // SRV lookups Node makes for mongodb+srv:// URIs. Retry once via public DNS.
+    if (!(error && error.syscall === 'querySrv') && !/querySrv/.test(String(error && error.message))) {
+      throw error;
+    }
+    logger.warn('MongoDB SRV lookup failed; retrying with public DNS servers', { error: error.message });
+    require('dns').setServers(['8.8.8.8', '1.1.1.1']);
+    await mongoose.connect(process.env.MONGODB_URI);
+  }
   const dbName = mongoose.connection.db.databaseName;
   mongoose.connection.on('error', (error) => {
     logger.error('MongoDB connection error', error);
