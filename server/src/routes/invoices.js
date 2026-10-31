@@ -33,9 +33,10 @@ const createRules = [
     .isLength({ min: 10, max: 10 })
     .withMessage('Enter a valid 10-digit phone number'),
   body('address')
+    .optional({ checkFalsy: true })
     .trim()
-    .isLength({ min: 1, max: 300 })
-    .withMessage('Enter a billing address up to 300 characters'),
+    .isLength({ max: 300 })
+    .withMessage('Billing address can be up to 300 characters'),
   body('dueDate').isISO8601().withMessage('Choose a valid due date'),
   body('issuedOn').optional().isISO8601().withMessage('Enter a valid issue date'),
   body('amountReceived')
@@ -63,7 +64,7 @@ const updateRules = [
     .isLength({ min: 10, max: 10 })
     .isNumeric()
     .withMessage('Enter a valid 10-digit phone number'),
-  body('address').optional().trim().isLength({ min: 1, max: 300 }),
+  body('address').optional().trim().isLength({ max: 300 }),
   body('upiId').optional().trim().isLength({ max: 120 }),
   body('issuedOn').optional().isISO8601().withMessage('Enter a valid issue date'),
   body('dueDate').optional().isISO8601().withMessage('Enter a valid due date'),

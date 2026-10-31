@@ -83,7 +83,7 @@ const invoiceSchema = new mongoose.Schema(
     eventName: { type: String, required: true, trim: true },
     contactName: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
-    address: { type: String, required: true, trim: true },
+    address: { type: String, default: '', trim: true },
     issuedOn: { type: Date, required: true, default: Date.now },
     dueDate: { type: Date, required: true },
     deliverables: { type: [deliverableSchema], default: [] },
