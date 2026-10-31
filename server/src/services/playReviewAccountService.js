@@ -71,6 +71,62 @@ async function ensureReviewAccount({
   return { created: true };
 }
 
+// Review accounts use dummy mailboxes, so no real verification email can be
+// received. Account deletion accepts this fixed code for them instead.
+const REVIEW_DELETE_OTP = process.env.REVIEW_DELETE_OTP || '123456';
+
+function getReviewAccountConfigs() {
+  const configs = [
+    {
+      email: process.env.APPLE_REVIEW_EMAIL || 'applereview@clientshub.com',
+      password: process.env.APPLE_REVIEW_PASSWORD || '123456789',
+      prefix: 'apple_review',
+      label: 'Apple App Store Reviewer',
+    },
+    {
+      email: process.env.PLAY_REVIEW_EMAIL,
+      password: process.env.PLAY_REVIEW_PASSWORD,
+      prefix: 'play_review',
+      label: 'Google Play Reviewer',
+    },
+  ];
+  return configs
+    .map((c) => ({ ...c, email: String(c.email || '').trim().toLowerCase() }))
+    .filter((c) => c.email && c.password);
+}
+
+function isReviewEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return !!normalized && getReviewAccountConfigs().some((c) => c.email === normalized);
+}
+
+function isReviewDeleteOtp(email, otp) {
+  return isReviewEmail(email) && String(otp || '').trim() === REVIEW_DELETE_OTP;
+}
+
+/**
+ * Re-create a deleted review account as a brand-new, empty user when someone
+ * logs in with its credentials. Returns the created user, or null when the
+ * identifier/password do not match a review account.
+ */
+async function createFreshReviewAccountIfCredentialsMatch(
+  identifier,
+  password,
+  repository = userRepository,
+) {
+  const normalized = String(identifier || '').trim().toLowerCase();
+  const config = getReviewAccountConfigs().find((c) => c.email === normalized);
+  if (!config || String(password || '') !== String(config.password)) return null;
+
+  const usernameSuffix = crypto.createHash('sha256').update(config.email).digest('hex').slice(0, 12);
+  return repository.createUser({
+    username: `${config.prefix}_${usernameSuffix}`,
+    email: config.email,
+    password: await bcrypt.hash(String(config.password), 12),
+    isReviewAccount: true,
+  });
+}
+
 /**
  * Ensures the Google Play review account exists (backward-compatible).
  */
@@ -105,4 +161,11 @@ async function ensureAppleReviewAccount({
   });
 }
 
-module.exports = { ensureReviewAccount, ensurePlayReviewAccount, ensureAppleReviewAccount };
+module.exports = {
+  ensureReviewAccount,
+  ensurePlayReviewAccount,
+  ensureAppleReviewAccount,
+  isReviewEmail,
+  isReviewDeleteOtp,
+  createFreshReviewAccountIfCredentialsMatch,
+};

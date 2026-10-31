@@ -8,6 +8,7 @@ const otpService = require("../services/otpService");
 const googleAuthService = require("../services/googleAuthService");
 const { uploadToCloudinary } = require("../config/cloudinary");
 const logger = require("../config/logger");
+const reviewAccounts = require("../services/playReviewAccountService");
 
 const PHOTON_BASE_URL =
   process.env.PHOTON_API_URL || "https://photon.komoot.io/api";
@@ -212,6 +213,14 @@ async function login(req, res) {
       if (cleaned.length === 10) {
         user = await userRepository.findByPhone(cleaned);
       }
+    }
+
+    // 4. A deleted store-review account signs back in as a fresh, empty user
+    if (!user && identifier.includes("@")) {
+      user = await reviewAccounts.createFreshReviewAccountIfCredentialsMatch(
+        identifier,
+        password,
+      );
     }
 
     if (!user) {
@@ -1269,6 +1278,15 @@ async function deleteAccountSendOtp(req, res) {
       });
     }
 
+    // Review accounts use dummy mailboxes: skip the email, a fixed code is accepted.
+    if (reviewAccounts.isReviewEmail(email)) {
+      return res.json({
+        success: true,
+        message: `Verification code sent to ${email}.`,
+        email,
+      });
+    }
+
     const result = await otpService.generateAndSendEmailOtp(email);
     return res.json({
       success: true,
@@ -1312,14 +1330,16 @@ async function deleteAccountVerifyOtp(req, res) {
       });
     }
 
-    try {
-      await otpService.verifyEmailOtp(email, otp);
-    } catch (otpErr) {
-      const status = otpErr.statusCode || 400;
-      return res.status(status).json({
-        success: false,
-        message: otpErr.message || "Invalid or expired verification code.",
-      });
+    if (!reviewAccounts.isReviewDeleteOtp(email, otp)) {
+      try {
+        await otpService.verifyEmailOtp(email, otp);
+      } catch (otpErr) {
+        const status = otpErr.statusCode || 400;
+        return res.status(status).json({
+          success: false,
+          message: otpErr.message || "Invalid or expired verification code.",
+        });
+      }
     }
 
     const deleteToken = jwt.sign(
@@ -1395,7 +1415,7 @@ async function deleteAccount(req, res) {
           message: "Verification session expired. Please verify your code again.",
         });
       }
-    } else {
+    } else if (!reviewAccounts.isReviewDeleteOtp(user.email, otp)) {
       try {
         await otpService.verifyEmailOtp(user.email, otp);
       } catch (otpErr) {
