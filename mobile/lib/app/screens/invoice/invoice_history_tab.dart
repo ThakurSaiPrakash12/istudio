@@ -93,9 +93,12 @@ class _InvoiceHistoryTabState extends State<InvoiceHistoryTab> {
       case InvoiceSheetAction.share:
         try {
           final studio = context.read<AuthProvider>().user;
+          final box = context.findRenderObject() as RenderBox?;
+          final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
           await InvoicePdfService.shareInvoice(
             invoice: latest,
             studio: studio,
+            sharePositionOrigin: origin,
           );
         } catch (_) {
           if (!mounted) return;

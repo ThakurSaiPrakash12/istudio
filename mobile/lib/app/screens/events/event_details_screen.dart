@@ -12,6 +12,7 @@ import '../../providers/events_provider.dart';
 import '../../routes/smooth_page_route.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/app_image_picker.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/geo_distance_utils.dart';
 import '../../widgets/studio_app_bar.dart';
@@ -3400,7 +3401,13 @@ Widget _buildNotesSection(BuildContext context, StudioEvent event) {
     try {
       final effInvoice = _syncInvoiceWithEvent(context, invoice);
       final studio = context.read<AuthProvider?>()?.user;
-      await InvoicePdfService.shareInvoice(invoice: effInvoice, studio: studio);
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+      await InvoicePdfService.shareInvoice(
+        invoice: effInvoice,
+        studio: studio,
+        sharePositionOrigin: origin,
+      );
     } catch (_) {
       if (!context.mounted) return;
       AppSnackBar.error(context, 'Could not share invoice PDF.');
@@ -3907,11 +3914,11 @@ Widget _buildNotesSection(BuildContext context, StudioEvent event) {
                               : () async {
                                   setModalState(() => isUploadingProof = true);
                                   try {
-                                    final picked = await ImagePicker()
-                                        .pickImage(
-                                          source: ImageSource.gallery,
-                                          imageQuality: 85,
-                                        );
+                                    final picked = await AppImagePicker.pickImage(
+                                      context,
+                                      source: ImageSource.gallery,
+                                      imageQuality: 85,
+                                    );
                                     if (picked != null) {
                                       final bytes = await picked.readAsBytes();
                                       final fname = picked.name.toLowerCase();
@@ -4104,18 +4111,11 @@ Widget _buildNotesSection(BuildContext context, StudioEvent event) {
     required bool replacing,
   }) async {
     final provider = context.read<EventsProvider>();
-    final XFile? picked;
-    try {
-      picked = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-      );
-    } catch (_) {
-      if (context.mounted) {
-        AppSnackBar.error(context, 'Could not open the gallery.');
-      }
-      return false;
-    }
+    final picked = await AppImagePicker.pickImage(
+      context,
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     if (picked == null) return false;
     final bytes = await picked.readAsBytes();
     final error = await provider.uploadPaymentProof(

@@ -15,6 +15,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    appleId: {
+      type: String,
+      default: null,
+    },
     phone: {
       type: String,
       required: false,
@@ -68,6 +72,10 @@ userSchema.index(
   { googleId: 1 },
   { unique: true, partialFilterExpression: { googleId: { $type: 'string', $gt: '' } } },
 );
+userSchema.index(
+  { appleId: 1 },
+  { unique: true, partialFilterExpression: { appleId: { $type: 'string', $gt: '' } } },
+);
 
 userSchema.statics.migrateIndexes = async function migrateIndexes() {
   let existing = [];
@@ -76,7 +84,7 @@ userSchema.statics.migrateIndexes = async function migrateIndexes() {
   } catch (error) {
     if (error.codeName !== 'NamespaceNotFound') throw error;
   }
-  for (const name of ['phone_1', 'googleId_1']) {
+  for (const name of ['phone_1', 'googleId_1', 'appleId_1']) {
     const index = existing.find((item) => item.name === name);
     if (index && !index.partialFilterExpression) {
       await this.collection.dropIndex(name);
@@ -120,6 +128,7 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     logoUrl: this.logoUrl || '',
     paymentQrUrl: this.paymentQrUrl || '',
     googleId: this.googleId || '',
+    appleId: this.appleId || '',
   };
 };
 

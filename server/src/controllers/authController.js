@@ -6,6 +6,7 @@ const https = require("https");
 const userRepository = require("../repositories/userRepository");
 const otpService = require("../services/otpService");
 const googleAuthService = require("../services/googleAuthService");
+const appleAuthService = require("../services/appleAuthService");
 const { uploadToCloudinary } = require("../config/cloudinary");
 const logger = require("../config/logger");
 const reviewAccounts = require("../services/playReviewAccountService");
@@ -67,7 +68,7 @@ function signToken(user) {
       phone: user.phone,
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || "7d", algorithm: "HS256" },
+    { expiresIn: process.env.JWT_EXPIRES_IN || "90d", algorithm: "HS256" },
   );
 }
 
@@ -278,12 +279,37 @@ async function me(req, res) {
     return res.json({
       success: true,
       user: user.toPublicJSON(),
+      token: signToken(user),
     });
   } catch (error) {
     logCaught(req, "Session error", error);
     return res.status(500).json({
       success: false,
       message: "Unable to restore your session.",
+    });
+  }
+}
+
+async function refreshToken(req, res) {
+  try {
+    const user = await userRepository.findById(req.userId);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Your session is no longer valid.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      token: signToken(user),
+      user: user.toPublicJSON(),
+    });
+  } catch (error) {
+    logCaught(req, "Token refresh error", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to refresh session.",
     });
   }
 }
@@ -789,7 +815,16 @@ async function forgotPasswordReset(req, res) {
     if (!user && resetToken) {
       try {
         const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
-        if (decoded.id) {
+        if (decoded.purpose === 'password_reset') {
+          if (decoded.id) {
+            user = await userRepository.findById(decoded.id);
+          } else if (decoded.email) {
+            user = await userRepository.findByEmail(decoded.email);
+          } else if (decoded.username) {
+            user = await userRepository.findByUsername(decoded.username);
+          }
+        } else if (decoded.id) {
+          // Legacy JWT resetToken (verify-username flow)
           user = await userRepository.findById(decoded.id);
         } else if (decoded.username) {
           user = await userRepository.findByUsername(decoded.username);
@@ -832,6 +867,122 @@ async function forgotPasswordReset(req, res) {
     return res.status(status).json({
       success: false,
       message: error.message || "Unable to reset password.",
+    });
+  }
+}
+
+/**
+ * NEW unified forgot-password flow:
+ * POST /auth/forgot-password/lookup
+ * Body: { identifier } — username or email
+ * Looks up user, sends 6-digit OTP to their email, returns a short-lived
+ * lookupToken (JWT) that the client must pass back when verifying the OTP.
+ */
+async function forgotPasswordLookup(req, res) {
+  try {
+    const identifier = String(req.body.identifier || "").trim();
+    if (!identifier) {
+      return res.status(400).json({ success: false, message: "Enter your username or email address." });
+    }
+
+    // Try email first, then username
+    let user = null;
+    if (identifier.includes('@')) {
+      user = await userRepository.findByEmail(identifier.toLowerCase());
+    }
+    if (!user) {
+      user = await userRepository.findByUsername(identifier);
+    }
+    if (!user) {
+      // Generic message — do not reveal whether email/username exists
+      return res.json({
+        success: true,
+        message: "If an account with that identifier exists, a verification code has been sent to its email address.",
+      });
+    }
+
+    const email = user.email;
+    if (!email) {
+      return res.status(422).json({
+        success: false,
+        message: "No email address is associated with this account. Please contact support.",
+      });
+    }
+
+    // Send OTP to email
+    await otpService.generateAndSendEmailOtp(email, user.username || "");
+
+    // Issue a short-lived lookupToken so the OTP verify step can resolve the user
+    const lookupToken = jwt.sign(
+      { id: (user._id || user.id).toString(), email, purpose: 'fp_lookup' },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m', algorithm: 'HS256' },
+    );
+
+    const maskedEmail = email.replace(/(.{2}).+(@.+)/, '$1***$2');
+
+    return res.json({
+      success: true,
+      message: `A verification code has been sent to ${maskedEmail}.`,
+      lookupToken,
+      maskedEmail,
+    });
+  } catch (error) {
+    logCaught(req, "forgotPasswordLookup error", error);
+    const status = error.statusCode || 500;
+    return res.status(status).json({
+      success: false,
+      message: error.message || "Unable to send verification code.",
+    });
+  }
+}
+
+/**
+ * POST /auth/forgot-password/verify-otp  (new unified endpoint)
+ * Body: { lookupToken, otp }
+ * Verifies OTP from email and returns a password-reset token.
+ */
+async function forgotPasswordVerifyOtpUnified(req, res) {
+  try {
+    const lookupToken = String(req.body.lookupToken || "").trim();
+    const otp = String(req.body.otp || "").trim();
+
+    if (!lookupToken || !otp) {
+      return res.status(400).json({ success: false, message: "Verification code and session are required." });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(lookupToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    } catch (_) {
+      return res.status(401).json({ success: false, message: "Session expired. Please start over." });
+    }
+
+    if (decoded.purpose !== 'fp_lookup' || !decoded.email || !decoded.id) {
+      return res.status(401).json({ success: false, message: "Invalid session. Please start over." });
+    }
+
+    // Verify email OTP
+    await otpService.verifyEmailOtp(decoded.email, otp);
+
+    // Issue a password reset token
+    const resetToken = jwt.sign(
+      { id: decoded.id, email: decoded.email, purpose: 'password_reset' },
+      process.env.JWT_SECRET,
+      { expiresIn: '10m', algorithm: 'HS256' },
+    );
+
+    return res.json({
+      success: true,
+      message: "Verification successful.",
+      resetToken,
+    });
+  } catch (error) {
+    logCaught(req, "forgotPasswordVerifyOtpUnified error", error);
+    const status = error.statusCode || 400;
+    return res.status(status).json({
+      success: false,
+      message: error.message || "Unable to verify code.",
     });
   }
 }
@@ -1219,6 +1370,109 @@ async function googleAuth(req, res) {
   }
 }
 
+async function appleAuth(req, res) {
+  if (sendValidationError(req, res)) return;
+
+  try {
+    const identityToken = req.body.identityToken || req.body.idToken || req.body.token;
+    const userIdentifier = req.body.userIdentifier || req.body.appleId;
+    const email = req.body.email;
+    const fullName = req.body.fullName || req.body.name;
+
+    if (!identityToken && !userIdentifier) {
+      return res.status(400).json({
+        success: false,
+        message: "Apple authorization credentials are required.",
+      });
+    }
+
+    let profile;
+    try {
+      profile = await appleAuthService.verifyAppleToken({
+        identityToken,
+        userIdentifier,
+        email,
+        fullName,
+      });
+    } catch (verifyErr) {
+      logCaught(req, "Apple token verification failed", verifyErr);
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired Apple authorization token.",
+      });
+    }
+
+    if (!profile || !profile.appleId) {
+      return res.status(401).json({
+        success: false,
+        message: "Could not retrieve Apple profile information.",
+      });
+    }
+
+    // 1. Check if user already exists by appleId
+    let user = await userRepository.findByAppleId(profile.appleId);
+
+    // 2. If not found by appleId, check if email matches an existing account
+    if (!user && profile.email) {
+      user = await userRepository.findByEmail(profile.email);
+      if (user) {
+        user = await userRepository.updateUser(user._id || user.id, {
+          appleId: profile.appleId,
+          ...(profile.name && !user.ownerName ? { ownerName: profile.name } : {}),
+        });
+      }
+    }
+
+    // 3. If still no user, create a new user profile
+    if (!user) {
+      let baseUsername = (profile.name || (profile.email ? profile.email.split("@")[0] : "apple_user"))
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "_")
+        .slice(0, 16);
+      if (baseUsername.length < 3) baseUsername = `user_${baseUsername}`;
+
+      let candidateUsername = baseUsername;
+      let existing = await userRepository.findByUsername(candidateUsername);
+      let suffix = 1;
+      while (existing && suffix < 100) {
+        candidateUsername = `${baseUsername.slice(0, 14)}_${Math.floor(1000 + Math.random() * 9000)}`;
+        existing = await userRepository.findByUsername(candidateUsername);
+        suffix++;
+      }
+
+      user = await userRepository.createUser({
+        username: candidateUsername,
+        appleId: profile.appleId,
+        email: profile.email || "",
+        ownerName: profile.name || candidateUsername,
+        phone: "",
+      });
+    }
+
+    const userWithPassword = await userRepository.findById(
+      user._id || user.id,
+      { withPassword: true },
+    );
+    const needsPasswordSetup = !userWithPassword || !userWithPassword.password;
+
+    const publicJson = user.toPublicJSON();
+    publicJson.needsPasswordSetup = needsPasswordSetup;
+
+    return res.json({
+      success: true,
+      token: signToken(user),
+      user: publicJson,
+      needsPasswordSetup,
+    });
+  } catch (error) {
+    logCaught(req, "Apple auth error", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to authenticate with Apple right now.",
+    });
+  }
+}
+
 async function setPassword(req, res) {
   if (sendValidationError(req, res)) return;
 
@@ -1437,6 +1691,17 @@ async function deleteAccount(req, res) {
       }
     }
 
+    // 3. If Apple user, attempt remote token revocation
+    if (user.appleId) {
+      try {
+        await appleAuthService.revokeAppleToken({
+          token: req.body?.appleRefreshToken || req.body?.authorizationCode,
+        });
+      } catch (revokeErr) {
+        logger.warn('Apple token revocation failed during deletion', { error: revokeErr.message });
+      }
+    }
+
     await userRepository.deleteUserAccount(req.userId);
     return res.json({
       success: true,
@@ -1578,8 +1843,10 @@ module.exports = {
   signupVerifyEmail,
   login,
   googleAuth,
+  appleAuth,
   setPassword,
   me,
+  refreshToken,
   updateProfile,
   uploadLogo,
   uploadPaymentQr,
@@ -1588,6 +1855,8 @@ module.exports = {
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
   forgotPasswordVerifyUsername,
+  forgotPasswordLookup,
+  forgotPasswordVerifyOtpUnified,
   verifyCurrentPassword,
   changePassword,
   deleteAccountSendOtp,

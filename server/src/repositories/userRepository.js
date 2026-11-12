@@ -46,6 +46,14 @@ async function findByGoogleId(googleId) {
   return User.findOne({ googleId });
 }
 
+async function findByAppleId(appleId) {
+  if (!appleId) return null;
+  if (memoryUsers.enabled) {
+    return memoryUsers.findByAppleId(appleId);
+  }
+  return User.findOne({ appleId });
+}
+
 async function findByEmail(email) {
   if (!email) return null;
   if (memoryUsers.enabled) {
@@ -59,18 +67,19 @@ async function findByEmail(email) {
 }
 
 async function createUser(data) {
-  const { username, phone = '', password = '', googleId = null, email = '', ownerName = '', logoUrl = '', address = '', isReviewAccount = false } = data;
+  const { username, phone = '', password = '', googleId = null, appleId = null, email = '', ownerName = '', logoUrl = '', address = '', isReviewAccount = false } = data;
   const cleanPhone = String(phone || '').trim();
   const cleanEmail = String(email || '').trim().toLowerCase();
 
   if (memoryUsers.enabled) {
-    return memoryUsers.create({ username, phone: cleanPhone, password, googleId, email: cleanEmail, ownerName: ownerName || username, logoUrl, address, categories: data.categories || [], isReviewAccount });
+    return memoryUsers.create({ username, phone: cleanPhone, password, googleId, appleId, email: cleanEmail, ownerName: ownerName || username, logoUrl, address, categories: data.categories || [], isReviewAccount });
   }
   return User.create({
     username,
     phone: cleanPhone || '',
     password: password || undefined,
     googleId: googleId || undefined,
+    appleId: appleId || undefined,
     email: cleanEmail || '',
     ownerName: ownerName || username,
     logoUrl: logoUrl || '',
@@ -295,6 +304,7 @@ module.exports = {
   findByPhone,
   findByUsername,
   findByGoogleId,
+  findByAppleId,
   findByEmail,
   findById,
   createUser,

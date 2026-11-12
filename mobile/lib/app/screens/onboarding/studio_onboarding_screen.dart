@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/app_image_picker.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/photographer_categories.dart';
 import '../../utils/validators.dart';
@@ -114,30 +115,39 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       (value == null || value.trim().isEmpty) ? message : null;
 
   Future<void> _pickLogo(ImageSource source) async {
-    final picked = await ImagePicker().pickImage(
-      source: source,
-      maxWidth: 2048,
-      maxHeight: 2048,
-      imageQuality: 85,
-    );
-    if (picked == null || !mounted) return;
-    final original = await picked.readAsBytes();
-    if (!mounted) return;
-    final cropped = await AvatarCropScreen.open(
-      context,
-      bytes: original,
-      filename: picked.name,
-    );
-    if (cropped == null || !mounted) return;
-    setState(() => _uploadingLogo = true);
-    final auth = context.read<AuthProvider>();
-    final ok = await auth.uploadLogo(cropped.bytes, cropped.filename);
-    if (!mounted) return;
-    setState(() => _uploadingLogo = false);
-    if (ok) {
-      AppSnackBar.success(context, 'Studio photo uploaded.');
-    } else {
-      AppSnackBar.error(context, auth.errorMessage ?? 'Could not upload photo.');
+    try {
+      final picked = await AppImagePicker.pickImage(
+        context,
+        source: source,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+      final original = await picked.readAsBytes();
+      if (!mounted) return;
+      final cropped = await AvatarCropScreen.open(
+        context,
+        bytes: original,
+        filename: picked.name,
+      );
+      if (cropped == null || !mounted) return;
+      setState(() => _uploadingLogo = true);
+      final auth = context.read<AuthProvider>();
+      final ok = await auth.uploadLogo(cropped.bytes, cropped.filename);
+      if (!mounted) return;
+      setState(() => _uploadingLogo = false);
+      if (ok) {
+        AppSnackBar.success(context, 'Studio photo uploaded.');
+      } else {
+        AppSnackBar.error(
+            context, auth.errorMessage ?? 'Could not upload photo.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploadingLogo = false);
+        AppSnackBar.error(context, 'Failed to pick or upload photo: $e');
+      }
     }
   }
 

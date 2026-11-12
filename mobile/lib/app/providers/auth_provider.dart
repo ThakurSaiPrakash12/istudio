@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/google_auth_service.dart';
+import '../services/apple_auth_service.dart';
 import '../services/secure_vault_service.dart';
 import '../utils/validators.dart';
 
@@ -13,15 +14,18 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider({
     AuthService? authService,
     GoogleAuthService? googleAuthService,
+    AppleAuthService? appleAuthService,
     SecureVaultService? vault,
   })  : _authService = authService ?? AuthService(),
         _googleAuthService = googleAuthService ?? GoogleAuthService(),
+        _appleAuthService = appleAuthService ?? AppleAuthService(),
         _vault = vault ?? SecureVaultService.instance {
     ApiService.onUnauthorized = handleUnauthorized;
   }
 
   final AuthService _authService;
   final GoogleAuthService _googleAuthService;
+  final AppleAuthService _appleAuthService;
   final SecureVaultService _vault;
 
   User? _user;
@@ -99,12 +103,19 @@ class AuthProvider extends ChangeNotifier {
       // 4. Fetch fresh profile in background without logging user out if server is sleeping
       if (tokenIsUsable) {
         try {
-          final freshUser = await _authService.me(storedToken);
-          _user = freshUser;
-          _hasVerifiedGoogleMaps = prefs.getBool('has_verified_google_maps_${freshUser.id}') ?? false;
-          await _vault.writeUser(freshUser);
-          if (freshUser.logoUrl.isNotEmpty) {
-            await _vault.writeStudioLogo(freshUser.id, freshUser.logoUrl);
+          final authResult = await _authService.me(storedToken);
+          _user = authResult.user;
+          // If server issued a refreshed token, persist it so EventsProvider
+          // keeps the same token reference and the guard on line 771 does not
+          // abort the reload on the next launch.
+          if (authResult.token != storedToken) {
+            _token = authResult.token;
+            await _vault.writeToken(authResult.token);
+          }
+          _hasVerifiedGoogleMaps = prefs.getBool('has_verified_google_maps_${authResult.user.id}') ?? false;
+          await _vault.writeUser(authResult.user);
+          if (authResult.user.logoUrl.isNotEmpty) {
+            await _vault.writeStudioLogo(authResult.user.id, authResult.user.logoUrl);
           }
           notifyListeners();
         } on ApiException catch (error) {
@@ -204,6 +215,47 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = kDebugMode
           ? 'Google sign-in could not be completed: $error'
           : 'Google sign-in could not be completed. Please try again.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> signInWithApple() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final appleResult = await _appleAuthService.signIn();
+      if (appleResult == null) {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final result = await _authService.loginWithApple(
+        identityToken: appleResult.identityToken,
+        userIdentifier: appleResult.userIdentifier,
+        email: appleResult.email,
+        fullName: appleResult.fullName,
+      );
+
+      await _persistSession(result);
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } on AppleAuthException catch (error) {
+      debugPrint('Apple sign-in error: ${error.message}');
+      _errorMessage = error.message;
+      return false;
+    } catch (error, stackTrace) {
+      debugPrint('Apple sign-in error: $error\n$stackTrace');
+      _errorMessage = kDebugMode
+          ? 'Apple sign-in could not be completed: $error'
+          : 'Apple sign-in could not be completed. Please try again.';
       return false;
     } finally {
       _isLoading = false;
@@ -498,20 +550,19 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> verifyForgotPasswordUsername(String username) async {
+  /// Step 1 – Lookup user by username or email; server sends OTP to email.
+  Future<Map<String, dynamic>> forgotPasswordLookup(String identifier) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
     try {
-      final res =
-          await _authService.verifyForgotPasswordUsername(username.trim());
+      final res = await _authService.forgotPasswordLookup(identifier.trim());
       return res;
     } on ApiException catch (error) {
       _errorMessage = error.message;
       rethrow;
     } catch (_) {
-      _errorMessage =
-          'Unable to verify username. Please check your connection.';
+      _errorMessage = 'Unable to send verification code. Please check your connection.';
       rethrow;
     } finally {
       _isLoading = false;
@@ -519,41 +570,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> sendForgotPasswordOtp(String phone) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      final normalized = Validators.normalizePhone(phone);
-      final res = await _authService.sendForgotPasswordOtp(normalized);
-      return res;
-    } on ApiException catch (error) {
-      _errorMessage = error.message;
-      rethrow;
-    } catch (_) {
-      _errorMessage =
-          'Unable to send verification code. Please check your connection.';
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<String> verifyForgotPasswordOtp({
-    required String phone,
+  /// Step 2 – Verify OTP; returns a short-lived resetToken.
+  Future<String> forgotPasswordVerifyOtp({
+    required String lookupToken,
     required String otp,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
     try {
-      final normalized = Validators.normalizePhone(phone);
-      final token = await _authService.verifyForgotPasswordOtp(
-        phone: normalized,
+      final resetToken = await _authService.forgotPasswordVerifyOtp(
+        lookupToken: lookupToken,
         otp: otp.trim(),
       );
-      return token;
+      return resetToken;
     } on ApiException catch (error) {
       _errorMessage = error.message;
       rethrow;
@@ -566,9 +596,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Step 3 – Set new password.
   Future<bool> resetPassword({
-    String? resetToken,
-    String? username,
+    required String resetToken,
     required String newPassword,
   }) async {
     _isLoading = true;
@@ -577,7 +607,6 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.resetPassword(
         resetToken: resetToken,
-        username: username,
         newPassword: newPassword,
       );
       return true;
@@ -592,6 +621,19 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ── Legacy wrappers kept for backward compat ──────────────────────────────
+  Future<Map<String, dynamic>> verifyForgotPasswordUsername(String username) =>
+      forgotPasswordLookup(username);
+
+  Future<Map<String, dynamic>> sendForgotPasswordOtp(String phone) =>
+      forgotPasswordLookup(phone);
+
+  Future<String> verifyForgotPasswordOtp({
+    required String phone,
+    required String otp,
+  }) =>
+      forgotPasswordVerifyOtp(lookupToken: phone, otp: otp);
 
   Future<bool> verifyCurrentPassword(String currentPassword) async {
     if (_token == null) {

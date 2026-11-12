@@ -94,7 +94,7 @@ async function searchNearbyPhotographers(req, res) {
       // Strip fields that are private to the account holder and have no
       // legitimate use in the public Discover payload.  Contact and profile
       // data needed for collaboration are still present via phone/email/etc.
-      const { googleId: _g, paymentQrUrl: _p, ...publicFields } = json;
+      const { googleId: _g, appleId: _a, paymentQrUrl: _p, ...publicFields } = json;
 
       return {
         ...publicFields,

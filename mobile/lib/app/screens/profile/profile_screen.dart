@@ -12,6 +12,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_config.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/app_image_picker.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/photographer_categories.dart';
 import '../../utils/validators.dart';
@@ -330,8 +331,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickAndUpload(ImageSource source) async {
     try {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(
+      final picked = await AppImagePicker.pickImage(
+        context,
         source: source,
         maxWidth: 2048,
         maxHeight: 2048,
@@ -1345,18 +1346,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _uploadPaymentQr() async {
-    final XFile? picked;
-    try {
-      picked = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 95,
-      );
-    } catch (_) {
-      if (mounted) AppSnackBar.error(context, 'Could not open the gallery.');
-      return;
-    }
+    final picked = await AppImagePicker.pickImage(
+      context,
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      imageQuality: 95,
+    );
     if (picked == null || !mounted) return;
     setState(() => _isUploadingQr = true);
     final bytes = await picked.readAsBytes();

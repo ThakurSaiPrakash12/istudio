@@ -73,6 +73,7 @@ function publicFields(user) {
     logoUrl: user.logoUrl || '',
     paymentQrUrl: user.paymentQrUrl || '',
     googleId: user.googleId || '',
+    appleId: user.appleId || '',
   };
 }
 
@@ -82,6 +83,7 @@ function toDoc(user, withPassword = false) {
     username: user.username,
     phone: user.phone || '',
     googleId: user.googleId || null,
+    appleId: user.appleId || null,
     password: withPassword ? user.password : undefined,
     studioName: user.studioName || '',
     ownerName: user.ownerName || user.username,
@@ -124,6 +126,11 @@ const memoryUsers = {
     const user = users.find((item) => item.googleId === googleId);
     return user ? toDoc(user) : null;
   },
+  findByAppleId(appleId) {
+    if (!appleId) return null;
+    const user = users.find((item) => item.appleId === appleId);
+    return user ? toDoc(user) : null;
+  },
   findByEmail(email) {
     if (!email) return null;
     const user = users.find(
@@ -144,6 +151,7 @@ const memoryUsers = {
       phone: data.phone || '',
       password: data.password || '',
       googleId: data.googleId || null,
+      appleId: data.appleId || null,
       studioName: data.studioName || '',
       ownerName: data.ownerName || data.username,
       email: data.email || '',

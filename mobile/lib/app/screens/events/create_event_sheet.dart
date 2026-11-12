@@ -14,6 +14,7 @@ import '../../providers/events_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/location_search_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/app_image_picker.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/geo_distance_utils.dart';
 import '../../utils/validators.dart';
@@ -2025,7 +2026,6 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
   }
 
   Future<void> _pickAdvanceProof() async {
-    final picker = ImagePicker();
     showModalBottomSheet(
       context: context,
       backgroundColor: context.cardBg,
@@ -2053,8 +2053,12 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                 title: Text('Gallery', style: TextStyle(color: sheetContext.textMain)),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-                  if (picked != null) {
+                  final picked = await AppImagePicker.pickImage(
+                    context,
+                    source: ImageSource.gallery,
+                    imageQuality: 85,
+                  );
+                  if (picked != null && mounted) {
                     final bytes = await picked.readAsBytes();
                     setState(() {
                       _advanceProofBytes = bytes;
@@ -2068,8 +2072,12 @@ class _CreateEventSheetState extends State<CreateEventSheet> {
                 title: Text('Camera', style: TextStyle(color: sheetContext.textMain)),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-                  if (picked != null) {
+                  final picked = await AppImagePicker.pickImage(
+                    context,
+                    source: ImageSource.camera,
+                    imageQuality: 85,
+                  );
+                  if (picked != null && mounted) {
                     final bytes = await picked.readAsBytes();
                     setState(() {
                       _advanceProofBytes = bytes;

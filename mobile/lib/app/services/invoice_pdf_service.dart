@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -1095,11 +1096,13 @@ class InvoicePdfService {
     required Invoice invoice,
     User? studio,
     Uint8List? bytes,
+    Rect? sharePositionOrigin,
   }) async {
     final data = bytes ?? await buildBytes(invoice: invoice, studio: studio);
     final name = fileName(invoice, studio: studio);
     final message =
         '${_documentLabel(invoice)} ${invoice.number} for ${invoice.contactName}';
+    final safeOrigin = sharePositionOrigin ?? const Rect.fromLTWH(0, 0, 100, 100);
     try {
       final tempPath = await writeTempPdf(data, name);
       final files = tempPath == null
@@ -1110,6 +1113,7 @@ class InvoicePdfService {
           files: files,
           subject: name,
           text: message,
+          sharePositionOrigin: safeOrigin,
           fileNameOverrides: [name],
         ),
       );
@@ -1119,6 +1123,7 @@ class InvoicePdfService {
         filename: name,
         subject: name,
         body: message,
+        bounds: safeOrigin,
       );
     }
   }

@@ -25,6 +25,18 @@ paths:
       responses:
         '200':
           description: Login successful
+  /auth/google:
+    post:
+      summary: Sign in or register with Google OAuth
+      responses:
+        '200':
+          description: Login successful
+  /auth/apple:
+    post:
+      summary: Sign in or register with Sign in with Apple
+      responses:
+        '200':
+          description: Login successful
   /auth/signup:
     post:
       summary: Register a new studio user

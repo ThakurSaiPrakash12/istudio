@@ -78,7 +78,13 @@ class EventsProvider extends ChangeNotifier {
     _authResolved = true;
     final userId = auth.user?.id;
     final token = auth.token;
-    if (userId == _userId && token == _token) return;
+    // Only reset if the USER changes (login/logout/switch account).
+    // A rolling-refreshed token for the same user must NOT clear data.
+    if (userId == _userId) {
+      // Same user — just update the token so future API calls use the fresh one.
+      _token = token;
+      return;
+    }
     _userId = userId;
     _token = token;
     _hasLoaded = false;
@@ -768,7 +774,10 @@ class EventsProvider extends ChangeNotifier {
     try {
       final clients = await _service.listClients(token);
       final events = await _service.listEvents(token);
-      if (token != _token) return;
+      // Guard: abort if the user logged out or switched accounts while loading.
+      // Compare by userId, not token string, so a rolling-refreshed token does
+      // not silently drop the response.
+      if (_userId == null) return;
       _clients.addAll(clients);
       _events.addAll(events);
       try {
@@ -779,11 +788,12 @@ class EventsProvider extends ChangeNotifier {
         // Summaries are optional; do not fail the main load.
       }
       _hasLoaded = true;
-    } catch (_) {
-      _clients.clear();
-      _events.clear();
+    } catch (e) {
+      // On network/server error keep the lists empty but do NOT clear data
+      // that may have been partially loaded. Only clear on sign-out (syncAuth).
+      _hasLoaded = false;
     } finally {
-      if (token == _token) {
+      if (_userId != null) {
         _loading = false;
         notifyListeners();
       }

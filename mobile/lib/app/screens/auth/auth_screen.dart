@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +13,7 @@ import '../../providers/theme_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/app_snackbar.dart';
+import '../../widgets/apple_sign_in_button.dart';
 import '../../widgets/auth_background.dart';
 import '../../widgets/auth_mode_toggle.dart';
 import '../../widgets/fade_slide_in.dart';
@@ -112,6 +114,19 @@ class _AuthScreenState extends State<AuthScreen>
     final success = await auth.signInWithGoogle();
     if (success && mounted) {
       AppSnackBar.success(context, 'Signed in with Google.');
+      if (auth.user?.needsPasswordSetup == true) {
+        await SetPasswordSheet.show(context);
+      }
+    } else if (!success && mounted && auth.errorMessage != null) {
+      _showError(auth.errorMessage);
+    }
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    final auth = context.read<AuthProvider>();
+    final success = await auth.signInWithApple();
+    if (success && mounted) {
+      AppSnackBar.success(context, 'Signed in with Apple.');
       if (auth.user?.needsPasswordSetup == true) {
         await SetPasswordSheet.show(context);
       }
@@ -223,6 +238,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 onLogin: _handleLogin,
                                 onSignup: _handleSignup,
                                 onGoogleSignIn: _handleGoogleSignIn,
+                                onAppleSignIn: _handleAppleSignIn,
                               ),
                               const SizedBox(height: 12),
                               Center(
@@ -315,6 +331,7 @@ class _AuthCard extends StatelessWidget {
     required this.onLogin,
     required this.onSignup,
     required this.onGoogleSignIn,
+    required this.onAppleSignIn,
   });
 
   final bool isLogin;
@@ -328,6 +345,7 @@ class _AuthCard extends StatelessWidget {
   })
   onSignup;
   final VoidCallback onGoogleSignIn;
+  final VoidCallback onAppleSignIn;
 
   @override
   Widget build(BuildContext context) {
@@ -518,6 +536,17 @@ class _AuthCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          if (defaultTargetPlatform == TargetPlatform.iOS ||
+              defaultTargetPlatform == TargetPlatform.macOS) ...[
+            AppleSignInButton(
+              isLoading: isLoading,
+              label: isLogin
+                  ? context.tr('Sign in with Apple')
+                  : context.tr('Sign up with Apple'),
+              onPressed: isLoading ? null : onAppleSignIn,
+            ),
+            const SizedBox(height: 12),
+          ],
           GoogleSignInButton(
             isLoading: isLoading,
             label: isLogin ? context.tr('Sign in with Google') : context.tr('Sign up with Google'),

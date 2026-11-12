@@ -5,8 +5,10 @@ const {
   checkUsername,
   login,
   googleAuth,
+  appleAuth,
   setPassword,
   me,
+  refreshToken,
   signup,
   signupSendOtp,
   signupVerify,
@@ -20,6 +22,8 @@ const {
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
   forgotPasswordVerifyUsername,
+  forgotPasswordLookup,
+  forgotPasswordVerifyOtpUnified,
   verifyCurrentPassword,
   changePassword,
   deleteAccountSendOtp,
@@ -124,6 +128,11 @@ router.post(
 );
 
 router.post(
+  '/apple',
+  appleAuth,
+);
+
+router.post(
   '/set-password',
   requireAuth,
   [
@@ -149,7 +158,6 @@ router.post(
 router.post(
   '/forgot-password/verify-otp',
   [
-    phoneRule,
     body('otp')
       .trim()
       .isLength({ min: 6, max: 6 })
@@ -157,7 +165,52 @@ router.post(
       .isNumeric()
       .withMessage('OTP must be numbers only'),
   ],
+  (req, res, next) => {
+    // Route to unified handler when lookupToken is present (new flow),
+    // otherwise fall through to the legacy phone-based handler.
+    if (req.body && req.body.lookupToken) {
+      return forgotPasswordVerifyOtpUnified(req, res);
+    }
+    return next();
+  },
+  (req, res, next) => {
+    // Legacy flow requires phone validation
+    const phoneVal = normalizePhone(req.body.phone || '');
+    if (!phoneVal || phoneVal.length !== 10 || !/^\d+$/.test(phoneVal)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid 10-digit phone number' });
+    }
+    req.body.phone = phoneVal;
+    return next();
+  },
   forgotPasswordVerifyOtp,
+);
+
+// ── NEW unified endpoints (username OR email → email OTP → reset) ─────────
+router.post(
+  '/forgot-password/lookup',
+  [
+    body('identifier')
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage('Enter your username or email address.'),
+  ],
+  forgotPasswordLookup,
+);
+
+// Reuse /forgot-password/verify-otp for the new flow too (lookupToken + otp)
+// The unified handler detects purpose from lookupToken.
+router.post(
+  '/forgot-password/verify-otp-email',
+  [
+    body('lookupToken').trim().notEmpty().withMessage('Session token is required.'),
+    body('otp')
+      .trim()
+      .isLength({ min: 6, max: 6 })
+      .withMessage('Enter the 6-digit verification code.')
+      .isNumeric()
+      .withMessage('OTP must be numbers only.'),
+  ],
+  forgotPasswordVerifyOtpUnified,
 );
 
 router.post(
@@ -196,6 +249,7 @@ function handleLogoUpload(req, res, next) {
 }
 
 router.get('/me', requireAuth, me);
+router.post('/refresh', requireAuth, refreshToken);
 router.patch('/profile', requireAuth, updateProfile);
 router.post('/logo', requireAuth, handleLogoUpload, uploadLogo);
 router.post('/profile-image', requireAuth, handleLogoUpload, uploadLogo);

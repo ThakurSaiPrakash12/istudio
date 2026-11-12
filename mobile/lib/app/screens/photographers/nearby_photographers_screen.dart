@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../models/photographer_profile.dart';
@@ -48,6 +49,7 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
   bool _isBackgroundSyncing = false;
   List<PhotographerProfile> _photographers = [];
   List<PhotographerProfile> _allPhotographers = [];
+  final Set<String> _blockedUsernames = {};
   String? _errorMessage;
   String? _selectedState;
   String? _selectedDistrict;
@@ -63,6 +65,16 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
     final defaultLoc = widget.initialLocation ?? '';
     _searchController = TextEditingController(text: defaultLoc);
     _locationSearchController = TextEditingController();
+
+    SharedPreferences.getInstance().then((prefs) {
+      final list = prefs.getStringList('blocked_photographers') ?? [];
+      if (mounted && list.isNotEmpty) {
+        setState(() {
+          _blockedUsernames.addAll(list);
+          _applyLocalFilter();
+        });
+      }
+    });
 
     // Use preloaded cache if already available in memory for instantaneous rendering
     if (PhotographerService.preloadedPhotographers.isNotEmpty) {
@@ -91,6 +103,10 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
     if (_allPhotographers.isEmpty) return;
 
     List<PhotographerProfile> filtered = List.from(_allPhotographers);
+
+    if (_blockedUsernames.isNotEmpty) {
+      filtered = filtered.where((p) => !_blockedUsernames.contains(p.username)).toList();
+    }
 
     // Apply category filters
     if (_selectedCategories.isNotEmpty) {
@@ -507,11 +523,16 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
                     ),
                   ),
                   onPressed: () {
+                    final box = context.findRenderObject() as RenderBox?;
+                    final origin = box != null
+                        ? box.localToGlobal(Offset.zero) & box.size
+                        : null;
                     Navigator.of(ctx).pop();
                     // ignore: deprecated_member_use
                     Share.share(
                       message,
                       subject: 'Collaboration: ${event.title}',
+                      sharePositionOrigin: origin,
                     );
                   },
                 ),
@@ -717,11 +738,158 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _handleReportPhotographer(ctx, photographer),
+                      icon: Icon(Icons.flag_outlined, size: 14, color: ctx.textMuted),
+                      label: Text(
+                        'Report profile',
+                        style: TextStyle(fontSize: 12, color: ctx.textMuted),
+                      ),
+                    ),
+                    Text(' • ', style: TextStyle(color: ctx.textMuted)),
+                    TextButton.icon(
+                      onPressed: () => _handleBlockPhotographer(ctx, photographer),
+                      icon: Icon(Icons.block_outlined, size: 14, color: ctx.textMuted),
+                      label: Text(
+                        'Block photographer',
+                        style: TextStyle(fontSize: 12, color: ctx.textMuted),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _handleReportPhotographer(
+    BuildContext bottomSheetContext,
+    PhotographerProfile photographer,
+  ) async {
+    Navigator.of(bottomSheetContext).pop();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dlgCtx) {
+        String selected = 'Inappropriate content';
+        return StatefulBuilder(
+          builder: (context, setDlgState) {
+            return AlertDialog(
+              title: const Text('Report Photographer'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Why are you reporting @${photographer.username}?',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  for (final opt in [
+                    'Inappropriate content',
+                    'Impersonation or false info',
+                    'Spam or harassment',
+                    'Other violation',
+                  ])
+                    InkWell(
+                      onTap: () => setDlgState(() => selected = opt),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected == opt
+                                  ? Icons.radio_button_checked_rounded
+                                  : Icons.radio_button_off_rounded,
+                              size: 18,
+                              color: selected == opt ? AppColors.sky : Colors.grey,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                opt,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: selected == opt ? FontWeight.w600 : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dlgCtx).pop(null),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dlgCtx).pop(selected),
+                  child: const Text('Submit Report'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (reason != null && mounted) {
+      AppSnackBar.success(
+        context,
+        'Report submitted. Our moderation team reviews flagged accounts within 24 hours.',
+      );
+    }
+  }
+
+  Future<void> _handleBlockPhotographer(
+    BuildContext bottomSheetContext,
+    PhotographerProfile photographer,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Block Photographer?'),
+        content: Text(
+          'You will no longer see @${photographer.username} in search or discovery.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dlgCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(dlgCtx).pop(true),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      if (bottomSheetContext.mounted) {
+        Navigator.of(bottomSheetContext).pop();
+      }
+      setState(() {
+        _blockedUsernames.add(photographer.username);
+        _applyLocalFilter();
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('blocked_photographers', _blockedUsernames.toList());
+      if (mounted) {
+        AppSnackBar.info(context, '@${photographer.username} has been blocked.');
+      }
+    }
   }
 
   @override

@@ -28,6 +28,13 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>tel</string>
+		<string>mailto</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -51,6 +58,10 @@
 	</dict>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Clients Hub requires access to your photo library to select and upload your studio logo, payment QR code, or payment receipts.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Clients Hub requires permission to save generated invoices, receipts, and studio photos to your photo library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Clients Hub requires access to your camera to take photos for your studio profile, receipts, and event documents.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

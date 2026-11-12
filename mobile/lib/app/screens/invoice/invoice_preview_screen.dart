@@ -84,7 +84,13 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     setState(() => _busy = true);
     try {
       final studio = context.read<AuthProvider>().user;
-      await InvoicePdfService.shareInvoice(invoice: _invoice, studio: studio);
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+      await InvoicePdfService.shareInvoice(
+        invoice: _invoice,
+        studio: studio,
+        sharePositionOrigin: origin,
+      );
     } catch (_) {
       if (!mounted) return;
       AppSnackBar.error(

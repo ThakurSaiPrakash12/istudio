@@ -24,7 +24,8 @@ void main() {
       expect(forgotBtn, findsOneWidget);
     });
 
-    testWidgets('ForgotPasswordSheet displays step 1 username verification correctly',
+    testWidgets(
+        'ForgotPasswordSheet step 1 accepts username or email and shows send code button',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -37,9 +38,16 @@ void main() {
         ),
       );
 
-      expect(find.text('Reset Studio Password'), findsOneWidget);
-      expect(find.text('Verify Username'), findsOneWidget);
+      // New step 1: "Reset Your Password" title
+      expect(find.text('Reset Your Password'), findsOneWidget);
+      // Send code button
+      expect(find.text('Send Verification Code'), findsOneWidget);
+      // Pre-filled identifier from initialUsername
       expect(find.text('studio_pro'), findsOneWidget);
+      // Step indicator visible
+      expect(find.text('Identify'), findsOneWidget);
+      expect(find.text('Verify'), findsOneWidget);
+      expect(find.text('Reset'), findsOneWidget);
     });
   });
 }

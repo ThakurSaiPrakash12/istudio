@@ -125,9 +125,32 @@ class AuthService {
     return _parseAuth(payload);
   }
 
-  Future<User> me(String token) async {
+  Future<AuthResult> loginWithApple({
+    required String identityToken,
+    required String userIdentifier,
+    String? email,
+    String? fullName,
+  }) async {
+    final body = <String, dynamic>{
+      'identityToken': identityToken,
+      'userIdentifier': userIdentifier,
+    };
+    if (email != null && email.isNotEmpty) {
+      body['email'] = email;
+    }
+    if (fullName != null && fullName.isNotEmpty) {
+      body['fullName'] = fullName;
+    }
+    final payload = await _api.post('/auth/apple', body);
+    return _parseAuth(payload);
+  }
+
+  Future<AuthResult> me(String token) async {
     final payload = await _api.get('/auth/me', token: token);
-    return _parseUser(payload);
+    // Server returns a fresh token alongside the user (rolling 90-day refresh).
+    final freshToken = payload['token'] as String?;
+    final user = _parseUser(payload);
+    return AuthResult(token: freshToken ?? token, user: user);
   }
 
   Future<User> updateProfile({
@@ -168,16 +191,52 @@ class AuthService {
     return _parseUser(payload);
   }
 
+  /// Step 1 – Lookup by username OR email; server sends OTP to user's email.
+  Future<Map<String, dynamic>> forgotPasswordLookup(String identifier) async {
+    final payload = await _api.post('/auth/forgot-password/lookup', {
+      'identifier': identifier.trim(),
+    });
+    return payload;
+  }
+
+  /// Step 2 – Submit OTP sent to email; server returns a short-lived resetToken.
+  Future<String> forgotPasswordVerifyOtp({
+    required String lookupToken,
+    required String otp,
+  }) async {
+    final payload = await _api.post('/auth/forgot-password/verify-otp', {
+      'lookupToken': lookupToken,
+      'otp': otp.trim(),
+    });
+    final resetToken = payload['resetToken'] as String?;
+    if (resetToken == null || resetToken.isEmpty) {
+      throw const ApiException('Invalid reset verification response.');
+    }
+    return resetToken;
+  }
+
+  /// Step 3 – Set new password using the verified resetToken.
+  Future<void> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    await _api.post('/auth/forgot-password/reset', {
+      'resetToken': resetToken,
+      'newPassword': newPassword,
+    });
+  }
+
+  // ── Legacy / internal helpers kept for other callers ─────────────────────
   Future<Map<String, dynamic>> verifyForgotPasswordUsername(String username) async {
-    final payload = await _api.post('/auth/forgot-password/verify-username', {
-      'username': username.trim(),
+    final payload = await _api.post('/auth/forgot-password/lookup', {
+      'identifier': username.trim(),
     });
     return payload;
   }
 
   Future<Map<String, dynamic>> sendForgotPasswordOtp(String phone) async {
-    final payload = await _api.post('/auth/forgot-password/send-otp', {
-      'phone': phone,
+    final payload = await _api.post('/auth/forgot-password/lookup', {
+      'identifier': phone.trim(),
     });
     return payload;
   }
@@ -187,7 +246,7 @@ class AuthService {
     required String otp,
   }) async {
     final payload = await _api.post('/auth/forgot-password/verify-otp', {
-      'phone': phone,
+      'lookupToken': phone, // legacy callers pass phone as lookupToken
       'otp': otp,
     });
     final resetToken = payload['resetToken'] as String?;
@@ -195,23 +254,6 @@ class AuthService {
       throw const ApiException('Invalid reset verification response.');
     }
     return resetToken;
-  }
-
-  Future<void> resetPassword({
-    String? resetToken,
-    String? username,
-    required String newPassword,
-  }) async {
-    final body = <String, dynamic>{
-      'newPassword': newPassword,
-    };
-    if (resetToken != null && resetToken.isNotEmpty) {
-      body['resetToken'] = resetToken;
-    }
-    if (username != null && username.isNotEmpty) {
-      body['username'] = username.trim();
-    }
-    await _api.post('/auth/forgot-password/reset', body);
   }
 
   Future<bool> verifyCurrentPassword({
