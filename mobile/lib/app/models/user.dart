@@ -69,19 +69,12 @@ class User {
       longitude != 0.0 &&
       address.trim().isNotEmpty;
 
-  /// True when all basic profile fields (name, phone, email, city, specialties,
-  /// about) are filled — REGARDLESS of whether Google Maps location is linked.
-  /// Used to distinguish new users (need full onboarding) from existing users
-  /// who just haven't linked Google Maps yet (need only a location prompt).
-  bool get hasBasicProfileFilled => [
-        studioName,
-        ownerName,
-        phone,
-        email,
-        city,
-        specialties,
-        about,
-      ].every((value) => value.trim().isNotEmpty);
+  /// True when basic profile identity fields (name, and phone or email)
+  /// are filled. Used to distinguish brand new users needing initial onboarding
+  /// from users who have completed their initial profile setup.
+  bool get hasBasicProfileFilled =>
+      (studioName.trim().isNotEmpty || ownerName.trim().isNotEmpty || username.trim().isNotEmpty) &&
+      (phone.trim().isNotEmpty || email.trim().isNotEmpty);
 
   /// Socials (instagram, youtube, website) and the logo are optional.
   /// Studio Location is mandatory for all users (new and existing).

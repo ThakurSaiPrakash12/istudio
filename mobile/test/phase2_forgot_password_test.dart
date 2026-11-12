@@ -44,10 +44,11 @@ void main() {
       expect(find.text('Send Verification Code'), findsOneWidget);
       // Pre-filled identifier from initialUsername
       expect(find.text('studio_pro'), findsOneWidget);
-      // Step indicator visible
-      expect(find.text('Identify'), findsOneWidget);
-      expect(find.text('Verify'), findsOneWidget);
-      expect(find.text('Reset'), findsOneWidget);
+      // Subtitle visible
+      expect(
+        find.text("Enter your username or email and we'll send a code."),
+        findsOneWidget,
+      );
     });
   });
 }

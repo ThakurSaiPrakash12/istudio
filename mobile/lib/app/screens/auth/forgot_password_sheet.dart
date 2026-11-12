@@ -263,10 +263,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Step progress indicator
-            if (_step != _ResetStep.success) _buildStepIndicator(isDark),
-            if (_step != _ResetStep.success) const SizedBox(height: 20),
-
             // Error banner
             if (_errorMessage != null) ...[
               Container(
@@ -307,73 +303,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStepIndicator(bool isDark) {
-    final steps = [_ResetStep.lookup, _ResetStep.verifyOtp, _ResetStep.newPassword];
-    final labels = ['Identify', 'Verify', 'Reset'];
-    final currentIndex = steps.indexOf(_step).clamp(0, steps.length - 1);
-
-    return Row(
-      children: List.generate(steps.length * 2 - 1, (i) {
-        if (i.isOdd) {
-          final lineActive = (i ~/ 2) < currentIndex;
-          return Expanded(
-            child: Container(
-              height: 2,
-              color: lineActive
-                  ? AppColors.sky
-                  : (isDark ? Colors.white12 : Colors.black12),
-            ),
-          );
-        }
-        final stepIdx = i ~/ 2;
-        final done = stepIdx < currentIndex;
-        final active = stepIdx == currentIndex;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: done || active
-                    ? AppColors.sky
-                    : (isDark ? Colors.white10 : Colors.black12),
-              ),
-              child: Center(
-                child: done
-                    ? const Icon(Icons.check_rounded,
-                        size: 15, color: Colors.white)
-                    : Text(
-                        '${stepIdx + 1}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: active
-                              ? Colors.white
-                              : (isDark ? Colors.white38 : Colors.black38),
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              labels[stepIdx],
-              style: TextStyle(
-                fontSize: 10,
-                color: done || active
-                    ? AppColors.sky
-                    : (isDark ? Colors.white38 : Colors.black38),
-                fontWeight:
-                    active ? FontWeight.w700 : FontWeight.normal,
-              ),
-            ),
-          ],
-        );
-      }),
     );
   }
 

@@ -35,6 +35,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isBootstrapping = true;
   bool _hasSeenFeatureTour = true;
   bool _hasVerifiedGoogleMaps = false;
+  bool _hasCompletedOnboarding = false;
 
   User? get user => _user;
   String? get token => _token;
@@ -44,9 +45,19 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _user != null && _token != null;
   bool get hasSeenFeatureTour => _hasSeenFeatureTour;
   bool get hasVerifiedGoogleMaps => _hasVerifiedGoogleMaps;
+  bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get needsLocationUpdate =>
       isLoggedIn &&
       (!_hasVerifiedGoogleMaps || !_user!.hasVerifiedLocation);
+
+  Future<void> completeOnboarding() async {
+    _hasCompletedOnboarding = true;
+    notifyListeners();
+    if (_user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_completed_onboarding_${_user!.id}', true);
+    }
+  }
 
   Future<void> completeFeatureTour() async {
     _hasSeenFeatureTour = true;
@@ -94,6 +105,7 @@ class AuthProvider extends ChangeNotifier {
           }
           _hasSeenFeatureTour = prefs.getBool('has_seen_features_tour_${_user!.id}') ?? true;
           _hasVerifiedGoogleMaps = prefs.getBool('has_verified_google_maps_${_user!.id}') ?? false;
+          _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding_${_user!.id}') ?? _user!.hasBasicProfileFilled;
         }
       }
 
@@ -825,6 +837,9 @@ class AuthProvider extends ChangeNotifier {
     _hasVerifiedGoogleMaps =
         prefs.getBool('has_verified_google_maps_${result.user.id}') ??
         result.user.hasVerifiedLocation;
+    _hasCompletedOnboarding =
+        prefs.getBool('has_completed_onboarding_${result.user.id}') ??
+        result.user.hasBasicProfileFilled;
     _token = result.token;
     _user = result.user;
   }
@@ -835,6 +850,7 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     _hasSeenFeatureTour = false;
     _hasVerifiedGoogleMaps = false;
+    _hasCompletedOnboarding = false;
   }
 
   bool _isTokenExpired(String token) {

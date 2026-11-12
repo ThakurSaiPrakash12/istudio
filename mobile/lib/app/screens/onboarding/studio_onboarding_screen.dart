@@ -19,6 +19,7 @@ import '../../widgets/profile_avatar.dart';
 import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
+import '../shell/app_shell.dart';
 
 /// Shown after sign-in until the studio profile has every required field.
 class StudioOnboardingScreen extends StatefulWidget {
@@ -214,13 +215,20 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
       'studioName': _studioName.text.trim(),
       'ownerName': _ownerName.text.trim(),
       'phone': _phone.text.trim(),
-      'city': _city.text.trim(),
+      if (_email.text.trim().isNotEmpty) 'email': _email.text.trim(),
+      'city': _city.text.trim().isNotEmpty
+          ? _city.text.trim()
+          : (_district.text.trim().isNotEmpty
+              ? _district.text.trim()
+              : (_state.text.trim().isNotEmpty ? _state.text.trim() : 'Studio City')),
       'state': _state.text.trim(),
       'district': _district.text.trim(),
       'country': _country.text.trim(),
       'address': _address.text.trim(),
-      'specialties': _specialties.text.trim(),
-      'about': _about.text.trim(),
+      'specialties': _specialties.text.trim().isNotEmpty
+          ? _specialties.text.trim()
+          : (_selectedCategories.isNotEmpty ? _selectedCategories.join(', ') : 'Photography'),
+      'about': _about.text.trim().isNotEmpty ? _about.text.trim() : 'Photography Studio',
       'instagram': _instagram.text.trim(),
       'youtube': _youtube.text.trim(),
       'website': _website.text.trim(),
@@ -231,7 +239,13 @@ class _StudioOnboardingScreenState extends State<StudioOnboardingScreen> {
     final ok = await auth.updateProfile(payload);
     if (!mounted) return;
     if (ok) {
+      await auth.completeOnboarding();
+      if (!mounted) return;
       AppSnackBar.success(context, 'Welcome aboard! Your studio is ready.');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AppShell(key: ValueKey('home'))),
+        (route) => false,
+      );
     } else {
       AppSnackBar.error(
         context,
