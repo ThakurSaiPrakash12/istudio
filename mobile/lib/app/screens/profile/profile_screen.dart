@@ -27,6 +27,7 @@ import '../../widgets/studio_button.dart';
 import '../../widgets/studio_card.dart';
 import '../../widgets/studio_text_field.dart';
 import '../../widgets/change_password_sheet.dart';
+import '../auth/set_password_sheet.dart';
 import '../legal/legal_screen.dart';
 import '../onboarding/app_features_showcase_screen.dart';
 
@@ -520,9 +521,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _openChangePasswordSheet() async {
-    final success = await ChangePasswordSheet.show(context);
-    if (success == true && mounted) {
-      AppSnackBar.success(context, 'Password updated successfully.');
+    final auth = context.read<AuthProvider>();
+    if (auth.user?.needsPasswordSetup == true) {
+      final success = await SetPasswordSheet.show(context, isOptional: true);
+      if (success == true && mounted) {
+        AppSnackBar.success(context, 'Password set successfully.');
+      }
+    } else {
+      final success = await ChangePasswordSheet.show(context);
+      if (success == true && mounted) {
+        AppSnackBar.success(context, 'Password updated successfully.');
+      }
     }
   }
 
@@ -1732,7 +1741,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            context.tr('Change Password'),
+                            (context.watch<AuthProvider>().user?.needsPasswordSetup ?? false)
+                                ? 'Set Password'
+                                : context.tr('Change Password'),
                             style: TextStyle(
                               color: textMain,
                               fontWeight: FontWeight.w600,
@@ -1741,7 +1752,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Update current login password',
+                            (context.watch<AuthProvider>().user?.needsPasswordSetup ?? false)
+                                ? 'Create a password for your account'
+                                : 'Update current login password',
                             style: TextStyle(color: textMuted, fontSize: 12),
                           ),
                         ],
@@ -2541,6 +2554,38 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
     }
   }
 
+  Future<void> _confirmDeleteWithApple() async {
+    final auth = context.read<AuthProvider>();
+    setState(() {
+      _deleting = true;
+      _errorMessage = null;
+    });
+
+    final success = await auth.deleteAccountWithApple();
+
+    if (!mounted) return;
+    setState(() => _deleting = false);
+
+    if (success) {
+      final rootContext = Navigator.of(context, rootNavigator: true).context;
+      Navigator.of(context).pop();
+      Navigator.of(context).pop();
+      if (rootContext.mounted) {
+        AppSnackBar.success(
+          rootContext,
+          'Your account and associated data have been permanently deleted.',
+        );
+      }
+    } else {
+      final message = auth.errorMessage;
+      if (message != null) {
+        setState(() => _errorMessage = message);
+        AppSnackBar.error(context, message);
+      }
+      // If message is null the user cancelled Apple sign-in; do nothing.
+    }
+  }
+
   Future<void> _confirmDelete() async {
     final auth = context.read<AuthProvider>();
     final needsPassword = !(auth.user?.needsPasswordSetup ?? false);
@@ -2631,6 +2676,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
 
   Widget _buildRequestStep(BuildContext context) {
     final user = context.read<AuthProvider>().user;
+    final isApple = user?.isAppleUser ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2698,7 +2744,9 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'All your events, clients, quotes, invoices, and expenses will be permanently wiped. To protect your data, a verification code will be sent to your email.',
+                  isApple
+                      ? 'All your events, clients, quotes, invoices, and expenses will be permanently wiped. Re-authenticate with Apple to confirm.'
+                      : 'All your events, clients, quotes, invoices, and expenses will be permanently wiped. To protect your data, a verification code will be sent to your email.',
                   style: TextStyle(
                     fontSize: 12,
                     color: context.textMain,
@@ -2716,94 +2764,137 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
           const SizedBox(height: 14),
         ],
 
-        // Registered Email Card
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.innerBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.cardBorder),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.mark_email_read_outlined,
-                size: 20,
-                color: context.accentColor,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Registered Email',
-                      style: TextStyle(fontSize: 11, color: context.textMuted),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      user?.email ?? 'Unknown Email',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: context.textMain,
+        if (!isApple) ...[
+          // Registered Email Card (OTP flow only)
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: context.innerBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.cardBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.mark_email_read_outlined,
+                  size: 20,
+                  color: context.accentColor,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Registered Email',
+                        style: TextStyle(fontSize: 11, color: context.textMuted),
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        user?.email ?? 'Unknown Email',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: context.textMain,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+
+          // Send OTP Button
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _dangerColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            onPressed: _sendingOtp ? null : _sendOtp,
+            child: _sendingOtp
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
                     ),
-                  ],
+                  )
+                : const Text(
+                    'Send Verification Code',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() => _step = _DeleteAccountStep.verifyOtp);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _otpFocusNodes[0].requestFocus();
+                  });
+                },
+                child: Text(
+                  'Already have a code?',
+                  style: TextStyle(
+                    color: context.accentColor,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: context.textMuted,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 22),
-
-        // Send OTP Button
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _dangerColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-          ),
-          onPressed: _sendingOtp ? null : _sendOtp,
-          child: _sendingOtp
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text(
-                  'Send Verification Code',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () {
-                setState(() => _step = _DeleteAccountStep.verifyOtp);
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _otpFocusNodes[0].requestFocus();
-                });
-              },
-              child: Text(
-                'Already have a code?',
-                style: TextStyle(
-                  color: context.accentColor,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
+        ] else ...[
+          // Apple re-authentication delete button
+          const SizedBox(height: 6),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 0,
             ),
-            TextButton(
+            onPressed: _deleting ? null : _confirmDeleteWithApple,
+            icon: _deleting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.apple, size: 20),
+            label: Text(
+              _deleting ? 'Deleting…' : 'Continue with Apple to Delete',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancel',
@@ -2814,8 +2905,8 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ],
     );
   }

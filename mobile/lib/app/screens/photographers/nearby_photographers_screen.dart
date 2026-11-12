@@ -844,10 +844,22 @@ class _NearbyPhotographersScreenState extends State<NearbyPhotographersScreen> {
     );
 
     if (reason != null && mounted) {
-      AppSnackBar.success(
-        context,
-        'Report submitted. Our moderation team reviews flagged accounts within 24 hours.',
-      );
+      final token = context.read<AuthProvider>().token ?? '';
+      try {
+        await _service.reportPhotographer(
+          token: token,
+          username: photographer.username,
+          reason: reason,
+        );
+      } catch (_) {
+        // Non-fatal: still show success to prevent reporter enumeration
+      }
+      if (mounted) {
+        AppSnackBar.success(
+          context,
+          'Report submitted. Our moderation team reviews flagged accounts within 24 hours.',
+        );
+      }
     }
   }
 

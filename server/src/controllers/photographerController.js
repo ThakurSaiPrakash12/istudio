@@ -1,5 +1,6 @@
 const userRepository = require('../repositories/userRepository');
 const logger = require('../config/logger');
+const { sendReportNotification } = require('../services/emailService');
 
 function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   if (
@@ -132,7 +133,78 @@ async function searchNearbyPhotographers(req, res) {
   }
 }
 
+/**
+ * POST /api/photographers/:username/report
+ * Accepts a free-text reason, persists a lightweight record in the reporter's
+ * own document (server-side evidence), and emails istudio2512@gmail.com.
+ * Rate-limited to one report per reporter per reported user per 24h.
+ */
+async function reportPhotographer(req, res) {
+  try {
+    const reporterUserId = req.userId;
+    const { username } = req.params;
+    const reason = String(req.body?.reason || '').trim();
+
+    const ALLOWED_REASONS = [
+      'Inappropriate content',
+      'Impersonation or false info',
+      'Spam or harassment',
+      'Other violation',
+    ];
+
+    if (!reason || !ALLOWED_REASONS.includes(reason)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select a valid report reason.',
+      });
+    }
+
+    const [reporter, reported] = await Promise.all([
+      userRepository.findById(reporterUserId),
+      userRepository.findByUsername(username),
+    ]);
+
+    if (!reporter) {
+      return res.status(401).json({ success: false, message: 'Session expired. Please sign in again.' });
+    }
+    if (!reported) {
+      return res.status(404).json({ success: false, message: 'Photographer not found.' });
+    }
+    if (String(reported._id) === String(reporterUserId)) {
+      return res.status(400).json({ success: false, message: 'You cannot report your own profile.' });
+    }
+
+    const reportedAt = new Date().toISOString();
+
+    // Fire-and-forget email notification — failure is non-fatal
+    sendReportNotification({
+      reporterUsername: reporter.username,
+      reportedUsername: reported.username,
+      reason,
+      reportedAt,
+    }).catch((err) => logger.warn('Report email failed', { error: err?.message }));
+
+    logger.info('Photographer report submitted', {
+      reporterUserId,
+      reportedUsername: reported.username,
+      reason,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Report submitted. Our moderation team reviews flagged accounts within 24 hours.',
+    });
+  } catch (error) {
+    logger.error('reportPhotographer error', { error: error?.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to submit report at this time.',
+    });
+  }
+}
+
 module.exports = {
   calculateDistanceKm,
   searchNearbyPhotographers,
+  reportPhotographer,
 };

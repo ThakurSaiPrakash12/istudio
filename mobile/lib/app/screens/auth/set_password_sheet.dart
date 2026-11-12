@@ -10,16 +10,18 @@ import '../../widgets/studio_button.dart';
 import '../../widgets/studio_text_field.dart';
 
 class SetPasswordSheet extends StatefulWidget {
-  const SetPasswordSheet({super.key});
+  const SetPasswordSheet({super.key, this.isOptional = false});
 
-  static Future<bool?> show(BuildContext context) {
+  final bool isOptional;
+
+  static Future<bool?> show(BuildContext context, {bool isOptional = false}) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
+      isDismissible: isOptional,
+      enableDrag: isOptional,
       backgroundColor: Colors.transparent,
-      builder: (context) => const SetPasswordSheet(),
+      builder: (context) => SetPasswordSheet(isOptional: isOptional),
     );
   }
 
@@ -85,7 +87,7 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return PopScope(
-      canPop: false,
+      canPop: widget.isOptional,
       child: Container(
         padding: EdgeInsets.only(
           left: 24,
@@ -147,7 +149,7 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Create a password for your Google account so you can sign in directly anytime.',
+                          'Create a password for your account so you can sign in directly with your email or username anytime.',
                           style: TextStyle(
                             color: isDark
                                 ? AppColors.muted
@@ -158,6 +160,11 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                       ],
                     ),
                   ),
+                  if (widget.isOptional)
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -224,6 +231,20 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                 isLoading: _isLoading,
                 onPressed: _isLoading ? null : _submit,
               ),
+
+              if (widget.isOptional) ...[
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _isLoading ? null : () => Navigator.of(context).pop(false),
+                  child: Text(
+                    'Skip for now',
+                    style: TextStyle(
+                      color: isDark ? AppColors.muted : AppColors.lightTextMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

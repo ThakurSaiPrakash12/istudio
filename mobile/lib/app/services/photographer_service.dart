@@ -82,4 +82,18 @@ class PhotographerService {
 
     return list;
   }
+
+  /// Report a photographer profile. Sends the report to the server for
+  /// server-side storage and email notification to the moderation team.
+  Future<void> reportPhotographer({
+    required String token,
+    required String username,
+    required String reason,
+  }) async {
+    await _api.post(
+      '/photographers/${Uri.encodeComponent(username)}/report',
+      {'reason': reason},
+      token: token,
+    );
+  }
 }

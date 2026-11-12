@@ -342,7 +342,37 @@ async function sendDeletionRequestNotification({ requestId, email, phone, create
   }
 }
 
+async function sendReportNotification({ reporterUsername, reportedUsername, reason, reportedAt }) {
+  const from = configuredFromAddress();
+  const subject = `Photographer reported: @${reportedUsername} - Clients Hub`;
+  const text = [
+    'A user has submitted a report against a photographer profile.',
+    '',
+    `Reported profile : @${reportedUsername}`,
+    `Reported by      : @${reporterUsername}`,
+    `Reason           : ${reason}`,
+    `Submitted        : ${reportedAt}`,
+    '',
+    'Review this profile in the admin panel and take action within 24 hours.',
+  ].join('\n');
+
+  try {
+    if (gmailApiConfigured()) {
+      return await sendWithGmailApi({ from, to: 'istudio2512@gmail.com', subject, text });
+    }
+    const mailTransporter = getTransporter();
+    if (!mailTransporter) {
+      return { sent: false, reason: 'email_provider_not_configured' };
+    }
+    const info = await mailTransporter.sendMail({ from, to: 'istudio2512@gmail.com', subject, text });
+    return { sent: true, messageId: info.messageId };
+  } catch (error) {
+    return { sent: false, reason: 'delivery_failed', error };
+  }
+}
+
 module.exports = {
   sendVerificationEmail,
   sendDeletionRequestNotification,
+  sendReportNotification,
 };

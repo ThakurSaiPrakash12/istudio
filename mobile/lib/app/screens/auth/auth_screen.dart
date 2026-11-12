@@ -127,9 +127,8 @@ class _AuthScreenState extends State<AuthScreen>
     final success = await auth.signInWithApple();
     if (success && mounted) {
       AppSnackBar.success(context, 'Signed in with Apple.');
-      if (auth.user?.needsPasswordSetup == true) {
-        await SetPasswordSheet.show(context);
-      }
+      // Apple users enter the app immediately without a forced password prompt.
+      // Password setup is available optionally in Profile settings.
     } else if (!success && mounted && auth.errorMessage != null) {
       _showError(auth.errorMessage);
     }

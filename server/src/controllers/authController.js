@@ -1716,6 +1716,88 @@ async function deleteAccount(req, res) {
   }
 }
 
+/**
+ * DELETE account via Apple re-authentication (no email OTP required).
+ * Used for Apple Sign-In users, especially those with Hide My Email relay addresses
+ * who cannot receive OTP emails. The client passes a fresh Apple identity token;
+ * the server verifies it matches the account's stored appleId, then deletes.
+ */
+async function deleteAccountWithApple(req, res) {
+  try {
+    const user = await userRepository.findById(req.userId, { withPassword: true });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Account not found." });
+    }
+
+    if (!user.appleId) {
+      return res.status(400).json({
+        success: false,
+        message: "This account is not linked to Apple Sign-In.",
+      });
+    }
+
+    const identityToken = req.body.identityToken || req.body.idToken;
+    const userIdentifier = req.body.userIdentifier || req.body.appleId;
+
+    if (!identityToken && !userIdentifier) {
+      return res.status(400).json({
+        success: false,
+        message: "Apple authorization credentials are required.",
+      });
+    }
+
+    // Verify the fresh Apple identity token
+    let profile;
+    try {
+      profile = await appleAuthService.verifyAppleToken({ identityToken, userIdentifier });
+    } catch (verifyErr) {
+      logCaught(req, "Apple re-auth token verification failed", verifyErr);
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired Apple authorization. Please try again.",
+      });
+    }
+
+    if (!profile || !profile.appleId) {
+      return res.status(401).json({
+        success: false,
+        message: "Could not retrieve Apple profile information.",
+      });
+    }
+
+    // Confirm the re-authenticated Apple account matches the stored appleId
+    if (String(profile.appleId) !== String(user.appleId)) {
+      return res.status(401).json({
+        success: false,
+        message: "Apple account does not match. Please sign in with the correct Apple ID.",
+      });
+    }
+
+    // Attempt to revoke the Apple refresh token (non-fatal if missing or fails)
+    if (req.body?.authorizationCode || req.body?.appleRefreshToken) {
+      try {
+        await appleAuthService.revokeAppleToken({
+          token: req.body.authorizationCode || req.body.appleRefreshToken,
+        });
+      } catch (revokeErr) {
+        logger.warn("Apple token revocation failed during Apple-delete", { error: revokeErr.message });
+      }
+    }
+
+    await userRepository.deleteUserAccount(req.userId);
+    return res.json({
+      success: true,
+      message: "Account and associated data deleted successfully.",
+    });
+  } catch (error) {
+    logCaught(req, "deleteAccountWithApple error", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to delete account at this time.",
+    });
+  }
+}
+
 async function sendEmailChangeOtp(req, res) {
   try {
     const user = await userRepository.findById(req.userId);
@@ -1862,6 +1944,7 @@ module.exports = {
   deleteAccountSendOtp,
   deleteAccountVerifyOtp,
   deleteAccount,
+  deleteAccountWithApple,
   sendEmailChangeOtp,
   verifyEmailChange,
 };

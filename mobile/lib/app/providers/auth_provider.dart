@@ -538,6 +538,48 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Delete account for Apple users by re-authenticating with Apple.
+  /// Triggers an Apple Sign-In prompt, verifies the new identity token server-side,
+  /// and deletes the account without requiring an email OTP.
+  Future<bool> deleteAccountWithApple() async {
+    if (_token == null) {
+      _errorMessage = 'Please sign in to delete your account.';
+      notifyListeners();
+      return false;
+    }
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final appleResult = await _appleAuthService.signIn();
+      if (appleResult == null) {
+        // User cancelled Apple sign-in
+        _errorMessage = null;
+        return false;
+      }
+      await _authService.deleteAccountWithApple(
+        token: _token!,
+        identityToken: appleResult.identityToken,
+        userIdentifier: appleResult.userIdentifier,
+        authorizationCode: appleResult.authorizationCode,
+      );
+      await _clearSession();
+      return true;
+    } on AppleAuthException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to delete account at this time.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> handleUnauthorized() async {
     if (_token == null && _user == null) return;
     await _clearSession();

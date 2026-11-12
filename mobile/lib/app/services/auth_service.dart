@@ -315,6 +315,27 @@ class AuthService {
     );
   }
 
+  /// Delete account for Apple users by re-authenticating with Apple.
+  /// Passes the Apple identity token to the server for verification,
+  /// bypassing the email OTP flow (required for Hide My Email relay users).
+  Future<void> deleteAccountWithApple({
+    required String token,
+    required String identityToken,
+    required String userIdentifier,
+    String? authorizationCode,
+  }) async {
+    await _api.post(
+      '/auth/delete-account/with-apple',
+      {
+        'identityToken': identityToken,
+        'userIdentifier': userIdentifier,
+        if (authorizationCode != null && authorizationCode.isNotEmpty)
+          'authorizationCode': authorizationCode,
+      },
+      token: token,
+    );
+  }
+
   Future<Map<String, dynamic>> sendEmailChangeOtp({
     required String token,
     required String newEmail,

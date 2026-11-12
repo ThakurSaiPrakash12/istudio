@@ -20,6 +20,7 @@ class User {
     this.logoUrl = '',
     this.paymentQrUrl = '',
     this.googleId = '',
+    this.appleId = '',
     this.needsPasswordSetup = false,
     this.latitude,
     this.longitude,
@@ -45,6 +46,7 @@ class User {
   final String logoUrl;
   final String paymentQrUrl;
   final String googleId;
+  final String appleId;
   final bool needsPasswordSetup;
   final double? latitude;
   final double? longitude;
@@ -57,6 +59,7 @@ class User {
   String get displayOwner => ownerName.isNotEmpty ? ownerName : username;
 
   bool get isGoogleUser => googleId.isNotEmpty;
+  bool get isAppleUser => appleId.isNotEmpty;
 
   /// Whether the user has an exact verified studio location via Google Maps.
   bool get hasVerifiedLocation =>
@@ -127,6 +130,7 @@ class User {
       logoUrl: json['logoUrl'] as String? ?? '',
       paymentQrUrl: json['paymentQrUrl'] as String? ?? '',
       googleId: json['googleId'] as String? ?? '',
+      appleId: json['appleId'] as String? ?? '',
       needsPasswordSetup: json['needsPasswordSetup'] as bool? ?? false,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
@@ -155,6 +159,7 @@ class User {
       'logoUrl': logoUrl,
       'paymentQrUrl': paymentQrUrl,
       'googleId': googleId,
+      'appleId': appleId,
       'needsPasswordSetup': needsPasswordSetup,
       'latitude': latitude,
       'longitude': longitude,
@@ -180,6 +185,7 @@ class User {
     String? logoUrl,
     String? paymentQrUrl,
     String? googleId,
+    String? appleId,
     bool? needsPasswordSetup,
     double? latitude,
     double? longitude,
@@ -205,6 +211,7 @@ class User {
       logoUrl: logoUrl ?? this.logoUrl,
       paymentQrUrl: paymentQrUrl ?? this.paymentQrUrl,
       googleId: googleId ?? this.googleId,
+      appleId: appleId ?? this.appleId,
       needsPasswordSetup: needsPasswordSetup ?? this.needsPasswordSetup,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,

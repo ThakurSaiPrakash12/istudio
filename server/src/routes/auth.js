@@ -29,6 +29,7 @@ const {
   deleteAccountSendOtp,
   deleteAccountVerifyOtp,
   deleteAccount,
+  deleteAccountWithApple,
   sendEmailChangeOtp,
   verifyEmailChange,
 } = require('../controllers/authController');
@@ -280,6 +281,7 @@ router.post(
 router.post('/delete-account/send-otp', requireAuth, deleteAccountSendOtp);
 router.post('/delete-account/verify-otp', requireAuth, deleteAccountVerifyOtp);
 router.post('/delete-account/confirm', requireAuth, deleteAccount);
+router.post('/delete-account/with-apple', requireAuth, deleteAccountWithApple);
 router.post('/send-email-change-otp', requireAuth, sendEmailChangeOtp);
 router.post('/verify-email-change', requireAuth, verifyEmailChange);
 router.delete('/account', requireAuth, deleteAccount);
